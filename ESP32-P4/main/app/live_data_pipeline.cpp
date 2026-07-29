@@ -24,6 +24,9 @@ constexpr float kPi = 3.14159265358979323846F;
 constexpr float kSampleRateHz = 4062500.0F;
 constexpr int32_t kScaleUvPerLsb = 100;
 constexpr int32_t kOffsetUv = 500;
+constexpr uint32_t kSimulatedConfigId = 1;
+constexpr float kMaximumDisplayAmplitude = 0.5F;
+constexpr float kNoiseReferenceVolts = 0.00075F;
 // Keep these defaults synchronized with tools/generate_fft_test_vector.py.
 constexpr float kTestFundamentalHz = 40750.0F;
 constexpr std::array<uint16_t, kMaximumSpectralLines> kTestHarmonics = {1, 3, 4};
@@ -40,15 +43,25 @@ void *allocate_sample_buffer(size_t bytes)
     return buffer;
 }
 
+DynamicMeasurementFrame *allocate_analysis_frame()
+{
+    void *buffer = heap_caps_calloc(1, sizeof(DynamicMeasurementFrame), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (buffer == nullptr) {
+        buffer = heap_caps_calloc(1, sizeof(DynamicMeasurementFrame), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    }
+    return static_cast<DynamicMeasurementFrame *>(buffer);
+}
+
 }  // namespace
 
 bool LiveDataPipeline::start()
 {
-    if (receiver_task_handle_ != nullptr && analysis_task_handle_ != nullptr) {
+    if (receiver_task_handle_ != nullptr && analysis_task_handle_ != nullptr && raw_queue_ != nullptr
+        && ui_queue_ != nullptr && analysis_frame_ != nullptr) {
         return true;
     }
     if (raw_queue_ != nullptr || ui_queue_ != nullptr || receiver_task_handle_ != nullptr
-        || analysis_task_handle_ != nullptr) {
+        || analysis_task_handle_ != nullptr || analysis_frame_ != nullptr) {
         ESP_LOGE(kTag, "Pipeline is only partially initialized; refusing an unsafe restart");
         return false;
     }
@@ -61,29 +74,25 @@ bool LiveDataPipeline::start()
     if (!allocate_test_samples()) {
         return false;
     }
+    analysis_frame_ = allocate_analysis_frame();
+    if (analysis_frame_ == nullptr) {
+        ESP_LOGE(kTag, "Unable to allocate the spectrum display frame");
+        release_resources();
+        return false;
+    }
 
     raw_queue_ = xQueueCreate(kRawQueueDepth, sizeof(RawCaptureFrame));
     ui_queue_ = xQueueCreate(1, sizeof(DynamicMeasurementFrame));
     if (raw_queue_ == nullptr || ui_queue_ == nullptr) {
         ESP_LOGE(kTag, "Unable to allocate pipeline queues");
-        if (raw_queue_ != nullptr) {
-            vQueueDelete(raw_queue_);
-            raw_queue_ = nullptr;
-        }
-        if (ui_queue_ != nullptr) {
-            vQueueDelete(ui_queue_);
-            ui_queue_ = nullptr;
-        }
+        release_resources();
         return false;
     }
 
     if (xTaskCreatePinnedToCore(analysis_task, "cs_fft8192", kAnalysisStackBytes, this,
                                 kAnalysisPriority, &analysis_task_handle_, kDataCore) != pdPASS) {
         ESP_LOGE(kTag, "Unable to start FFT analysis task");
-        vQueueDelete(raw_queue_);
-        vQueueDelete(ui_queue_);
-        raw_queue_ = nullptr;
-        ui_queue_ = nullptr;
+        release_resources();
         return false;
     }
     if (xTaskCreatePinnedToCore(receiver_task, "cs_local_source", kReceiverStackBytes, this,
@@ -91,16 +100,15 @@ bool LiveDataPipeline::start()
         ESP_LOGE(kTag, "Unable to start local sample source task");
         vTaskDelete(analysis_task_handle_);
         analysis_task_handle_ = nullptr;
-        vQueueDelete(raw_queue_);
-        vQueueDelete(ui_queue_);
-        raw_queue_ = nullptr;
-        ui_queue_ = nullptr;
+        release_resources();
         return false;
     }
 
     ESP_LOGI(kTag,
-             "Local-only pipeline pinned to Core %d: S16 test frame -> latest queue -> esp-dsp FFT8192 -> UI",
-             kDataCore);
+             "Local FFT pipeline on Core %d: source prio %u -> FFT prio %u -> latest UI queue; "
+             "display frame=%u bytes",
+             kDataCore, kReceiverPriority, kAnalysisPriority,
+             static_cast<unsigned>(sizeof(DynamicMeasurementFrame)));
     return true;
 }
 
@@ -194,26 +202,27 @@ void LiveDataPipeline::analysis_task(void *context)
         if (xQueueReceive(pipeline->raw_queue_, &raw, portMAX_DELAY) != pdPASS) {
             continue;
         }
-        DynamicMeasurementFrame result{};
-        if (!pipeline->analyze(raw, &result)) {
+        if (!pipeline->analyze(raw, pipeline->analysis_frame_)) {
             pipeline->fft_failures_.fetch_add(1, std::memory_order_relaxed);
             continue;
         }
 
         const uint32_t analyzed_frames =
             pipeline->analyzed_frames_.fetch_add(1, std::memory_order_relaxed) + 1U;
-        pipeline->last_analysis_us_.store(result.analysis_time_us, std::memory_order_relaxed);
-        pipeline->cumulative_analysis_us_ += result.analysis_time_us;
+        pipeline->last_analysis_us_.store(pipeline->analysis_frame_->analysis_time_us,
+                                          std::memory_order_relaxed);
+        pipeline->cumulative_analysis_us_ += pipeline->analysis_frame_->analysis_time_us;
         const uint32_t next_average =
             static_cast<uint32_t>(pipeline->cumulative_analysis_us_ / analyzed_frames);
         pipeline->average_analysis_us_.store(next_average, std::memory_order_relaxed);
         uint32_t previous_maximum = pipeline->maximum_analysis_us_.load(std::memory_order_relaxed);
-        while (result.analysis_time_us > previous_maximum
+        while (pipeline->analysis_frame_->analysis_time_us > previous_maximum
                && !pipeline->maximum_analysis_us_.compare_exchange_weak(
-                   previous_maximum, result.analysis_time_us, std::memory_order_relaxed)) {
+                   previous_maximum, pipeline->analysis_frame_->analysis_time_us,
+                   std::memory_order_relaxed)) {
         }
 
-        if (xQueueOverwrite(pipeline->ui_queue_, &result) == pdPASS) {
+        if (xQueueOverwrite(pipeline->ui_queue_, pipeline->analysis_frame_) == pdPASS) {
             pipeline->published_frames_.fetch_add(1, std::memory_order_relaxed);
         }
         if (analyzed_frames % kHealthLogFramePeriod == 0U) {
@@ -237,12 +246,18 @@ void LiveDataPipeline::analysis_task(void *context)
 
 bool LiveDataPipeline::analyze(const RawCaptureFrame &raw, DynamicMeasurementFrame *result)
 {
+    if (result == nullptr) {
+        return false;
+    }
+
     FftAnalysisResult fft_result{};
     const esp_err_t error = fft_processor_.process(test_samples_, FftProcessor8192::kSampleCount,
                                                    kSampleRateHz, kScaleUvPerLsb, kOffsetUv, &fft_result);
-    if (error != ESP_OK || !fft_result.valid) {
-        ESP_LOGE(kTag, "FFT frame %lu failed: %s, valid=%d", static_cast<unsigned long>(raw.sequence),
-                 esp_err_to_name(error), fft_result.valid);
+    if (error != ESP_OK || !fft_result.valid
+        || fft_processor_.positive_spectrum_size() != FftProcessor8192::kPositiveBinCount) {
+        ESP_LOGE(kTag, "FFT frame %lu failed: %s, valid=%d, bins=%u",
+                 static_cast<unsigned long>(raw.sequence), esp_err_to_name(error), fft_result.valid,
+                 static_cast<unsigned>(fft_processor_.positive_spectrum_size()));
         return false;
     }
 
@@ -265,17 +280,81 @@ bool LiveDataPipeline::analyze(const RawCaptureFrame &raw, DynamicMeasurementFra
         ESP_LOGI(kTag, "Heap integrity after first FFT: %s", heap_integrity_passed ? "PASS" : "FAIL");
     }
 
-    *result = {
-        .sequence = raw.sequence,
-        .capture_time_ms = raw.capture_time_ms,
-        .voltage_peak_to_peak = fft_result.voltage_peak_to_peak,
-        .true_rms_volts = fft_result.true_rms_volts,
-        .fundamental_hz = fft_result.fundamental_hz,
-        .sample_rate_hz = fft_result.sample_rate_hz,
-        .analysis_time_us = fft_result.analysis_time_us,
-        .spectral_line_count = fft_result.spectral_line_count,
-        .spectral_lines = fft_result.spectral_lines,
-    };
+    *result = {};
+    result->sequence = raw.sequence;
+    result->capture_time_ms = raw.capture_time_ms;
+    result->config_id = kSimulatedConfigId;
+    result->voltage_peak_to_peak = fft_result.voltage_peak_to_peak;
+    result->true_rms_volts = fft_result.true_rms_volts;
+    result->fundamental_hz = fft_result.fundamental_hz;
+    result->sample_rate_hz = fft_result.sample_rate_hz;
+    result->analysis_time_us = fft_result.analysis_time_us;
+
+    SpectrumDisplayFrame &spectrum = result->spectrum;
+    spectrum.generation = raw.sequence + 1U;
+    spectrum.sample_rate_hz = static_cast<uint32_t>(fft_result.sample_rate_hz);
+    spectrum.fft_size = static_cast<uint16_t>(FftProcessor8192::kSampleCount);
+    spectrum.column_count = static_cast<uint16_t>(kSpectrumDisplayColumns);
+    spectrum.peak_count = static_cast<uint8_t>(
+        std::min<uint32_t>(fft_result.spectral_line_count, kMaximumSpectralPeaks));
+    spectrum.source_buffer_index = 0xFF;
+    spectrum.frequency_min_hz = 0.0F;
+    spectrum.frequency_max_hz = fft_result.sample_rate_hz * 0.5F;
+    spectrum.bin_width_hz = fft_result.bin_width_hz;
+    spectrum.amplitude_max_volts = kMaximumDisplayAmplitude;
+
+    for (size_t peak_index = 0; peak_index < spectrum.peak_count; ++peak_index) {
+        const SpectralLine &source = fft_result.spectral_lines[peak_index];
+        const long rounded_bin = std::lround(source.frequency_hz / fft_result.bin_width_hz);
+        const size_t bin = std::min<size_t>(
+            FftProcessor8192::kPositiveBinCount - 1U,
+            static_cast<size_t>(std::max(0L, rounded_bin)));
+        spectrum.peaks[peak_index] = {
+            .bin_index = static_cast<uint16_t>(bin),
+            .frequency_hz = source.frequency_hz,
+            .amplitude_volts_peak = source.amplitude_volts_peak,
+            .snr_db = 20.0F * std::log10(source.amplitude_volts_peak / kNoiseReferenceVolts),
+        };
+    }
+
+    const float *positive_spectrum = fft_processor_.positive_spectrum();
+    float dense_maximum = 0.0F;
+    float compressed_maximum = 0.0F;
+    for (size_t column = 0; column < kSpectrumDisplayColumns; ++column) {
+        const size_t first_bin =
+            column * FftProcessor8192::kPositiveBinCount / kSpectrumDisplayColumns;
+        size_t end_bin =
+            (column + 1U) * FftProcessor8192::kPositiveBinCount / kSpectrumDisplayColumns;
+        if (end_bin <= first_bin) {
+            end_bin = first_bin + 1U;
+        }
+
+        float peak = 0.0F;
+        float squares = 0.0F;
+        for (size_t bin = first_bin; bin < end_bin; ++bin) {
+            const float magnitude = positive_spectrum[bin];
+            peak = std::max(peak, magnitude);
+            dense_maximum = std::max(dense_maximum, magnitude);
+            squares += magnitude * magnitude;
+        }
+        spectrum.columns[column] = {
+            .peak_volts = peak,
+            .rms_volts = std::sqrt(squares / static_cast<float>(end_bin - first_bin)),
+        };
+        compressed_maximum = std::max(compressed_maximum, peak);
+    }
+
+    if (raw.sequence < 2U) {
+        const bool peak_preserved = std::fabs(dense_maximum - compressed_maximum) < 0.000001F;
+        ESP_LOGI(kTag,
+                 "Spectrum frame: gen=%lu FFT=%u bins=%u columns=%u peaks=%u df=%.6fHz "
+                 "axis=0..%.5fMHz peak-preservation=%s",
+                 static_cast<unsigned long>(spectrum.generation), spectrum.fft_size,
+                 static_cast<unsigned>(FftProcessor8192::kPositiveBinCount), spectrum.column_count,
+                 spectrum.peak_count, static_cast<double>(spectrum.bin_width_hz),
+                 static_cast<double>(spectrum.frequency_max_hz / 1000000.0F),
+                 peak_preserved ? "PASS" : "FAIL");
+    }
     return true;
 }
 
@@ -299,6 +378,26 @@ bool LiveDataPipeline::validate_self_test(const FftAnalysisResult &result)
         expected_rms_square += kTestAmplitudesVolts[line] * kTestAmplitudesVolts[line] * 0.5F;
     }
     return std::fabs(result.true_rms_volts - std::sqrt(expected_rms_square)) <= 0.005F;
+}
+
+void LiveDataPipeline::release_resources()
+{
+    if (raw_queue_ != nullptr) {
+        vQueueDelete(raw_queue_);
+        raw_queue_ = nullptr;
+    }
+    if (ui_queue_ != nullptr) {
+        vQueueDelete(ui_queue_);
+        ui_queue_ = nullptr;
+    }
+    if (analysis_frame_ != nullptr) {
+        heap_caps_free(analysis_frame_);
+        analysis_frame_ = nullptr;
+    }
+    if (test_samples_ != nullptr) {
+        heap_caps_free(test_samples_);
+        test_samples_ = nullptr;
+    }
 }
 
 }  // namespace cyclescope
