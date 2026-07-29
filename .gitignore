@@ -4,3 +4,9 @@
 
 # 本地编辑器配置
 /.vscode/
+
+# ESP-IDF 生成文件
+/ESP32-P4/build/
+/ESP32-P4/managed_components/
+/ESP32-P4/sdkconfig
+/ESP32-P4/sdkconfig.old

@@ -1,0 +1,17 @@
+## ESP-IDF Component Manager manifest for the ESP32-P4 display bring-up.
+dependencies:
+  idf:
+    version: ">=6.0.2,<6.1.0"
+  lvgl/lvgl:
+    version: "9.4.*"
+    public: true
+  espressif/esp_lvgl_adapter:
+    version: "0.6.2"
+    public: true
+  espressif/esp32_p4_function_ev_board_noglib:
+    version: "5.2.3"
+    public: true
+  # Version 1.5.11 has malformed CMake syntax in its published archive.
+  # Keep the BSP-compatible 1.5.10 release until Espressif republishes a fix.
+  espressif/esp_codec_dev:
+    version: "1.5.10"
