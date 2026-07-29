@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import secrets
 import socket
 import struct
@@ -28,6 +30,12 @@ WAVE_DATA = 0x20
 HELLO_ACK = 0x81
 CONFIG_ACK = 0x82
 ENABLE_PUSH_ACK = 0x83
+
+ACK_FOR_REQUEST = {
+    HELLO: HELLO_ACK,
+    CONFIG_SET: CONFIG_ACK,
+    ENABLE_PUSH: ENABLE_PUSH_ACK,
+}
 
 STATUS_OK = 0
 STATUS_BAD_CONFIG = 3
@@ -219,16 +227,25 @@ class CslpFpgaEmulator:
     def close(self) -> None:
         self.socket.close()
 
-    def send_response(self, request_packet: bytes, request: Message, response_type: int, payload: bytes) -> None:
+    def send_response(self, request: Message, response_type: int, payload: bytes) -> None:
         key = (request.session_id, request.message_type, request.message_seq)
         cached = self.response_cache.get(key)
         if cached is not None:
-            cached_request, cached_response = cached
-            if cached_request == request_packet:
+            cached_payload, cached_response = cached
+            if cached_payload == request.payload:
                 self.socket.sendto(cached_response, self.peer_address)
                 print(f"replayed response type=0x{response_type:02X} seq={request.message_seq}", flush=True)
                 return
-            payload = self.conflict_payload(response_type)
+            conflict = build_message(
+                response_type,
+                request.session_id,
+                request.message_seq,
+                monotonic_us(self.boot_start_ns),
+                self.conflict_payload(response_type),
+            )
+            self.socket.sendto(conflict, self.peer_address)
+            print(f"rejected sequence conflict type=0x{response_type:02X} seq={request.message_seq}", flush=True)
+            return
 
         response = build_message(
             response_type,
@@ -237,8 +254,18 @@ class CslpFpgaEmulator:
             monotonic_us(self.boot_start_ns),
             payload,
         )
-        self.response_cache[key] = (request_packet, response)
+        self.response_cache[key] = (request.payload, response)
         self.socket.sendto(response, self.peer_address)
+
+    def handle_cached_request(self, request: Message) -> bool:
+        key = (request.session_id, request.message_type, request.message_seq)
+        if key not in self.response_cache:
+            return False
+        response_type = ACK_FOR_REQUEST.get(request.message_type)
+        if response_type is None:
+            raise RuntimeError(f"cached unsupported control type 0x{request.message_type:02X}")
+        self.send_response(request, response_type, b"")
+        return True
 
     @staticmethod
     def conflict_payload(response_type: int) -> bytes:
@@ -269,13 +296,10 @@ class CslpFpgaEmulator:
         deadline = time.monotonic() + timeout_seconds
         state = HELLO
         while state != WAVE_DATA:
-            packet, request, address = self.receive_request(deadline)
+            _packet, request, address = self.receive_request(deadline)
             self.peer_address = address
 
-            cached = self.response_cache.get((request.session_id, request.message_type, request.message_seq))
-            if cached is not None and cached[0] == packet:
-                self.socket.sendto(cached[1], address)
-                print(f"replayed cached ACK for seq={request.message_seq}", flush=True)
+            if self.handle_cached_request(request):
                 continue
 
             if request.message_type == HELLO:
@@ -305,7 +329,7 @@ class CslpFpgaEmulator:
                     if status == STATUS_OK
                     else struct.pack("!HBBIII", status, 0, 0, 0, 0, 0)
                 )
-                self.send_response(packet, request, HELLO_ACK, ack_payload)
+                self.send_response(request, HELLO_ACK, ack_payload)
                 print(
                     f"HELLO session=0x{self.session_id:08X} seq={request.message_seq} "
                     f"port={data_port} mtu={max_udp_payload} caps=0x{capabilities:08X}",
@@ -347,7 +371,7 @@ class CslpFpgaEmulator:
                     if status == STATUS_OK
                     else struct.pack("!HHIIIIBBHI", status, 0, 0, 0, 0, 0, 0, 0, 0, 0)
                 )
-                self.send_response(packet, request, CONFIG_ACK, ack_payload)
+                self.send_response(request, CONFIG_ACK, ack_payload)
                 print(f"CONFIG_SET seq={request.message_seq} values={config}", flush=True)
                 state = ENABLE_PUSH if status == STATUS_OK else state
                 continue
@@ -355,7 +379,6 @@ class CslpFpgaEmulator:
             if request.message_type == ENABLE_PUSH:
                 status = STATUS_OK if state == ENABLE_PUSH and request.payload_bytes == 0 else STATUS_BAD_STATE
                 self.send_response(
-                    packet,
                     request,
                     ENABLE_PUSH_ACK,
                     struct.pack("!HH", status, 0),
@@ -548,6 +571,183 @@ class CslpFpgaEmulator:
         )
 
 
+class FakeSocket:
+    def __init__(self) -> None:
+        self.sent: list[tuple[bytes, tuple[str, int]]] = []
+
+    def sendto(self, packet: bytes, address: tuple[str, int]) -> None:
+        self.sent.append((packet, address))
+
+
+def make_offline_emulator() -> CslpFpgaEmulator:
+    emulator = object.__new__(CslpFpgaEmulator)
+    emulator.expected_peer = ("192.0.2.3", 50001)
+    emulator.peer_address = emulator.expected_peer
+    emulator.boot_start_ns = time.monotonic_ns()
+    emulator.boot_id = 0x12345678
+    emulator.config_id = 0x87654321
+    emulator.session_id = 0
+    emulator.response_cache = {}
+    emulator.socket = FakeSocket()
+    return emulator
+
+
+def response_status(packet: bytes) -> int:
+    response = parse_message(packet)
+    return struct.unpack_from("!H", response.payload)[0]
+
+
+def test_idempotency_cache() -> None:
+    emulator = make_offline_emulator()
+    payload_a = struct.pack("!HHI", 50001, MAX_UDP_PAYLOAD_BYTES, CAPABILITIES)
+    payload_b = struct.pack("!HHI", 50001, MAX_UDP_PAYLOAD_BYTES, CAPABILITIES ^ 1)
+    request_a = parse_message(build_message(HELLO, 1, 7, 10, payload_a))
+    request_a_retry = parse_message(build_message(HELLO, 1, 7, 20, payload_a))
+    request_b = parse_message(build_message(HELLO, 1, 7, 30, payload_b))
+    ok_payload = struct.pack(
+        "!HBBIII",
+        STATUS_OK,
+        VERSION,
+        0,
+        CAPABILITIES,
+        FRAME_SAMPLE_COUNT,
+        emulator.boot_id,
+    )
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        emulator.send_response(request_a, HELLO_ACK, ok_payload)
+        emulator.send_response(request_a_retry, HELLO_ACK, ok_payload)
+        emulator.send_response(request_b, HELLO_ACK, ok_payload)
+        emulator.send_response(request_a_retry, HELLO_ACK, ok_payload)
+
+    responses = [packet for packet, _address in emulator.socket.sent]
+    if [response_status(packet) for packet in responses] != [0, 0, 8, 0]:
+        raise RuntimeError("idempotency cache returned incorrect statuses")
+    if responses[0] != responses[1] or responses[0] != responses[3]:
+        raise RuntimeError("idempotency cache did not preserve the first response")
+    cached_payload, cached_response = emulator.response_cache[(1, HELLO, 7)]
+    if cached_payload != payload_a or cached_response != responses[0]:
+        raise RuntimeError("sequence conflict replaced the first cache entry")
+
+
+def test_handshake_conflict_state() -> None:
+    emulator = make_offline_emulator()
+    rejected_session_id = 0x10203040
+    session_id = 0x10203041
+    address = emulator.expected_peer
+    bad_hello = build_message(
+        HELLO,
+        rejected_session_id,
+        1,
+        1,
+        struct.pack("!HHI", 50001, MAX_UDP_PAYLOAD_BYTES, CAPABILITIES ^ 1),
+    )
+    conflicting_hello = build_message(
+        HELLO,
+        rejected_session_id,
+        1,
+        2,
+        struct.pack("!HHI", 50001, MAX_UDP_PAYLOAD_BYTES, CAPABILITIES),
+    )
+    accepted_hello = build_message(
+        HELLO,
+        session_id,
+        2,
+        3,
+        struct.pack("!HHI", 50001, MAX_UDP_PAYLOAD_BYTES, CAPABILITIES),
+    )
+    expected_config = (
+        SAMPLE_RATE_HZ,
+        FRAME_SAMPLE_COUNT,
+        FRAME_PERIOD_US,
+        SAMPLE_FORMAT_S16_LE,
+        CHANNEL_COUNT,
+        FILTER_PROFILE,
+        0,
+    )
+    bad_config = build_message(
+        CONFIG_SET,
+        session_id,
+        3,
+        4,
+        struct.pack("!IIIBBHI", SAMPLE_RATE_HZ + 1, *expected_config[1:]),
+    )
+    conflicting_config = build_message(
+        CONFIG_SET,
+        session_id,
+        3,
+        5,
+        struct.pack("!IIIBBHI", *expected_config),
+    )
+    accepted_config = build_message(
+        CONFIG_SET,
+        session_id,
+        4,
+        6,
+        struct.pack("!IIIBBHI", *expected_config),
+    )
+    bad_enable = build_message(ENABLE_PUSH, session_id, 5, 7, b"\0")
+    conflicting_enable = build_message(ENABLE_PUSH, session_id, 5, 8)
+    accepted_enable = build_message(ENABLE_PUSH, session_id, 6, 9)
+    requests = iter(
+        (packet, parse_message(packet), address)
+        for packet in (
+            bad_hello,
+            conflicting_hello,
+            accepted_hello,
+            bad_config,
+            conflicting_config,
+            accepted_config,
+            bad_enable,
+            conflicting_enable,
+            accepted_enable,
+        )
+    )
+    emulator.receive_request = lambda _deadline: next(requests)
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        emulator.handshake(1.0)
+
+    statuses_by_type = {
+        response_type: [
+            response_status(packet)
+            for packet, _address in emulator.socket.sent
+            if parse_message(packet).message_type == response_type
+        ]
+        for response_type in (HELLO_ACK, CONFIG_ACK, ENABLE_PUSH_ACK)
+    }
+    if statuses_by_type[HELLO_ACK] != [
+        STATUS_BAD_CONFIG,
+        STATUS_SEQ_CONFLICT,
+        STATUS_OK,
+    ]:
+        raise RuntimeError(
+            f"conflicting HELLO changed handshake state: {statuses_by_type[HELLO_ACK]}"
+        )
+    config_statuses = statuses_by_type[CONFIG_ACK]
+    if config_statuses != [STATUS_BAD_CONFIG, STATUS_SEQ_CONFLICT, STATUS_OK]:
+        raise RuntimeError(
+            f"conflicting CONFIG_SET changed handshake state: {config_statuses}"
+        )
+    if statuses_by_type[ENABLE_PUSH_ACK] != [
+        STATUS_BAD_STATE,
+        STATUS_SEQ_CONFLICT,
+        STATUS_OK,
+    ]:
+        raise RuntimeError(
+            "conflicting ENABLE_PUSH changed handshake state: "
+            f"{statuses_by_type[ENABLE_PUSH_ACK]}"
+        )
+
+    cached_payload, cached_response = emulator.response_cache[
+        (session_id, CONFIG_SET, 3)
+    ]
+    if cached_payload != parse_message(bad_config).payload:
+        raise RuntimeError("CONFIG_SET conflict replaced the first request payload")
+    if response_status(cached_response) != STATUS_BAD_CONFIG:
+        raise RuntimeError("CONFIG_SET conflict replaced the first response")
+
+
 def self_test() -> None:
     if COMMON_HEADER.size != COMMON_HEADER_BYTES or WAVE_HEADER.size != 40:
         raise RuntimeError("CSLP struct sizes do not match v0.1")
@@ -563,6 +763,8 @@ def self_test() -> None:
     corrupted = corrupt_wave_payload(first)
     if packet_crc32(corrupted) == struct.unpack_from("!I", corrupted, CRC_OFFSET)[0]:
         raise RuntimeError("fault-injection payload corruption did not break CRC")
+    test_idempotency_cache()
+    test_handshake_conflict_state()
 
 
 def parse_args() -> argparse.Namespace:
@@ -576,14 +778,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--hold-seconds", type=float, default=2.0)
     parser.add_argument("--handshake-timeout", type=float, default=15.0)
     parser.add_argument("--scenario", choices=("normal", "faults"), default="normal")
+    parser.add_argument(
+        "--self-test-only",
+        action="store_true",
+        help="run offline protocol/idempotency tests without creating a UDP socket",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    self_test()
+    if args.self_test_only:
+        print("CSLP emulator self-test passed", flush=True)
+        return 0
     if args.frames <= 0 or args.chunk_gap_us < 0 or args.hold_seconds < 0:
         raise SystemExit("frames must be positive; timing arguments must be non-negative")
-    self_test()
     emulator = CslpFpgaEmulator(args.bind_ip, args.port, args.peer_ip, args.peer_port)
     print(
         f"listening on {args.bind_ip}:{args.port}; expecting {args.peer_ip}:{args.peer_port}",

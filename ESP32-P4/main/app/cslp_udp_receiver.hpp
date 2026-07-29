@@ -17,6 +17,7 @@
 #include "lwip/sockets.h"
 
 #include "cslp_protocol.hpp"
+#include "cslp_receiver_policy.hpp"
 
 namespace cyclescope {
 
@@ -28,6 +29,8 @@ public:
     static constexpr uint16_t kFilterProfile = 1;
     static constexpr size_t kSamplesPerFullChunk = 700;
     static constexpr size_t kChunkCount = 12;
+
+    using FrameCursor = receiver_policy::FrameCursor;
 
     struct FrameMetadata {
         uint32_t session_id;
@@ -49,6 +52,11 @@ public:
         FrameMetadata metadata{};
         uint8_t slot_index = 0xFF;
         uint32_t lease_generation = 0;
+
+        FrameCursor cursor() const
+        {
+            return {metadata.session_id, metadata.frame_id};
+        }
     };
 
     struct Stats {
@@ -75,7 +83,9 @@ public:
     };
 
     esp_err_t start();
-    bool acquire_latest(uint32_t after_frame_id, FrameView *view);
+    bool acquire_latest(const FrameCursor &after, FrameView *view);
+    // Check immediately before publishing results derived from an acquired frame.
+    bool frame_is_current(const FrameView &view) const;
     void release(FrameView *view);
     Stats stats() const;
     bool session_ready() const;
@@ -92,6 +102,13 @@ private:
         Timeout,
         Valid,
         Fatal,
+    };
+
+    enum class StartState : uint8_t {
+        Stopped,
+        Starting,
+        Started,
+        Failed,
     };
 
     struct FrameSlot {
@@ -133,6 +150,7 @@ private:
 
     esp_err_t initialize_ethernet();
     esp_err_t configure_static_ip();
+    bool rollback_start();
     void task_main();
     bool open_socket();
     void close_socket();
@@ -189,8 +207,9 @@ private:
     sockaddr_in fpga_address_{};
     int socket_fd_ = -1;
 
-    std::atomic<bool> started_{false};
-    std::atomic<bool> session_ready_{false};
+    std::atomic<StartState> start_state_{StartState::Stopped};
+    std::atomic<uint32_t> active_session_id_{0};
+    bool ethernet_start_attempted_ = false;
     int assembling_index_ = -1;
     int latest_index_ = -1;
     uint32_t last_completed_frame_id_ = 0;

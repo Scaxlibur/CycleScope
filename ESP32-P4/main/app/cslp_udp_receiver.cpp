@@ -43,35 +43,125 @@ CslpUdpReceiver &cslp_udp_receiver()
 
 esp_err_t CslpUdpReceiver::start()
 {
-    if (started_.exchange(true, std::memory_order_acq_rel)) {
-        return ESP_OK;
+    StartState expected = StartState::Stopped;
+    if (!start_state_.compare_exchange_strong(expected, StartState::Starting,
+                                              std::memory_order_acq_rel)) {
+        return expected == StartState::Started ? ESP_OK : ESP_ERR_INVALID_STATE;
     }
-    if (!cslp::protocol_self_test()) {
-        ESP_LOGE(kTag, "CSLP golden packet self-test failed");
-        return ESP_FAIL;
+
+    const auto fail_start = [this](esp_err_t error) {
+        const bool rolled_back = rollback_start();
+        start_state_.store(rolled_back ? StartState::Stopped : StartState::Failed,
+                           std::memory_order_release);
+        return rolled_back ? error : ESP_FAIL;
+    };
+
+    if (!cslp::protocol_self_test() || !receiver_policy::self_test()) {
+        ESP_LOGE(kTag, "CSLP protocol/receiver self-test failed");
+        return fail_start(ESP_FAIL);
     }
 
     slot_mutex_ = xSemaphoreCreateMutex();
     network_events_ = xEventGroupCreate();
     if (slot_mutex_ == nullptr || network_events_ == nullptr) {
         ESP_LOGE(kTag, "Unable to allocate receiver synchronization primitives");
-        return ESP_ERR_NO_MEM;
+        return fail_start(ESP_ERR_NO_MEM);
     }
 
     const esp_err_t network_error = initialize_ethernet();
     if (network_error != ESP_OK) {
         ESP_LOGE(kTag, "Ethernet initialization failed: %s", esp_err_to_name(network_error));
-        return network_error;
+        return fail_start(network_error);
     }
 
     if (xTaskCreatePinnedToCore(receiver_task, "cslp_udp_rx", kReceiverTaskStackBytes, this,
                                 kReceiverTaskPriority, &receiver_task_handle_, kReceiverCore) != pdPASS) {
         ESP_LOGE(kTag, "Unable to create CSLP receiver task");
-        return ESP_ERR_NO_MEM;
+        receiver_task_handle_ = nullptr;
+        return fail_start(ESP_ERR_NO_MEM);
     }
 
+    start_state_.store(StartState::Started, std::memory_order_release);
     ESP_LOGI(kTag, "CSLP v1 receiver ready on Core %d; golden packet PASS", kReceiverCore);
     return ESP_OK;
+}
+
+bool CslpUdpReceiver::rollback_start()
+{
+    active_session_id_.store(0, std::memory_order_release);
+    close_socket();
+
+    bool handlers_removed = true;
+    if (ip_event_instance_ != nullptr) {
+        const esp_err_t error = esp_event_handler_instance_unregister(
+            IP_EVENT, IP_EVENT_ETH_GOT_IP, ip_event_instance_);
+        if (error == ESP_OK) {
+            ip_event_instance_ = nullptr;
+        } else {
+            handlers_removed = false;
+            ESP_LOGE(kTag, "Unable to unregister IP event handler: %s",
+                     esp_err_to_name(error));
+        }
+    }
+    if (eth_event_instance_ != nullptr) {
+        const esp_err_t error = esp_event_handler_instance_unregister(
+            ETH_EVENT, ESP_EVENT_ANY_ID, eth_event_instance_);
+        if (error == ESP_OK) {
+            eth_event_instance_ = nullptr;
+        } else {
+            handlers_removed = false;
+            ESP_LOGE(kTag, "Unable to unregister Ethernet event handler: %s",
+                     esp_err_to_name(error));
+        }
+    }
+    if (!handlers_removed) {
+        ESP_LOGE(kTag, "CSLP startup rollback stopped to avoid dangling event callbacks");
+        return false;
+    }
+
+    if (ethernet_start_attempted_ && eth_handles_ != nullptr && eth_handle_count_ > 0) {
+        const esp_err_t error = esp_eth_stop(eth_handles_[0]);
+        if (error != ESP_OK && error != ESP_ERR_INVALID_STATE) {
+            ESP_LOGE(kTag, "Unable to stop Ethernet during startup rollback: %s",
+                     esp_err_to_name(error));
+            return false;
+        }
+    }
+    ethernet_start_attempted_ = false;
+
+    if (eth_glue_ != nullptr) {
+        const esp_err_t error = esp_eth_del_netif_glue(eth_glue_);
+        if (error != ESP_OK) {
+            ESP_LOGE(kTag, "Unable to delete Ethernet netif glue: %s",
+                     esp_err_to_name(error));
+            return false;
+        }
+        eth_glue_ = nullptr;
+    }
+    if (eth_netif_ != nullptr) {
+        esp_netif_destroy(eth_netif_);
+        eth_netif_ = nullptr;
+    }
+    if (eth_handles_ != nullptr) {
+        const esp_err_t error = ethernet_deinit_all(eth_handles_);
+        if (error != ESP_OK) {
+            ESP_LOGE(kTag, "Unable to deinitialize Ethernet: %s", esp_err_to_name(error));
+            return false;
+        }
+        eth_handles_ = nullptr;
+        eth_handle_count_ = 0;
+    }
+
+    if (network_events_ != nullptr) {
+        vEventGroupDelete(network_events_);
+        network_events_ = nullptr;
+    }
+    if (slot_mutex_ != nullptr) {
+        vSemaphoreDelete(slot_mutex_);
+        slot_mutex_ = nullptr;
+    }
+    receiver_task_handle_ = nullptr;
+    return true;
 }
 
 esp_err_t CslpUdpReceiver::initialize_ethernet()
@@ -124,6 +214,7 @@ esp_err_t CslpUdpReceiver::initialize_ethernet()
     if (error != ESP_OK) {
         return error;
     }
+    ethernet_start_attempted_ = true;
     return esp_eth_start(eth_handles_[0]);
 }
 
@@ -153,7 +244,7 @@ void CslpUdpReceiver::network_event_handler(void *context, esp_event_base_t even
             }
         } else if (event_id == ETHERNET_EVENT_DISCONNECTED || event_id == ETHERNET_EVENT_STOP) {
             xEventGroupClearBits(receiver->network_events_, kIpReadyBit);
-            receiver->session_ready_.store(false, std::memory_order_release);
+            receiver->active_session_id_.store(0, std::memory_order_release);
             ESP_LOGW(kTag, "Ethernet link down");
         }
         return;
@@ -190,7 +281,7 @@ void CslpUdpReceiver::task_main()
         attempted_session = true;
 
         if (!open_socket() || !establish_session()) {
-            session_ready_.store(false, std::memory_order_release);
+            active_session_id_.store(0, std::memory_order_release);
             reset_pending_frames();
             close_socket();
             vTaskDelay(pdMS_TO_TICKS(500));
@@ -198,7 +289,7 @@ void CslpUdpReceiver::task_main()
         }
 
         while ((xEventGroupGetBits(network_events_) & kIpReadyBit) != 0
-               && session_ready_.load(std::memory_order_acquire)) {
+               && active_session_id_.load(std::memory_order_acquire) != 0) {
             cslp::CommonHeader common{};
             size_t length = 0;
             const ReceiveResult result = receive_valid_datagram(&common, &length);
@@ -223,7 +314,7 @@ void CslpUdpReceiver::task_main()
             }
         }
 
-        session_ready_.store(false, std::memory_order_release);
+        active_session_id_.store(0, std::memory_order_release);
         reset_pending_frames();
         close_socket();
         vTaskDelay(pdMS_TO_TICKS(500));
@@ -296,14 +387,12 @@ void CslpUdpReceiver::close_socket()
 
 bool CslpUdpReceiver::establish_session()
 {
-    session_ready_.store(false, std::memory_order_release);
+    active_session_id_.store(0, std::memory_order_release);
     reset_pending_frames();
     active_config_id_ = 0;
     device_boot_id_ = 0;
-    session_id_ = esp_random();
-    if (session_id_ == 0) {
-        session_id_ = 1;
-    }
+    const uint32_t initial_session_seed = session_id_ == 0 ? esp_random() : 0;
+    session_id_ = receiver_policy::next_session_id(session_id_, initial_session_seed);
     control_sequence_ = esp_random();
     if (!run_hello() || !run_config() || !run_enable_push()) {
         ESP_LOGW(kTag, "CSLP session 0x%08" PRIX32 " handshake failed", session_id_);
@@ -311,7 +400,7 @@ bool CslpUdpReceiver::establish_session()
     }
 
     last_stream_message_us_ = now_us();
-    session_ready_.store(true, std::memory_order_release);
+    active_session_id_.store(session_id_, std::memory_order_release);
     ESP_LOGI(kTag, "CSLP session ready: session=0x%08" PRIX32
              " boot=%" PRIu32 " config=%" PRIu32,
              session_id_, device_boot_id_, active_config_id_);
@@ -587,18 +676,18 @@ void CslpUdpReceiver::handle_status(const cslp::CommonHeader &common, size_t len
         stats_.config_mismatches.fetch_add(1, std::memory_order_relaxed);
         ESP_LOGW(kTag, "STATUS config changed from %" PRIu32 " to %" PRIu32,
                  active_config_id_, active_config_id);
-        session_ready_.store(false, std::memory_order_release);
+        active_session_id_.store(0, std::memory_order_release);
         return;
     }
     last_stream_message_us_ = now_us();
-    const bool session_active = session_ready_.load(std::memory_order_acquire);
+    const bool session_active = active_session_id_.load(std::memory_order_acquire) != 0;
     if (device_state != 2 || last_error != 0) {
         ESP_LOGW(kTag, "FPGA STATUS state=%u last_error=%u",
                  static_cast<unsigned>(device_state), static_cast<unsigned>(last_error));
     }
     if (session_active && device_state != 2) {
         ESP_LOGW(kTag, "FPGA left PUSH_ENABLED; starting a new session");
-        session_ready_.store(false, std::memory_order_release);
+        active_session_id_.store(0, std::memory_order_release);
     }
 }
 
@@ -677,6 +766,10 @@ void CslpUdpReceiver::handle_wave(const cslp::CommonHeader &common, size_t lengt
         return;
     }
 
+    if (wave.frame_id == rejected_frame_id_) {
+        return;
+    }
+
     if (!have_observed_frame_) {
         newest_observed_frame_id_ = wave.frame_id;
         have_observed_frame_ = true;
@@ -687,13 +780,7 @@ void CslpUdpReceiver::handle_wave(const cslp::CommonHeader &common, size_t lengt
         }
         newest_observed_frame_id_ = wave.frame_id;
         invalidate_assembly(true);
-        if (rejected_frame_id_ != 0
-            && cslp::sequence_is_newer(wave.frame_id, rejected_frame_id_)) {
-            rejected_frame_id_ = 0;
-        }
-    }
-    if (wave.frame_id == rejected_frame_id_) {
-        return;
+        rejected_frame_id_ = 0;
     }
 
     last_stream_message_us_ = now_us();
@@ -759,10 +846,6 @@ int CslpUdpReceiver::ensure_assembly_slot(const cslp::CommonHeader &common,
 
         stats_.incomplete_frames.fetch_add(1, std::memory_order_relaxed);
         initialize_assembly(&current, common, wave);
-        if (rejected_frame_id_ != 0
-            && cslp::sequence_is_newer(wave.frame_id, rejected_frame_id_)) {
-            rejected_frame_id_ = 0;
-        }
         return assembling_index_;
     }
 
@@ -790,10 +873,6 @@ int CslpUdpReceiver::ensure_assembly_slot(const cslp::CommonHeader &common,
 
     assembling_index_ = free_index;
     initialize_assembly(&slots_[free_index], common, wave);
-    if (rejected_frame_id_ != 0
-        && cslp::sequence_is_newer(wave.frame_id, rejected_frame_id_)) {
-        rejected_frame_id_ = 0;
-    }
     return free_index;
 }
 
@@ -887,8 +966,7 @@ void CslpUdpReceiver::expire_assembly(uint64_t current_time_us)
     if (assembling_index_ >= 0
         && current_time_us - slots_[assembling_index_].assembly_started_us
                > kFrameAssemblyTimeoutUs) {
-        rejected_frame_id_ = slots_[assembling_index_].metadata.frame_id;
-        invalidate_assembly(true);
+        reject_frame(slots_[assembling_index_].metadata.frame_id);
     }
 }
 
@@ -915,7 +993,8 @@ void CslpUdpReceiver::reset_pending_frames()
 
 void CslpUdpReceiver::reject_frame(uint32_t frame_id)
 {
-    if (frame_id == 0 || frame_id == rejected_frame_id_) {
+    if (!receiver_policy::rejection_targets_observed(
+            frame_id, have_observed_frame_, newest_observed_frame_id_)) {
         return;
     }
     rejected_frame_id_ = frame_id;
@@ -925,7 +1004,7 @@ void CslpUdpReceiver::reject_frame(uint32_t frame_id)
     }
 }
 
-bool CslpUdpReceiver::acquire_latest(uint32_t after_frame_id, FrameView *view)
+bool CslpUdpReceiver::acquire_latest(const FrameCursor &after, FrameView *view)
 {
     if (view == nullptr || slot_mutex_ == nullptr) {
         return false;
@@ -935,8 +1014,15 @@ bool CslpUdpReceiver::acquire_latest(uint32_t after_frame_id, FrameView *view)
     xSemaphoreTake(slot_mutex_, portMAX_DELAY);
     if (latest_index_ >= 0) {
         FrameSlot &slot = slots_[latest_index_];
-        if (after_frame_id == 0
-            || cslp::sequence_is_newer(slot.metadata.frame_id, after_frame_id)) {
+        const uint32_t active_session_id =
+            active_session_id_.load(std::memory_order_acquire);
+        const FrameCursor candidate = {
+            slot.metadata.session_id,
+            slot.metadata.frame_id,
+        };
+        if (receiver_policy::session_is_current(active_session_id,
+                                                slot.metadata.session_id)
+            && receiver_policy::cursor_allows(candidate, after)) {
             slot.state = SlotState::InUse;
             ++slot.lease_generation;
             if (slot.lease_generation == 0) {
@@ -957,6 +1043,28 @@ bool CslpUdpReceiver::acquire_latest(uint32_t after_frame_id, FrameView *view)
         stats_.frames_acquired.fetch_add(1, std::memory_order_relaxed);
     }
     return acquired;
+}
+
+bool CslpUdpReceiver::frame_is_current(const FrameView &view) const
+{
+    if (view.slot_index >= slots_.size() || slot_mutex_ == nullptr) {
+        return false;
+    }
+
+    bool lease_is_current = false;
+    xSemaphoreTake(slot_mutex_, portMAX_DELAY);
+    const FrameSlot &slot = slots_[view.slot_index];
+    lease_is_current = slot.state == SlotState::InUse
+                       && slot.lease_generation == view.lease_generation
+                       && slot.metadata.session_id == view.metadata.session_id
+                       && slot.metadata.frame_id == view.metadata.frame_id;
+    xSemaphoreGive(slot_mutex_);
+
+    const uint32_t active_session_id =
+        active_session_id_.load(std::memory_order_acquire);
+    return lease_is_current
+           && receiver_policy::session_is_current(active_session_id,
+                                                  view.metadata.session_id);
 }
 
 void CslpUdpReceiver::release(FrameView *view)
@@ -1005,7 +1113,7 @@ CslpUdpReceiver::Stats CslpUdpReceiver::stats() const
 
 bool CslpUdpReceiver::session_ready() const
 {
-    return session_ready_.load(std::memory_order_acquire);
+    return active_session_id_.load(std::memory_order_acquire) != 0;
 }
 
 void CslpUdpReceiver::log_health()
