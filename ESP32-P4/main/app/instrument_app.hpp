@@ -3,6 +3,8 @@
 #include "lvgl.h"
 
 #include "waveform_view.hpp"
+#include "spectrum_model.hpp"
+#include "spectrum_view.hpp"
 
 namespace cyclescope {
 
@@ -27,6 +29,7 @@ private:
     void select_view(View view);
     void select_periods(uint8_t periods);
     void update_time_metrics();
+    void update_spectrum_metrics();
     lv_obj_t *create_card(lv_obj_t *parent, int32_t x, int32_t y, int32_t width, int32_t height) const;
     lv_obj_t *create_mode_button(lv_obj_t *parent, const char *text, int32_t x, int32_t width);
     lv_obj_t *create_period_button(lv_obj_t *parent, const char *text, int32_t x);
@@ -48,8 +51,11 @@ private:
     lv_obj_t *fundamental_value_ = nullptr;
     lv_obj_t *sample_rate_value_ = nullptr;
     lv_obj_t *timebase_label_ = nullptr;
+    lv_obj_t *spectrum_legend_ = nullptr;
     lv_obj_t *source_label_ = nullptr;
     WaveformView waveform_;
+    SpectrumModel spectrum_model_;
+    SpectrumView spectrum_view_;
 };
 
 }  // namespace cyclescope

@@ -54,10 +54,11 @@ InstrumentApp::InstrumentApp(lv_display_t *display) : display_(display)
 void InstrumentApp::start()
 {
     build_layout();
-    select_view(View::Time);
     select_periods(WaveformView::kPeriodsInCapture);
-    ESP_LOGI("cyclescope_ui", "Instrument UI skeleton started; envelope peak preservation: %s",
-             waveform_.peak_preservation_verified() ? "PASS" : "FAIL");
+    select_view(View::Spectrum);
+    ESP_LOGI("cyclescope_ui", "Instrument UI started; waveform envelope: %s, spectrum vector: %s",
+             waveform_.peak_preservation_verified() ? "PASS" : "FAIL",
+             spectrum_model_.validation_passed() ? "PASS" : "FAIL");
 }
 
 void InstrumentApp::build_layout()
@@ -131,8 +132,13 @@ void InstrumentApp::build_layout()
     lv_obj_align(plot_subhint_, LV_ALIGN_CENTER, 0, 26);
 
     waveform_.create(plot_card, 18, 72, plot_width - 36, content_height - 126);
+    spectrum_view_.create(plot_card, 18, 72, plot_width - 36, content_height - 126, &spectrum_model_);
     timebase_label_ = create_text(plot_card, "500 mV/div   •   3 periods   •   30.0 us span", &lv_font_montserrat_12, kMutedText);
     lv_obj_align(timebase_label_, LV_ALIGN_BOTTOM_LEFT, 18, -18);
+    spectrum_legend_ = create_text(plot_card, "40.0 kHz  400 mV  •  80.0 kHz  120 mV  •  120.0 kHz  60 mV",
+                                   &lv_font_montserrat_12, kMutedText);
+    lv_obj_align(spectrum_legend_, LV_ALIGN_BOTTOM_LEFT, 18, -18);
+    lv_obj_add_flag(spectrum_legend_, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_t *metrics = create_card(screen, kScreenPadding * 2 + plot_width, content_top, kMetricsWidth, content_height);
     lv_obj_t *metrics_title = create_text(metrics, "MEASUREMENTS", &lv_font_montserrat_18, kText);
@@ -217,22 +223,25 @@ void InstrumentApp::select_view(View view)
     lv_label_set_text(mode_label_, is_time ? "MODE  TIME DOMAIN" : "MODE  FREQUENCY DOMAIN");
     lv_label_set_text(plot_title_, is_time ? "TIME DOMAIN" : "FREQUENCY DOMAIN");
     waveform_.set_visible(is_time);
+    spectrum_view_.set_visible(!is_time);
     if (is_time) {
         lv_obj_remove_flag(one_period_button_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(three_period_button_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(plot_hint_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(plot_subhint_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(spectrum_legend_, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(source_label_, "SOURCE  SYNTHETIC   •   LINK  STANDBY");
         update_time_metrics();
     } else {
         lv_obj_add_flag(one_period_button_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(three_period_button_, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(plot_hint_, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(plot_subhint_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(plot_hint_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(plot_subhint_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(plot_hint_, "WAITING FOR SYNTHETIC SPECTRUM PIPELINE");
-        lv_label_set_text(source_label_, "SOURCE  SYNTHETIC   •   LINK  STANDBY");
+        lv_obj_remove_flag(spectrum_legend_, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(source_label_, "SOURCE  TEST VECTOR   •   FFT 512   •   500 Hz/bin");
+        update_spectrum_metrics();
     }
     lv_label_set_text(active_view_value_, is_time ? "TIME" : "FFT");
 }
@@ -264,6 +273,29 @@ void InstrumentApp::update_time_metrics()
     lv_label_set_text(fundamental_value_, value);
     snprintf(value, sizeof(value), "%.1f MS/s", static_cast<double>(waveform_.sample_rate_hz() / 1000000.0F));
     lv_label_set_text(sample_rate_value_, value);
+}
+
+void InstrumentApp::update_spectrum_metrics()
+{
+    char value[24];
+    snprintf(value, sizeof(value), "%.3f V", static_cast<double>(spectrum_model_.voltage_peak_to_peak()));
+    lv_label_set_text(vpp_value_, value);
+    snprintf(value, sizeof(value), "%.3f V", static_cast<double>(spectrum_model_.true_rms_volts()));
+    lv_label_set_text(rms_value_, value);
+    snprintf(value, sizeof(value), "%.1f kHz", static_cast<double>(spectrum_model_.fundamental_hz() / 1000.0F));
+    lv_label_set_text(fundamental_value_, value);
+    snprintf(value, sizeof(value), "%.1f kS/s", static_cast<double>(spectrum_model_.sample_rate_hz() / 1000.0F));
+    lv_label_set_text(sample_rate_value_, value);
+
+    const auto &lines = spectrum_model_.lines();
+    ESP_LOGI("cyclescope_fft", "M5 FFT: F0 %.1f kHz, lines %.0f/%.0f/%.0f mV, Vpp %.6f V, RMS %.6f V, %s",
+             static_cast<double>(spectrum_model_.fundamental_hz() / 1000.0F),
+             static_cast<double>(lines[0].amplitude_volts_peak * 1000.0F),
+             static_cast<double>(lines[1].amplitude_volts_peak * 1000.0F),
+             static_cast<double>(lines[2].amplitude_volts_peak * 1000.0F),
+             static_cast<double>(spectrum_model_.voltage_peak_to_peak()),
+             static_cast<double>(spectrum_model_.true_rms_volts()),
+             spectrum_model_.validation_passed() ? "PASS" : "FAIL");
 }
 
 void InstrumentApp::on_time_view_clicked(lv_event_t *event)

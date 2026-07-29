@@ -4,6 +4,8 @@ idf_component_register(
         "lvgl_adapter_init.c"
         "app/instrument_app.cpp"
         "app/waveform_view.cpp"
+        "app/spectrum_model.cpp"
+        "app/spectrum_view.cpp"
     INCLUDE_DIRS
         "."
         "app"
