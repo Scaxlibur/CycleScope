@@ -65,6 +65,24 @@ void WaveformView::set_periods(uint8_t periods)
     }
 }
 
+void WaveformView::set_render_gain(float gain)
+{
+    if (gain < 0.5F) {
+        gain = 0.5F;
+    }
+    if (gain > 1.25F) {
+        gain = 1.25F;
+    }
+    if (fabsf(gain - render_gain_) < 0.002F) {
+        return;
+    }
+
+    render_gain_ = gain;
+    if (object_ != nullptr) {
+        lv_obj_invalidate(object_);
+    }
+}
+
 uint8_t WaveformView::periods() const
 {
     return periods_;
@@ -229,8 +247,8 @@ void WaveformView::draw(lv_event_t *event) const
     line.width = 1;
     for (size_t column = 0; column < envelope_columns_; ++column) {
         const int32_t x = coords.x1 + static_cast<int32_t>(column);
-        lv_point_precise_set(&line.p1, x, sample_to_y(envelope_[column].minimum, coords));
-        lv_point_precise_set(&line.p2, x, sample_to_y(envelope_[column].maximum, coords));
+        lv_point_precise_set(&line.p1, x, sample_to_y(envelope_[column].minimum * render_gain_, coords));
+        lv_point_precise_set(&line.p2, x, sample_to_y(envelope_[column].maximum * render_gain_, coords));
         lv_draw_line(layer, &line);
     }
 }

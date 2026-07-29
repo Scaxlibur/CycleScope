@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "lvgl.h"
 
 #include "spectrum_model.hpp"
@@ -10,6 +12,7 @@ class SpectrumView {
 public:
     void create(lv_obj_t *parent, int32_t x, int32_t y, int32_t width, int32_t height, const SpectrumModel *model);
     void set_visible(bool visible);
+    void set_lines(const std::array<SpectralLine, SpectrumModel::kLineCount> &lines);
 
 private:
     static void on_draw(lv_event_t *event);
@@ -17,6 +20,7 @@ private:
 
     lv_obj_t *object_ = nullptr;
     const SpectrumModel *model_ = nullptr;
+    std::array<SpectralLine, SpectrumModel::kLineCount> lines_{};
 };
 
 }  // namespace cyclescope

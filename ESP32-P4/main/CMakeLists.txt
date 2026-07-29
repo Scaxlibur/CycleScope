@@ -6,6 +6,7 @@ idf_component_register(
         "app/waveform_view.cpp"
         "app/spectrum_model.cpp"
         "app/spectrum_view.cpp"
+        "app/live_data_pipeline.cpp"
     INCLUDE_DIRS
         "."
         "app"

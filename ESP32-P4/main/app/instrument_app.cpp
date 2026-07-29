@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 
 namespace cyclescope {
@@ -55,10 +56,14 @@ void InstrumentApp::start()
 {
     build_layout();
     select_periods(WaveformView::kPeriodsInCapture);
-    select_view(View::Spectrum);
-    ESP_LOGI("cyclescope_ui", "Instrument UI started; waveform envelope: %s, spectrum vector: %s",
+    select_view(View::Time);
+    live_mode_ = live_pipeline_.start();
+    if (live_mode_) {
+        live_data_timer_ = lv_timer_create(on_live_data_timer, 50, this);
+    }
+    ESP_LOGI("cyclescope_ui", "Instrument UI started; waveform envelope: %s, spectrum vector: %s, M6: %s",
              waveform_.peak_preservation_verified() ? "PASS" : "FAIL",
-             spectrum_model_.validation_passed() ? "PASS" : "FAIL");
+             spectrum_model_.validation_passed() ? "PASS" : "FAIL", live_mode_ ? "RUNNING" : "FAILED");
 }
 
 void InstrumentApp::build_layout()
@@ -172,9 +177,9 @@ void InstrumentApp::build_layout()
     lv_obj_set_style_radius(footer, 8, 0);
     lv_obj_set_style_pad_all(footer, 0, 0);
 
-    lv_obj_t *footer_left = create_text(footer, "UI READY", &lv_font_montserrat_12, kAccent);
-    lv_obj_align(footer_left, LV_ALIGN_LEFT_MID, 14, 0);
-    lv_obj_t *footer_right = create_text(footer, "M4  •  MIN/MAX ENVELOPE RENDERING", &lv_font_montserrat_12, kMutedText);
+    footer_left_ = create_text(footer, "UI READY", &lv_font_montserrat_12, kAccent);
+    lv_obj_align(footer_left_, LV_ALIGN_LEFT_MID, 14, 0);
+    lv_obj_t *footer_right = create_text(footer, "M6  •  QUEUED LIVE DATA", &lv_font_montserrat_12, kMutedText);
     lv_obj_align(footer_right, LV_ALIGN_RIGHT_MID, -14, 0);
 }
 
@@ -232,7 +237,9 @@ void InstrumentApp::select_view(View view)
         lv_obj_remove_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(spectrum_legend_, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(source_label_, "SOURCE  SYNTHETIC   •   LINK  STANDBY");
-        update_time_metrics();
+        if (!live_mode_) {
+            update_time_metrics();
+        }
     } else {
         lv_obj_add_flag(one_period_button_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(three_period_button_, LV_OBJ_FLAG_HIDDEN);
@@ -241,7 +248,9 @@ void InstrumentApp::select_view(View view)
         lv_obj_add_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(spectrum_legend_, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(source_label_, "SOURCE  TEST VECTOR   •   FFT 512   •   500 Hz/bin");
-        update_spectrum_metrics();
+        if (!live_mode_) {
+            update_spectrum_metrics();
+        }
     }
     lv_label_set_text(active_view_value_, is_time ? "TIME" : "FFT");
 }
@@ -296,6 +305,76 @@ void InstrumentApp::update_spectrum_metrics()
              static_cast<double>(spectrum_model_.voltage_peak_to_peak()),
              static_cast<double>(spectrum_model_.true_rms_volts()),
              spectrum_model_.validation_passed() ? "PASS" : "FAIL");
+}
+
+void InstrumentApp::on_live_data_timer(lv_timer_t *timer)
+{
+    auto *app = static_cast<InstrumentApp *>(lv_timer_get_user_data(timer));
+    DynamicMeasurementFrame frame{};
+    if (app->live_pipeline_.try_receive_latest(&frame)) {
+        app->apply_live_measurement(frame);
+    }
+}
+
+void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
+{
+    // This method is called by an LVGL timer, therefore in the adapter's UI
+    // task.  It is the only M6 consumer that touches LVGL objects.
+    const uint32_t now_ms = lv_tick_get();
+    if (last_ui_tick_ms_ != 0) {
+        const uint32_t gap_ms = now_ms - last_ui_tick_ms_;
+        if (gap_ms > maximum_ui_gap_ms_) {
+            maximum_ui_gap_ms_ = gap_ms;
+        }
+    }
+    last_ui_tick_ms_ = now_ms;
+    ++ui_frames_applied_;
+
+    // The numeric result remains live for every UI frame.  The time-domain
+    // view retains its M4 min/max reference trace: redrawing ~640 columns for
+    // each live result would monopolize the early-P4 DSI path.  In contrast,
+    // the FFT view has only three spectral lines and can update every frame.
+    if (active_view_ == View::Spectrum && frame.sequence != last_spectrum_render_sequence_) {
+        spectrum_view_.set_lines(frame.spectral_lines);
+        last_spectrum_render_sequence_ = frame.sequence;
+    }
+
+    char value[96];
+    snprintf(value, sizeof(value), "%.3f V", static_cast<double>(frame.voltage_peak_to_peak));
+    lv_label_set_text(vpp_value_, value);
+    snprintf(value, sizeof(value), "%.3f V", static_cast<double>(frame.true_rms_volts));
+    lv_label_set_text(rms_value_, value);
+    snprintf(value, sizeof(value), "%.2f kHz", static_cast<double>(frame.fundamental_hz / 1000.0F));
+    lv_label_set_text(fundamental_value_, value);
+    snprintf(value, sizeof(value), "%.1f kS/s", static_cast<double>(frame.sample_rate_hz / 1000.0F));
+    lv_label_set_text(sample_rate_value_, value);
+
+    snprintf(value, sizeof(value), "SOURCE  FPGA SIM   •   FRAME %lu   •   LINK LIVE",
+             static_cast<unsigned long>(frame.sequence));
+    lv_label_set_text(source_label_, value);
+    snprintf(value, sizeof(value), "%s / LIVE #%lu", active_view_ == View::Time ? "TIME" : "FFT",
+             static_cast<unsigned long>(frame.sequence));
+    lv_label_set_text(active_view_value_, value);
+    snprintf(value, sizeof(value), "LIVE  %lu frames", static_cast<unsigned long>(ui_frames_applied_));
+    lv_label_set_text(footer_left_, value);
+    snprintf(value, sizeof(value), "%.2fk %.0fmV  •  %.2fk %.0fmV  •  %.2fk %.0fmV",
+             static_cast<double>(frame.spectral_lines[0].frequency_hz / 1000.0F),
+             static_cast<double>(frame.spectral_lines[0].amplitude_volts_peak * 1000.0F),
+             static_cast<double>(frame.spectral_lines[1].frequency_hz / 1000.0F),
+             static_cast<double>(frame.spectral_lines[1].amplitude_volts_peak * 1000.0F),
+             static_cast<double>(frame.spectral_lines[2].frequency_hz / 1000.0F),
+             static_cast<double>(frame.spectral_lines[2].amplitude_volts_peak * 1000.0F));
+    lv_label_set_text(spectrum_legend_, value);
+
+    if (now_ms - last_health_log_ms_ >= 30000U) {
+        last_health_log_ms_ = now_ms;
+        const PipelineStats stats = live_pipeline_.stats();
+        ESP_LOGI("cyclescope_m6", "health: rx=%lu analyzed=%lu published=%lu ui=%lu dropped=%lu max_ui_gap=%lums free=%lu",
+                 static_cast<unsigned long>(stats.received_frames), static_cast<unsigned long>(stats.analyzed_frames),
+                 static_cast<unsigned long>(stats.published_frames), static_cast<unsigned long>(ui_frames_applied_),
+                 static_cast<unsigned long>(stats.dropped_raw_frames), static_cast<unsigned long>(maximum_ui_gap_ms_),
+                 static_cast<unsigned long>(esp_get_free_heap_size()));
+    }
 }
 
 void InstrumentApp::on_time_view_clicked(lv_event_t *event)

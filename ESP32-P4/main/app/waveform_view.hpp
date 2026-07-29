@@ -22,6 +22,7 @@ public:
     void create(lv_obj_t *parent, int32_t x, int32_t y, int32_t width, int32_t height);
     void set_visible(bool visible);
     void set_periods(uint8_t periods);
+    void set_render_gain(float gain);
 
     uint8_t periods() const;
     float peak_to_peak_volts() const;
@@ -54,6 +55,7 @@ private:
     int32_t viewport_width_ = 0;
     size_t envelope_columns_ = 0;
     uint8_t periods_ = kPeriodsInCapture;
+    float render_gain_ = 1.0F;
     float peak_to_peak_volts_ = 0.0F;
     float rms_volts_ = 0.0F;
     bool peak_preservation_verified_ = false;

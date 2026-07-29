@@ -17,6 +17,7 @@ void SpectrumView::create(lv_obj_t *parent, int32_t x, int32_t y, int32_t width,
                           const SpectrumModel *model)
 {
     model_ = model;
+    lines_ = model_->lines();
     object_ = lv_obj_create(parent);
     lv_obj_remove_style_all(object_);
     lv_obj_set_pos(object_, x, y);
@@ -25,6 +26,14 @@ void SpectrumView::create(lv_obj_t *parent, int32_t x, int32_t y, int32_t width,
     lv_obj_remove_flag(object_, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(object_, on_draw, LV_EVENT_DRAW_MAIN, this);
     lv_obj_add_flag(object_, LV_OBJ_FLAG_HIDDEN);
+}
+
+void SpectrumView::set_lines(const std::array<SpectralLine, SpectrumModel::kLineCount> &lines)
+{
+    lines_ = lines;
+    if (object_ != nullptr) {
+        lv_obj_invalidate(object_);
+    }
 }
 
 void SpectrumView::set_visible(bool visible)
@@ -85,9 +94,8 @@ void SpectrumView::draw(lv_event_t *event) const
     lv_draw_line(layer, &line);
 
     const float nyquist_hz = model_->sample_rate_hz() / 2.0F;
-    const auto &lines = model_->lines();
-    for (size_t index = 0; index < lines.size(); ++index) {
-        const SpectralLine &spectral_line = lines[index];
+    for (size_t index = 0; index < lines_.size(); ++index) {
+        const SpectralLine &spectral_line = lines_[index];
         const int32_t x = coords.x1 + static_cast<int32_t>(spectral_line.frequency_hz * static_cast<float>(width) / nyquist_hz);
         const float normalized = spectral_line.amplitude_volts_peak / kMaximumDisplayAmplitude;
         const int32_t y = coords.y2 - static_cast<int32_t>(normalized * static_cast<float>(height));
