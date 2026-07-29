@@ -1,26 +1,27 @@
 /*
- * ESP32-P4 display and touch bring-up.
+ * CycleScope application entry point.
  *
- * The display path follows Espressif's ESP32-P4 Function EV Board LVGL v9
- * example. It remains a hardware smoke test until LVGL-M2 passes; the
- * instrument UI begins at LVGL-M3.
+ * Board and LVGL adapter setup remain in C. The instrument application starts
+ * from C++ so UI, signal models, and transport code can evolve independently.
  */
 #include <assert.h>
 
 #include "esp_check.h"
 #include "esp_lv_adapter.h"
-#include "lv_demos.h"
-#include "lvgl.h"
 #include "bsp/display.h"
 
+#include "instrument_app.hpp"
 #include "lvgl_adapter_init.h"
 
-void app_main(void)
+extern "C" void app_main(void)
 {
     const bsp_display_cfg_t cfg = {
         .hw_cfg = {
             .hdmi_resolution = BSP_HDMI_RES_NONE,
             .dsi_bus = {
+                // Keep the BSP's documented "auto" choice.  On rev < v3
+                // silicon the IDF driver selects its legacy-safe default.
+                .phy_clk_src = static_cast<mipi_dsi_phy_clock_source_t>(0),
                 .lane_bit_rate_mbps = BSP_LCD_MIPI_DSI_LANE_BITRATE_MBPS,
             },
         },
@@ -31,6 +32,7 @@ void app_main(void)
     bsp_display_backlight_on();
 
     ESP_ERROR_CHECK(esp_lv_adapter_lock(-1));
-    lv_demo_widgets();
+    static cyclescope::InstrumentApp app(display);
+    app.start();
     esp_lv_adapter_unlock();
 }
