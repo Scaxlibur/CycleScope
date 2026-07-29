@@ -16,6 +16,7 @@ static const char *TAG = "cyclescope_lvgl";
 
 /* Small partial buffers leave PSRAM available for the signal pipeline. */
 #define LVGL_ADAPTER_BUFFER_HEIGHT 20
+#define LVGL_TASK_CORE 0
 
 static void lvgl_adapter_get_resolution(uint32_t *out_hres, uint32_t *out_vres)
 {
@@ -41,12 +42,14 @@ lv_display_t *lvgl_adapter_init(const bsp_display_cfg_t *cfg)
         return NULL;
     }
 
-    const esp_lv_adapter_config_t adapter_cfg = ESP_LV_ADAPTER_DEFAULT_CONFIG();
+    esp_lv_adapter_config_t adapter_cfg = ESP_LV_ADAPTER_DEFAULT_CONFIG();
+    adapter_cfg.task_core_id = LVGL_TASK_CORE;
     err = esp_lv_adapter_init(&adapter_cfg);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "LVGL adapter init failed: %s", esp_err_to_name(err));
         return NULL;
     }
+    ESP_LOGI(TAG, "LVGL worker pinned to Core %d", LVGL_TASK_CORE);
 
     uint32_t hres = 0;
     uint32_t vres = 0;

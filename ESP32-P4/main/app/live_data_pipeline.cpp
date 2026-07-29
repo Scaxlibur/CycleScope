@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "esp_log.h"
+#include "freertos/idf_additions.h"
 
 namespace cyclescope {
 namespace {
@@ -13,6 +14,7 @@ constexpr UBaseType_t kRawQueueDepth = 4;
 constexpr UBaseType_t kReceiverPriority = 3;
 constexpr UBaseType_t kAnalysisPriority = 4;
 constexpr uint32_t kTaskStackBytes = 4096;
+constexpr BaseType_t kDataCore = 1;
 constexpr float kPi = 3.14159265358979323846F;
 
 }  // namespace
@@ -30,20 +32,21 @@ bool LiveDataPipeline::start()
         return false;
     }
 
-    if (xTaskCreate(analysis_task, "cs_analyze", kTaskStackBytes, this, kAnalysisPriority,
-                    &analysis_task_handle_) != pdPASS) {
+    if (xTaskCreatePinnedToCore(analysis_task, "cs_analyze", kTaskStackBytes, this,
+                                kAnalysisPriority, &analysis_task_handle_, kDataCore) != pdPASS) {
         ESP_LOGE(kTag, "Unable to start analysis task");
         return false;
     }
-    if (xTaskCreate(receiver_task, "cs_receiver", kTaskStackBytes, this, kReceiverPriority,
-                    &receiver_task_handle_) != pdPASS) {
+    if (xTaskCreatePinnedToCore(receiver_task, "cs_receiver", kTaskStackBytes, this,
+                                kReceiverPriority, &receiver_task_handle_, kDataCore) != pdPASS) {
         ESP_LOGE(kTag, "Unable to start receiver task");
         vTaskDelete(analysis_task_handle_);
         analysis_task_handle_ = nullptr;
         return false;
     }
 
-    ESP_LOGI(kTag, "M6 pipeline started: receiver -> raw queue -> analysis -> UI queue");
+    ESP_LOGI(kTag, "M6 pipeline pinned to Core %d: receiver -> raw queue -> analysis -> UI queue",
+             kDataCore);
     return true;
 }
 
@@ -68,6 +71,8 @@ void LiveDataPipeline::receiver_task(void *context)
     TickType_t next_wake = xTaskGetTickCount();
     uint32_t sequence = 0;
 
+    ESP_LOGI(kTag, "Receiver task running on Core %d", xPortGetCoreID());
+
     while (true) {
         const RawCaptureFrame raw = {
             .sequence = sequence++,
@@ -88,6 +93,8 @@ void LiveDataPipeline::analysis_task(void *context)
 {
     auto *pipeline = static_cast<LiveDataPipeline *>(context);
     RawCaptureFrame raw{};
+
+    ESP_LOGI(kTag, "Analysis task running on Core %d", xPortGetCoreID());
 
     while (true) {
         if (xQueueReceive(pipeline->raw_queue_, &raw, portMAX_DELAY) != pdPASS) {
