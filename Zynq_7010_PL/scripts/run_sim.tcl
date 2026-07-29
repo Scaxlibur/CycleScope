@@ -9,7 +9,10 @@ set rtl_sources [list \
     [file join $pl_root rtl fir_coeffs_pkg.sv] \
     [file join $pl_root rtl ad9226_frontend.sv] \
     [file join $pl_root rtl fir_mac_decimator.sv] \
-    [file join $pl_root rtl fir_decimator_16.sv]]
+    [file join $pl_root rtl fir_decimator_16.sv] \
+    [file join $pl_root rtl frame_ram.sv] \
+    [file join $pl_root rtl frame_store_axis_spi.sv] \
+    [file join $pl_root rtl cyclescope_pipeline.sv]]
 
 proc run_test {build_root name sources testbench} {
     set test_dir [file join $build_root $name]
@@ -42,6 +45,8 @@ run_test $build_root tb_ad9226_frontend $rtl_sources \
     [file join $pl_root sim tb_ad9226_frontend.sv]
 run_test $build_root tb_fir_decimator_16 $rtl_sources \
     [file join $pl_root sim tb_fir_decimator_16.sv]
+run_test $build_root tb_frame_store_axis_spi $rtl_sources \
+    [file join $pl_root sim tb_frame_store_axis_spi.sv]
 
 puts "ALL_SIM_TESTS_PASS"
 exit

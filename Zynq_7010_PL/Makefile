@@ -2,7 +2,7 @@ SHELL := /bin/bash
 ROOT := $(abspath ..)
 ENV := source "$(CURDIR)/scripts/xilinx_env.sh"
 
-.PHONY: version sim synth system clean
+.PHONY: version sim synth synth-filter synth-core system clean
 
 version:
 	@$(ENV) && vivado -version | sed -n '1,5p' && v++ --version 2>&1 | sed -n '1,7p'
@@ -10,8 +10,13 @@ version:
 sim:
 	@$(ENV) && vivado -mode batch -nolog -nojournal -source scripts/run_sim.tcl
 
-synth:
+synth: synth-filter synth-core
+
+synth-filter:
 	@$(ENV) && vivado -mode batch -nolog -nojournal -source scripts/run_synth.tcl
+
+synth-core:
+	@$(ENV) && vivado -mode batch -nolog -nojournal -source scripts/run_core_synth.tcl
 
 system:
 	@$(ENV) && vivado -mode batch -nolog -nojournal -source scripts/build_system.tcl
