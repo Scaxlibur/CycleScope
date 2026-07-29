@@ -1,6 +1,12 @@
-# Codex 私人项目驾驶舱
+# Codex 本地配置
 /.codex/
-/tool-of-rei/
+
+# 项目驾驶舱：四件套纳入版本控制，其余日志/临时产物保持忽略
+/tool-of-rei/*
+!/tool-of-rei/任务清单.md
+!/tool-of-rei/项目快照.md
+!/tool-of-rei/scratch-of-rei.md
+!/tool-of-rei/已知问题.md
 
 # 本地编辑器配置
 /.vscode/
