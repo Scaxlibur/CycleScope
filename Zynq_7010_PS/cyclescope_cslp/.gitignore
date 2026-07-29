@@ -1,0 +1,7 @@
+/build/
+/.Xil/
+/*.log
+/*.jou
+/*.str
+__pycache__/
+*.py[cod]
