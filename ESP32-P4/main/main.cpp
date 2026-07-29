@@ -6,15 +6,34 @@
  */
 #include <assert.h>
 
+#include "sdkconfig.h"
+
 #include "esp_check.h"
+#include "esp_log.h"
 #include "esp_lv_adapter.h"
 #include "bsp/display.h"
 
+#include "cslp_udp_receiver.hpp"
+#if CONFIG_CYCLESCOPE_CSLP_DIAGNOSTIC_CONSUMER
+#include "cslp_frame_diagnostic.hpp"
+#endif
 #include "instrument_app.hpp"
 #include "lvgl_adapter_init.h"
 
+namespace {
+
+constexpr char kTag[] = "cyclescope";
+
+}  // namespace
+
 extern "C" void app_main(void)
 {
+    const esp_err_t receiver_error = cyclescope::cslp_udp_receiver().start();
+    if (receiver_error != ESP_OK) {
+        ESP_LOGE(kTag, "CSLP UDP receiver did not start: %s",
+                 esp_err_to_name(receiver_error));
+    }
+
     const bsp_display_cfg_t cfg = {
         .hw_cfg = {
             .hdmi_resolution = BSP_HDMI_RES_NONE,
@@ -35,4 +54,15 @@ extern "C" void app_main(void)
     static cyclescope::InstrumentApp app(display);
     app.start();
     esp_lv_adapter_unlock();
+
+#if CONFIG_CYCLESCOPE_CSLP_DIAGNOSTIC_CONSUMER
+    if (receiver_error == ESP_OK) {
+        const esp_err_t diagnostic_error =
+            cyclescope::start_cslp_frame_diagnostic();
+        if (diagnostic_error != ESP_OK) {
+            ESP_LOGE(kTag, "CSLP frame diagnostic did not start: %s",
+                     esp_err_to_name(diagnostic_error));
+        }
+    }
+#endif
 }

@@ -1,0 +1,32 @@
+menu "CycleScope CSLP Configuration"
+
+    config CYCLESCOPE_CSLP_PEER_IPV4
+        string "CSLP peer IPv4 address"
+        default "192.168.10.2"
+        help
+            Dotted-decimal IPv4 address of the FPGA or test emulator.
+            Production builds use 192.168.10.2. The configured address must
+            match the source address used by the peer.
+
+    config CYCLESCOPE_CSLP_DIAGNOSTIC_CONSUMER
+        bool "Enable the CSLP frame ownership diagnostic consumer"
+        default n
+        help
+            Start a low-priority test-only consumer that acquires the latest
+            frame, verifies that an InUse buffer remains immutable, checks
+            session validity, and releases the frame. Keep this disabled in
+            production and never enable it alongside another CSLP consumer.
+
+    if CYCLESCOPE_CSLP_DIAGNOSTIC_CONSUMER
+
+        config CYCLESCOPE_CSLP_DIAGNOSTIC_HOLD_MS
+            int "Diagnostic frame hold time (ms)"
+            range 50 5000
+            default 250
+            help
+                Time to retain each acquired InUse frame while the network
+                receiver continues publishing newer frames.
+
+    endif
+
+endmenu
