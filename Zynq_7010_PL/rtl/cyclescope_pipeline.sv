@@ -33,6 +33,8 @@ module cyclescope_pipeline #(
     logic frontend_valid;
     logic signed [15:0] frontend_sample;
     logic frontend_otr;
+    (* IOB = "TRUE" *) logic [11:0] adc_data_a_iob;
+    (* IOB = "TRUE" *) logic adc_otr_a_iob;
     logic signed [15:0] test_counter;
     logic signed [15:0] filter_input;
     logic filter_input_otr;
@@ -71,6 +73,19 @@ module cyclescope_pipeline #(
 
     assign clear_stats_pulse = clear_stats_sync & ~clear_stats_sync_d;
 
+    // Capture the source-synchronous ADC bus in IOB registers first. Keeping
+    // offset-binary conversion out of the input path preserves the external
+    // tOD setup/hold margin at 65 MHz.
+    always_ff @(posedge adc_clk) begin
+        if (!adc_rst_n) begin
+            adc_data_a_iob <= '0;
+            adc_otr_a_iob  <= 1'b0;
+        end else begin
+            adc_data_a_iob <= adc_data_a;
+            adc_otr_a_iob  <= adc_otr_a;
+        end
+    end
+
     ad9226_frontend #(
         .ADC_OFFSET_BINARY(ADC_OFFSET_BINARY),
         .INVERT_POLARITY(INVERT_POLARITY)
@@ -78,8 +93,8 @@ module cyclescope_pipeline #(
         .clk(adc_clk),
         .rst_n(adc_rst_n),
         .sample_valid(1'b1),
-        .adc_data(adc_data_a),
-        .adc_otr(adc_otr_a),
+        .adc_data(adc_data_a_iob),
+        .adc_otr(adc_otr_a_iob),
         .sample_valid_out(frontend_valid),
         .sample_out(frontend_sample),
         .otr_out(frontend_otr)

@@ -21,8 +21,8 @@
 |---|---|---|
 | `sys_clk_50m` | 50 MHz，板级输入 | Clocking Wizard 参考时钟 |
 | `adc_clk_out` | 65 MHz，输出到 AD9226 | ADC 转换时钟 |
-| `adc_sample_clk` | 65 MHz，相位偏移 | ADC 输入、滤波、帧缓存和 AXI-Stream |
-| `FCLK_CLK0` | 100 MHz，PS 输出 | AXI-Lite、DMA M_AXI、控制/状态 |
+| `adc_sample_clk` | 65 MHz，相对转换时钟约 300° | 在 AD9226 `tOD=3.5～7 ns` 有效窗中心附近用 IOB 寄存器锁存输入；随后驱动滤波、帧缓存和 AXI-Stream |
+| `FCLK_CLK0` | 100 MHz，PS 输出 | AXI-Lite、AXIS Clock Converter 出口、DMA S2MM/M_AXI、控制/状态 |
 | `spi_sclk` | 不高于 10 MHz，外部输入 | SPI 诊断读端口 |
 
 复位统一低有效。ADC 域复位必须在 Clocking Wizard `locked` 后同步释放；PS AXI 域由 `proc_sys_reset` 生成。跨域控制和状态至少经过双触发器同步，计数器使用握手快照而不是逐位直接采样。
@@ -34,6 +34,7 @@
 3. `INVERT_POLARITY` 在码型转换后执行算术极性翻转，`-2048` 翻转时饱和到 `2047`。
 4. 正式默认不翻转；MODE/DFS 与板级极性必须在上板阶段实测后才能改默认值。
 5. `Otr_A` 与原始样点同拍进入前端；16 个原始样点中任意一次 OTR 都传播到对应抽取样点，帧缓存再做整帧 sticky 锁存。
+6. 原始 ADC 总线与 OTR 必须先进入 IOB 寄存器，码型转换在下一拍完成；禁止把 offset-binary 算术塞回外部输入时序路径。
 
 ## AXI-Stream 数据帧
 
@@ -45,7 +46,7 @@
 | `TLAST` | 仅第 8192 个样点置 1，且必须与该样点同时握手 |
 | 帧间交错 | 禁止；前一帧完成或丢弃后才能发布新帧 |
 
-AXI DMA 首版固定使用 Simple S2MM，每次由 PS 预先提交 16384 byte 缓冲。S_AXIS_S2MM 工作在 `adc_sample_clk`，M_AXI_S2MM 与 AXI-Lite 工作在 `FCLK_CLK0`，DMA 必须启用异步时钟支持。
+AXI DMA 首版固定使用 Simple S2MM，每次由 PS 预先提交 16384 byte 缓冲。正式数据先以 `adc_sample_clk` 进入 AXIS Clock Converter，再以 `FCLK_CLK0` 进入 DMA；DMA 的 S_AXIS_S2MM、M_AXI_S2MM 与 AXI-Lite 均工作在 `FCLK_CLK0`。这是因为 AXI DMA 7.1 的 S_AXIS_S2MM 与 M_AXI_S2MM 固定共用 `m_axi_s2mm_aclk`，不能仅靠 DMA 的异步模式拆分这两个接口。
 
 ## AXI-Lite 控制与状态
 

@@ -12,6 +12,7 @@ set rtl_sources [list \
     [file join $pl_root rtl fir_decimator_16.sv] \
     [file join $pl_root rtl frame_ram.sv] \
     [file join $pl_root rtl frame_store_axis_spi.sv] \
+    [file join $pl_root rtl status_snapshot_cdc.sv] \
     [file join $pl_root rtl cyclescope_pipeline.sv]]
 
 proc run_test {build_root name sources testbench} {
@@ -47,6 +48,8 @@ run_test $build_root tb_fir_decimator_16 $rtl_sources \
     [file join $pl_root sim tb_fir_decimator_16.sv]
 run_test $build_root tb_frame_store_axis_spi $rtl_sources \
     [file join $pl_root sim tb_frame_store_axis_spi.sv]
+run_test $build_root tb_status_snapshot_cdc $rtl_sources \
+    [file join $pl_root sim tb_status_snapshot_cdc.sv]
 
 puts "ALL_SIM_TESTS_PASS"
 exit
