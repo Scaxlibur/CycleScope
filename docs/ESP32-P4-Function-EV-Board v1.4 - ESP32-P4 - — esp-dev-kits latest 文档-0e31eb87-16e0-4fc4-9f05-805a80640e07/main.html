@@ -1,0 +1,373 @@
+<html class="writer-html5" lang="zh-CN"><body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="esp32-p4-function-ev-board-v1-4"><h1 _item_id="6">ESP32-P4-Function-EV-Board v1.4<a class="headerlink" href="#esp32-p4-function-ev-board-v1-4" title="此标题的永久链接"></a></h1>
+<p _item_id="8">最新版本： <a class="reference internal" href="user_guide.html"><span class="doc">ESP32-P4-Function-EV-Board v1.5.2</span></a></p>
+<div class="admonition note">
+<p class="admonition-title" _item_id="9">备注</p>
+<p _item_id="10">若您使用的是搭载芯片版本 v3.x 的 ESP32-P4X-Function-EV-Board，请参阅此 <a class="reference internal" href="../esp32-p4x-function-ev-board/user_guide.html"><span class="doc">用户指南</span></a>。</p>
+<p _item_id="11">版本号 v1.4 指开发板的硬件版本。要识别所使用的芯片版本，请查看 <a class="reference external" href="https://docs.espressif.com/projects/esp-chip-errata/zh_CN/latest/esp32p4/index.html">ESP32-P4 系列芯片勘误表</a> &gt; <a class="reference external" href="https://docs.espressif.com/projects/esp-chip-errata/zh_CN/latest/esp32p4/01-chip-identification/index.html#">芯片版本标识</a>。</p>
+</div>
+<p _item_id="12">本指南将帮助您快速上手 ESP32-P4-Function-EV-Board，并提供该款开发板的详细信息。</p>
+<p _item_id="13">ESP32-P4-Function-EV-Board 是一款基于 ESP32-P4 芯片的多媒体开发板。ESP32-P4 搭载双核 RISC-V 处理器，支持最大 32 MB PSRAM。此外，ESP32-P4 支持 USB 2.0 标准, MIPI-CSI/DSI, H264 Encoder 等多种外设，可满足客户对低成本、高性能、低功耗的多媒体产品的开发需求。</p>
+<p _item_id="14">此开发板搭载了 ESP32-C6-MINI-1 2.4 GHz Wi-Fi 6 &amp; Bluetooth 5 (LE) 模组，用于该开发板的 Wi-Fi 和蓝牙通信；它还配置了一块 7 英寸电容式触摸屏，分辨率为 1024 x 600，并配有一颗 200 万像素的 MIPI CSI 接口摄像头，丰富了用户的交互体验。该开发板适用于可视门铃、网络摄像头、智能家居中控屏、LCD 电子价签、两轮车仪表盘等产品的原型构建。</p>
+<p _item_id="15">板上模组大部分管脚均已引出至排针，开发人员可根据实际需求，轻松通过跳线连接多种外围设备。</p>
+<figure class="align-center" id="id33"><img alt="ESP32-P4-Function-EV-Board" src="../_images/esp32-p4-function-ev-board-isometric_v1.4.png"><figcaption><p _item_id="17"><span class="caption-text">ESP32-P4-Function-EV-Board</span><a class="headerlink" href="#id33" title="此图像的永久链接"></a></p>
+</figcaption></figure><p _item_id="18">本指南包括如下内容：</p>
+<ul class="simple"><li><p _item_id="19"><a class="reference internal" href="#id1">入门指南</a>：简要介绍了 ESP32-P4-Function-EV-Board 和硬件、软件设置指南。</p></li>
+<li><p _item_id="20"><a class="reference internal" href="#id10">硬件参考</a>：详细介绍了 ESP32-P4-Function-EV-Board 的硬件。</p></li>
+<li><p _item_id="21"><a class="reference internal" href="#id21">硬件版本</a>：介绍硬件历史版本和已知问题，并提供链接至历史版本开发板的入门指南（如有）。</p></li>
+<li><p _item_id="22"><a class="reference internal" href="#id22">相关文档</a>：列出了相关文档的链接。</p></li>
+</ul><section id="id1"><h2 _item_id="24">入门指南<a class="headerlink" href="#id1" title="此标题的永久链接"></a></h2>
+<p _item_id="25">本小节将简要介绍 ESP32-P4-Function-EV-Board，说明如何在 ESP32-P4-Function-EV-Board 上烧录固件及相关准备工作。</p>
+<section id="id2"><h3 _item_id="26">组件介绍<a class="headerlink" href="#id2" title="此标题的永久链接"></a></h3>
+<figure class="align-center" id="id34"><span id="user-guide-esp32-p4-function-ev-board-v1-4-front"></span><a class="reference internal image-reference" href="../_images/esp32-p4-function-ev-board-annotated-photo-front_v1.4.png"><img alt="ESP32-P4-Function-EV-Board - 正面（点击放大）" src="../_images/esp32-p4-function-ev-board-annotated-photo-front_v1.4.png" style="width: 100%;"></a>
+<figcaption><p _item_id="28"><span class="caption-text">ESP32-P4-Function-EV-Board - 正面（点击放大）</span><a class="headerlink" href="#id34" title="此图像的永久链接"></a></p>
+</figcaption></figure><figure class="align-center" id="id35"><a class="reference internal image-reference" href="../_images/esp32-p4-function-ev-board-annotated-photo-back_v1.4.png"><img alt="ESP32-P4-Function-EV-Board - 背面（点击放大）" src="../_images/esp32-p4-function-ev-board-annotated-photo-back_v1.4.png" style="width: 100%;"></a>
+<figcaption><p _item_id="30"><span class="caption-text">ESP32-P4-Function-EV-Board - 背面（点击放大）</span><a class="headerlink" href="#id35" title="此图像的永久链接"></a></p>
+</figcaption></figure><p _item_id="31">以下按照顺时针的顺序依次介绍开发板上的主要组件。</p>
+<div class="wy-table-responsive"><table class="docutils align-default" _item_id="32"><colgroup><col style="width: 30.0%"><col style="width: 70.0%"></colgroup><thead><tr class="row-odd"><th class="head"><p>主要组件</p></th>
+<th class="head"><p>介绍</p></th>
+</tr></thead><tbody><tr class="row-even"><td><p>J1</p></td>
+<td><p>所有可用 GPIO 管脚均已引出至排针 J1，详细信息请见 <a class="reference internal" href="#header-block-v1-4"><span class="std std-ref">排针</span></a>。</p></td>
+</tr><tr class="row-odd"><td><p>ESP32-C6 Module Programming Connector（ESP32-C6 模组固件烧录接口）</p></td>
+<td><p>该接口可配合使用 ESP-Prog 或其他 UART 工具为 ESP32-C6 模组烧录固件。</p></td>
+</tr><tr class="row-even"><td><p>ESP32-C6-MINI-1 Module（ESP32-C6-MINI-1 模组）</p></td>
+<td><p>ESP32-C6-MINI-1 模组用于该开发板的 Wi-Fi 和蓝牙通信。</p></td>
+</tr><tr class="row-odd"><td><p>Microphone（麦克风）</p></td>
+<td><p>板载麦克风，连接至 Audio Codec Chip 接口。</p></td>
+</tr><tr class="row-even"><td><p>Reset Button（Reset 键）</p></td>
+<td><p>复位按键。</p></td>
+</tr><tr class="row-odd"><td><p>Audio Codec Chip（音频编解码芯片）</p></td>
+<td><p>音频编解码器芯片 ES8311 是一种低功耗单声道音频编解码器，包含单通道 ADC、单通道 DAC、低噪声前置放大器、耳机驱动器、数字音效、模拟混音和增益功能。它通过 I2S 和 I2C 总线与 ESP32-P4 芯片连接，以提供独立于音频应用程序的硬件音频处理。</p></td>
+</tr><tr class="row-even"><td><p>Speaker Output Port（扬声器输出端口）</p></td>
+<td><p>该输出端口用于连接扬声器。最高输出功率可以驱动 4 Ω 3 W 扬声器，引脚间距为 2.00 mm/0.08”。</p></td>
+</tr><tr class="row-odd"><td><p>Audio PA Chip（音频功率放大器）</p></td>
+<td><p>NS4150 是一款低 EMI、3 W 单声道 D 类音频功率放大器，用于放大来自音频编解码芯片的音频信号，以驱动扬声器。</p></td>
+</tr><tr class="row-even"><td><p>5 V to 3.3 V LDO（5 V 转 3.3 V LDO）</p></td>
+<td><p>电源转换器，输入 5 V，输出 3.3 V。</p></td>
+</tr><tr class="row-odd"><td><p>BOOT Button（BOOT 键）</p></td>
+<td><p>启动模式控制按键，保持按住 <strong>BOOT 键</strong> 的同时按一下 <strong>Reset 键</strong>，ESP-P4 将重新启动并进入“固件下载”模式，这时可以通过 USB 转 UART 接口下载固件到板载 SPI flash 中。</p></td>
+</tr><tr class="row-even"><td><p>Ethernet PHY IC</p></td>
+<td><p>以太网 PHY 芯片，与 ESP32-P4 EMAC RMII 接口和 RJ45 以太网模块端口连接。</p></td>
+</tr><tr class="row-odd"><td><p>Buck Converter（降压转换器）</p></td>
+<td><p>用于 3.3 V 电源的降压型 DC-DC 转换器。</p></td>
+</tr><tr class="row-even"><td><p>USB-to-UART Bridge Chip（USB 转 UART 桥接器）</p></td>
+<td><p>单芯片 USB 转 UART 桥接器芯片 CP2102N，与 ESP32-P4 UART0 接口、CHIP_PU 及 GPIO35 管脚 (strapping pin) 连接，可提供高达 3 Mbps 的传输速率，用于固件下载和调试 log 打印，支持自动下载功能。</p></td>
+</tr><tr class="row-odd"><td><p>5 V Power-on LED（5 V 电源指示灯）</p></td>
+<td><p>开发板通过任一 USB Type-C 接口连接电源后，该指示灯亮起。</p></td>
+</tr><tr class="row-even"><td><p>RJ45 Ethernet Port（RJ45 以太网接口）</p></td>
+<td><p>以太网接口，支持 10/100 Mbps 自适应。</p></td>
+</tr><tr class="row-odd"><td><p>USB-to-UART Port（USB 转 UART 接口）</p></td>
+<td><p>USB Type-C 接口，可用作开发板的供电接口，可烧录固件至芯片，也可作为通信接口，通过板载 USB 转 UART 桥接器与 ESP32-P4 芯片通信。</p></td>
+</tr><tr class="row-even"><td><p>USB Power-in Port（USB 电源输入接口）</p></td>
+<td><p>开发板的 USB Type-C 供电接口。</p></td>
+</tr><tr class="row-odd"><td><p>USB 2.0 Type-C Port（USB 2.0 Type-C 接口）</p></td>
+<td><p>USB 2.0 Type-C 接口与 ESP32-P4 芯片的 USB 2.0 OTG High-Speed 接口连接，支持 USB 2.0 标准。通过该接口进行 USB 通讯时，ESP32-P4 作为 USB Device 设备与其他 USB Host 设备连接。USB 2.0 Type-C 接口和 USB 2.0 Type-A 接口需要二选一使用，不能同时使用。该接口也可用作开发板的供电接口。</p></td>
+</tr><tr class="row-even"><td><p>USB 2.0 Type-A Port （USB 2.0 Type-A 接口）</p></td>
+<td><p>USB 2.0 Type-A 接口与 ESP32-P4 芯片的 USB 2.0 OTG High-Speed 接口连接，支持 USB 2.0 标准。通过该接口进行 USB 通讯时，ESP32-P4 作为 USB Host 与其它 USB device 设备连接，对外提供最高 500 mA 电流。USB 2.0 Type-C 接口和 USB 2.0 Type-A 接口需要二选一使用，不能同时使用。</p></td>
+</tr><tr class="row-odd"><td><p>Power Switch（电源开关）</p></td>
+<td><p>电源开关。拨向 ON 一侧，开发板连接 5 V 电源上电；拨离 ON 一侧，开发板断开 5 V 电源掉电。</p></td>
+</tr></tbody></table></div>
+<div class="wy-table-responsive"><table class="docutils align-default" _item_id="33"><colgroup><col style="width: 30.0%"><col style="width: 70.0%"></colgroup><thead><tr class="row-odd"><th class="head"><p>主要组件</p></th>
+<th class="head"><p>介绍</p></th>
+</tr></thead><tbody><tr class="row-even"><td><p>Switch（开关）</p></td>
+<td><p>TPS2051C 是一款 USB 电源开关，提供 500 mA 输出电流限制。</p></td>
+</tr><tr class="row-odd"><td><p>MIPI CSI Connector（MIPI CSI 连接器）</p></td>
+<td><p>FPC 连接器 1.0K-GT-15PB，用以连接外接摄像头模组，实现图像传输，详情请见相关文档中的 1.0K-GT-15PB 规格书。适配的 FPC 规格：间距 1.0 mm，管脚宽度 0.7 mm，厚度 0.3 mm，管脚数量 15。</p></td>
+</tr><tr class="row-even"><td><p>Buck Converter（降压转换器）</p></td>
+<td><p>用于 VDD_HP 电源的降压型 DC-DC 转换器。</p></td>
+</tr><tr class="row-odd"><td><p>ESP32-P4</p></td>
+<td><p>ESP32-P4 是一款高性能 MCU，支持超大片上内存，具有强大的图像和语音处理能力。</p></td>
+</tr><tr class="row-even"><td><p>40 MHz XTAL</p></td>
+<td><p>40 MHz 晶振，用于提供系统时钟。</p></td>
+</tr><tr class="row-odd"><td><p>32.768 kHz XTAL</p></td>
+<td><p>32.768 kHz 晶振，可提供 Deep-sleep 下使用的低功耗时钟。</p></td>
+</tr><tr class="row-even"><td><p>MIPI DSI Connector（MIPI DSI 连接器）</p></td>
+<td><p>FPC 连接器 1.0K-GT-15PB，用以连接 LCD 扩展板，详情请见相关文档中的 1.0K-GT-15PB 规格书。适配的 FPC 规格：间距 1.0 mm，管脚宽度 0.7 mm，厚度 0.3 mm，管脚数量 15。</p></td>
+</tr><tr class="row-odd"><td><p>SPI flash</p></td>
+<td><p>通过 SPI 接口与 ESP32-P4 芯片连接，大小为 16 MB。</p></td>
+</tr><tr class="row-even"><td><p>MicroSD Card Slot（MicroSD 卡槽）</p></td>
+<td><p>本开发板支持 4-bit 模式的 MicroSD 卡，可以存储或播放 MicroSD 卡中的音频文件。</p></td>
+</tr></tbody></table></div>
+</section><section id="id3"><h3 _item_id="34">开发板配件<a class="headerlink" href="#id3" title="此标题的永久链接"></a></h3>
+<p _item_id="35">ESP32-P4-Function-EV-Board 的包装盒中包含以下可选配件：</p>
+<ul class="simple"><li><p _item_id="36">显示屏及其附件（可选）</p>
+<ul><li><p _item_id="37">7 英寸 MIPI DSI 电容式触摸屏，分辨率为 1024 x 600 像素</p></li>
+<li><p _item_id="38">LCD 屏幕适配板</p></li>
+<li><p _item_id="39">附件包，包括杜邦线、屏幕排线、长铜柱（长度为 20 mm）、短铜柱（长度为 8 mm）</p></li>
+</ul></li>
+<li><p _item_id="40">摄像头及其附件（可选）</p>
+<ul><li><p _item_id="41">200 万像素 MIPI CSI 接口摄像头</p></li>
+<li><p _item_id="42">摄像头适配板</p></li>
+<li><p _item_id="43">摄像头排线</p></li>
+</ul></li>
+</ul><figure class="align-center" id="id36"><a class="reference internal image-reference" href="../_images/ribbon_cable.png"><img alt="正向和反向线序排线" src="../_images/ribbon_cable.png" style="width: 426.59999999999997px; height: 232.79999999999998px;"></a>
+<figcaption><p _item_id="45"><span class="caption-text">正向和反向线序排线</span><a class="headerlink" href="#id36" title="此图像的永久链接"></a></p>
+</figcaption></figure><div class="admonition note">
+<p class="admonition-title" _item_id="46">备注</p>
+<p _item_id="47">同向线序的排线为摄像头排线，其排线两侧的金属触点在同一面上；反向线序的排线为屏幕排线，其排线两侧的金属触点在不同面上。</p>
+</div>
+</section><section id="id4"><h3 _item_id="48">应用示例<a class="headerlink" href="#id4" title="此标题的永久链接"></a></h3>
+<p _item_id="49">以下为开发板的应用示例：</p>
+<ul class="simple"><li><p _item_id="50"><a class="reference external" href="https://github.com/espressif/esp-dev-kits/tree/2e9e9dc/examples/esp32-p4-function-ev-board/examples/esp_brookesia_phone">ESP_Brookesia Phone </a> - 展示了一个类似安卓的界面，使用 ESP_Brookesia，利用开发板上的 MIPI-DSI、MIPI-CSI、ESP32-C6、SD 卡和音频接口运行多个应用程序，为高效的多媒体应用开发提供了基础。</p></li>
+<li><p _item_id="51"><a class="reference external" href="https://github.com/espressif/esp-dev-kits/tree/2e9e9dc/examples/esp32-p4-function-ev-board/examples/lvgl_demo_v8">LVGL Demo v8 </a> - 演示如何在配备 7 英寸 LCD 屏幕的 ESP32-P4-Function-EV-Board 上移植 LVGL v8，并使用 LVGL 的内置演示进行性能测试，为基于 LVGL v8 开发应用程序提供基础。</p></li>
+<li><p _item_id="52"><a class="reference external" href="https://github.com/espressif/esp-dev-kits/tree/2e9e9dc/examples/esp32-p4-function-ev-board/examples/lvgl_demo_v9">LVGL Demo v9 </a> - 演示如何在 ESP32-P4-Function-EV-Board 上移植 LVGL v9 并使用 LVGL 内置的演示进行性能测试，作为基于 LVGL v9 开发应用程序的基础。</p></li>
+</ul><p _item_id="53">更多示例及最新更新请参阅 <a class="reference external" href="https://github.com/espressif/esp-dev-kits/tree/2e9e9dc/examples/esp32-p4-function-ev-board">examples </a> 文件夹。</p>
+<p _item_id="54">如需尝试应用示例或开发自定义应用，请参照 <a class="reference internal" href="#id5">开始开发应用</a> 小节中的步骤进行操作。</p>
+</section><section id="id5"><h3 _item_id="55">开始开发应用<a class="headerlink" href="#id5" title="此标题的永久链接"></a></h3>
+<p _item_id="56">通电前，请确保 ESP32-P4-Function-EV-Board 完好无损。</p>
+<section id="id6"><h4 _item_id="57">必备硬件<a class="headerlink" href="#id6" title="此标题的永久链接"></a></h4>
+<ul class="simple"><li><p _item_id="58">ESP32-P4-Function-EV-Board</p></li>
+<li><p _item_id="59">USB 数据线</p></li>
+<li><p _item_id="60">电脑（Windows、Linux 或 macOS）</p></li>
+</ul><div class="admonition note">
+<p class="admonition-title" _item_id="61">备注</p>
+<p _item_id="62">请确保使用优质 USB 数据线。部分数据线仅可用于充电，无法用于数据传输和编程。</p>
+</div>
+</section><section id="id7"><h4 _item_id="63">可选硬件<a class="headerlink" href="#id7" title="此标题的永久链接"></a></h4>
+<ul class="simple"><li><p _item_id="64">MicroSD 卡</p></li>
+</ul></section><section id="id8"><h4 _item_id="65">硬件设置<a class="headerlink" href="#id8" title="此标题的永久链接"></a></h4>
+<p _item_id="66">使用 USB 数据线将 ESP32-P4-Function-EV 连接到电脑，可通过任何一个 USB Type-C 端口为开发板供电。建议使用 USB 转 UART 接口烧录固件和调试。</p>
+<p _item_id="67">如需使用显示屏，请按照以下步骤连接显示屏：</p>
+<ol class="arabic simple"><li><p _item_id="68">用短铜柱将开发板固定在 LCD 屏幕适配板中心的四个螺母柱上。</p></li>
+<li><p _item_id="69">用屏幕排线（<strong>反向线序</strong>）连接 LCD 屏幕适配板的 J3 排针和开发板的 MIPI DSI 连接器。LCD 屏幕适配板已与 LCD 连接。</p></li>
+<li><p _item_id="70">用杜邦线将 LCD 屏幕适配板 J6 排针的 RST_LCD 引脚连接到开发板 J1 排针的 GPIO27 引脚。使用时 RST_LCD 由 ESP32-P4 芯片控制，具体引脚可由软件设置，默认为 GPIO27。</p></li>
+<li><p _item_id="71">用杜邦线将 LCD 屏幕适配板 J6 排针的 PWM 引脚连接到开发板 J1 排针的 GPIO26 引脚。使用时 PWM 由 ESP32-P4 芯片控制，具体引脚可由软件设置，默认为 GPIO26。</p></li>
+<li><p _item_id="72">推荐使用外接 USB 供电连接 LCD 屏幕适配板 J1 排针对屏幕供电。如果条件不允许，也可以在开发板供电充足的情况下，使用杜邦线将 LCD 屏幕适配板的 5V 与 GND 管脚连接到开发板的 J1 排针的 5V 与 GND 引脚。</p></li>
+<li><p _item_id="73">将长铜柱固定在 LCD 屏幕适配板四周的四个螺母柱上，可以将 LCD 立放。</p></li>
+</ol><p _item_id="74">连接关系如下表所示：</p>
+<div class="wy-table-responsive"><table class="docutils align-default" _item_id="75"><colgroup><col style="width: 50.0%"><col style="width: 50.0%"></colgroup><thead><tr class="row-odd"><th class="head"><p>LCD 屏幕适配板</p></th>
+<th class="head"><p>ESP32-P4-Function-EV</p></th>
+</tr></thead><tbody><tr class="row-even"><td><p>J3 排针</p></td>
+<td><p>MIPI DSI 连接器</p></td>
+</tr><tr class="row-odd"><td><p>J6 排针 RST_LCD 引脚</p></td>
+<td><p>J1 排针 GPIO27 引脚</p></td>
+</tr><tr class="row-even"><td><p>J6 排针 PWM 引脚</p></td>
+<td><p>J1 排针 GPIO26 引脚</p></td>
+</tr><tr class="row-odd"><td><p>J6 排针 5V 引脚</p></td>
+<td><p>J1 排针 5V 引脚</p></td>
+</tr><tr class="row-even"><td><p>J6 排针 GND 引脚</p></td>
+<td><p>J1 排针 GND 引脚</p></td>
+</tr></tbody></table></div>
+<div class="admonition note">
+<p class="admonition-title" _item_id="76">备注</p>
+<ul class="simple"><li><p _item_id="77">如果使用外接 USB 供电连接 LCD 屏幕适配板，则不需要连接 5V 和 GND 引脚。</p></li>
+<li><p _item_id="78">如需使用摄像头，请将摄像头排线（<strong>同向线序</strong>）连接至摄像头适配板和开发板的 MIPI CSI 连接器。</p></li>
+</ul></div>
+</section><section id="id9"><h4 _item_id="79">软件设置<a class="headerlink" href="#id9" title="此标题的永久链接"></a></h4>
+<p _item_id="80">请前往 <a class="reference external" href="https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32p4/get-started/index.html">ESP-IDF 快速入门</a>，查看如何快速设置开发环境，将应用程序烧录至您的开发板。</p>
+</section></section></section><section id="id10"><h2 _item_id="81">硬件参考<a class="headerlink" href="#id10" title="此标题的永久链接"></a></h2>
+<section id="id11"><h3 _item_id="82">功能框图<a class="headerlink" href="#id11" title="此标题的永久链接"></a></h3>
+<p _item_id="83">ESP32-P4-Function-EV-Board 的主要组件和连接方式如下图所示。</p>
+<figure class="align-center" id="id37"><a class="reference internal image-reference" href="../_images/esp32-p4-function-ev-board-block-diagram_v1.4.png"><img alt="ESP32-P4-Function-EV-Board v1.4（点击放大）" src="../_images/esp32-p4-function-ev-board-block-diagram_v1.4.png" style="width: 100%;"></a>
+<figcaption><p _item_id="85"><span class="caption-text">ESP32-P4-Function-EV-Board v1.4（点击放大）</span><a class="headerlink" href="#id37" title="此图像的永久链接"></a></p>
+</figcaption></figure></section><section id="power-supply-options-v1-4"><h3 _item_id="86">电源选项<a class="headerlink" href="#power-supply-options-v1-4" title="此标题的永久链接"></a></h3>
+<p _item_id="87">可通过以下接口为开发板供电：</p>
+<ul class="simple"><li><p _item_id="88">USB 2.0 Type-C 接口</p></li>
+<li><p _item_id="89">USB 电源输入接口</p></li>
+<li><p _item_id="90">USB 转 UART 接口</p></li>
+</ul><p _item_id="91">如果用于调试的 USB 数据线无法提供足够的电流，可通过空闲的 USB Type-C 接口连接电源适配器。</p>
+</section><section id="header-block-v1-4"><h3 _item_id="92">排针<a class="headerlink" href="#header-block-v1-4" title="此标题的永久链接"></a></h3>
+<p _item_id="93">下表列出了开发板排针 J1 的 <strong>名称</strong> 和 <strong>功能</strong>，排针的名称如图 <a class="reference internal" href="user_guide.html#user-guide-esp32-p4-function-ev-board-front"><span class="std std-ref">ESP32-P4-Function-EV-Board - 正面（点击放大）</span></a> 所示，排针的序号与 <a class="reference external" href="https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-v1.4-schematics.pdf">ESP32-P4-Function-EV-Board v1.4 原理图</a> 一致。</p>
+<section id="j1"><h4 _item_id="94">J1<a class="headerlink" href="#j1" title="此标题的永久链接"></a></h4>
+<div class="wy-table-responsive"><table class="docutils align-default"><thead><tr class="row-odd"><th class="head"><p _item_id="95">序号</p></th>
+<th class="head"><p _item_id="96">名称</p></th>
+<th class="head"><p _item_id="97">类型 <a class="footnote-reference brackets" href="#id18" id="id14" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a></p></th>
+<th class="head"><p _item_id="98">功能</p></th>
+</tr></thead><tbody><tr class="row-even"><td><p _item_id="99">1</p></td>
+<td><p _item_id="100">3V3</p></td>
+<td><p _item_id="101">P</p></td>
+<td><p _item_id="102">3.3 V 电源</p></td>
+</tr><tr class="row-odd"><td><p _item_id="103">2</p></td>
+<td><p _item_id="104">5V</p></td>
+<td><p _item_id="105">P</p></td>
+<td><p _item_id="106">5 V 电源</p></td>
+</tr><tr class="row-even"><td><p _item_id="107">3</p></td>
+<td><p _item_id="108">7</p></td>
+<td><p _item_id="109">I/O/T</p></td>
+<td><p _item_id="110">GPIO7</p></td>
+</tr><tr class="row-odd"><td><p _item_id="111">4</p></td>
+<td><p _item_id="112">5V</p></td>
+<td><p _item_id="113">P</p></td>
+<td><p _item_id="114">5 V 电源</p></td>
+</tr><tr class="row-even"><td><p _item_id="115">5</p></td>
+<td><p _item_id="116">8</p></td>
+<td><p _item_id="117">I/O/T</p></td>
+<td><p _item_id="118">GPIO8</p></td>
+</tr><tr class="row-odd"><td><p _item_id="119">6</p></td>
+<td><p _item_id="120">GND</p></td>
+<td><p _item_id="121">GND</p></td>
+<td><p _item_id="122">接地</p></td>
+</tr><tr class="row-even"><td><p _item_id="123">7</p></td>
+<td><p _item_id="124">23</p></td>
+<td><p _item_id="125">I/O/T</p></td>
+<td><p _item_id="126">GPIO23</p></td>
+</tr><tr class="row-odd"><td><p _item_id="127">8</p></td>
+<td><p _item_id="128">37</p></td>
+<td><p _item_id="129">I/O/T</p></td>
+<td><p _item_id="130">U0TXD, GPIO37</p></td>
+</tr><tr class="row-even"><td><p _item_id="131">9</p></td>
+<td><p _item_id="132">GND</p></td>
+<td><p _item_id="133">GND</p></td>
+<td><p _item_id="134">接地</p></td>
+</tr><tr class="row-odd"><td><p _item_id="135">10</p></td>
+<td><p _item_id="136">38</p></td>
+<td><p _item_id="137">I/O/T</p></td>
+<td><p _item_id="138">U0RXD, GPIO38</p></td>
+</tr><tr class="row-even"><td><p _item_id="139">11</p></td>
+<td><p _item_id="140">21</p></td>
+<td><p _item_id="141">I/O/T</p></td>
+<td><p _item_id="142">GPIO21</p></td>
+</tr><tr class="row-odd"><td><p _item_id="143">12</p></td>
+<td><p _item_id="144">22</p></td>
+<td><p _item_id="145">I/O/T</p></td>
+<td><p _item_id="146">GPIO22</p></td>
+</tr><tr class="row-even"><td><p _item_id="147">13</p></td>
+<td><p _item_id="148">20</p></td>
+<td><p _item_id="149">I/O/T</p></td>
+<td><p _item_id="150">GPIO20</p></td>
+</tr><tr class="row-odd"><td><p _item_id="151">14</p></td>
+<td><p _item_id="152">GND</p></td>
+<td><p _item_id="153">GND</p></td>
+<td><p _item_id="154">接地</p></td>
+</tr><tr class="row-even"><td><p _item_id="155">15</p></td>
+<td><p _item_id="156">6</p></td>
+<td><p _item_id="157">I/O/T</p></td>
+<td><p _item_id="158">GPIO6</p></td>
+</tr><tr class="row-odd"><td><p _item_id="159">16</p></td>
+<td><p _item_id="160">5</p></td>
+<td><p _item_id="161">I/O/T</p></td>
+<td><p _item_id="162">GPIO5</p></td>
+</tr><tr class="row-even"><td><p _item_id="163">17</p></td>
+<td><p _item_id="164">3V3</p></td>
+<td><p _item_id="165">P</p></td>
+<td><p _item_id="166">3.3 V 电源</p></td>
+</tr><tr class="row-odd"><td><p _item_id="167">18</p></td>
+<td><p _item_id="168">4</p></td>
+<td><p _item_id="169">I/O/T</p></td>
+<td><p _item_id="170">GPIO4</p></td>
+</tr><tr class="row-even"><td><p _item_id="171">19</p></td>
+<td><p _item_id="172">3</p></td>
+<td><p _item_id="173">I/O/T</p></td>
+<td><p _item_id="174">GPIO3</p></td>
+</tr><tr class="row-odd"><td><p _item_id="175">20</p></td>
+<td><p _item_id="176">GND</p></td>
+<td><p _item_id="177">GND</p></td>
+<td><p _item_id="178">接地</p></td>
+</tr><tr class="row-even"><td><p _item_id="179">21</p></td>
+<td><p _item_id="180">2</p></td>
+<td><p _item_id="181">I/O/T</p></td>
+<td><p _item_id="182">GPIO2</p></td>
+</tr><tr class="row-odd"><td><p _item_id="183">22</p></td>
+<td><p _item_id="184">NC(1)</p></td>
+<td><p _item_id="185">I/O/T</p></td>
+<td><p _item_id="186">GPIO1 <a class="footnote-reference brackets" href="#id19" id="id15" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a></p></td>
+</tr><tr class="row-even"><td><p _item_id="187">23</p></td>
+<td><p _item_id="188">NC(0)</p></td>
+<td><p _item_id="189">I/O/T</p></td>
+<td><p _item_id="190">GPIO0 <a class="footnote-reference brackets" href="#id19" id="id16" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a></p></td>
+</tr><tr class="row-odd"><td><p _item_id="191">24</p></td>
+<td><p _item_id="192">36</p></td>
+<td><p _item_id="193">I/O/T</p></td>
+<td><p _item_id="194">GPIO36</p></td>
+</tr><tr class="row-even"><td><p _item_id="195">25</p></td>
+<td><p _item_id="196">GND</p></td>
+<td><p _item_id="197">GND</p></td>
+<td><p _item_id="198">接地</p></td>
+</tr><tr class="row-odd"><td><p _item_id="199">26</p></td>
+<td><p _item_id="200">32</p></td>
+<td><p _item_id="201">I/O/T</p></td>
+<td><p _item_id="202">GPIO32</p></td>
+</tr><tr class="row-even"><td><p _item_id="203">27</p></td>
+<td><p _item_id="204">24</p></td>
+<td><p _item_id="205">I/O/T</p></td>
+<td><p _item_id="206">GPIO24</p></td>
+</tr><tr class="row-odd"><td><p _item_id="207">28</p></td>
+<td><p _item_id="208">25</p></td>
+<td><p _item_id="209">I/O/T</p></td>
+<td><p _item_id="210">GPIO25</p></td>
+</tr><tr class="row-even"><td><p _item_id="211">29</p></td>
+<td><p _item_id="212">33</p></td>
+<td><p _item_id="213">I/O/T</p></td>
+<td><p _item_id="214">GPIO33</p></td>
+</tr><tr class="row-odd"><td><p _item_id="215">30</p></td>
+<td><p _item_id="216">GND</p></td>
+<td><p _item_id="217">GND</p></td>
+<td><p _item_id="218">接地</p></td>
+</tr><tr class="row-even"><td><p _item_id="219">31</p></td>
+<td><p _item_id="220">26</p></td>
+<td><p _item_id="221">I/O/T</p></td>
+<td><p _item_id="222">GPIO26</p></td>
+</tr><tr class="row-odd"><td><p _item_id="223">32</p></td>
+<td><p _item_id="224">54</p></td>
+<td><p _item_id="225">I/O/T</p></td>
+<td><p _item_id="226">GPIO54</p></td>
+</tr><tr class="row-even"><td><p _item_id="227">33</p></td>
+<td><p _item_id="228">48</p></td>
+<td><p _item_id="229">I/O/T</p></td>
+<td><p _item_id="230">GPIO48</p></td>
+</tr><tr class="row-odd"><td><p _item_id="231">34</p></td>
+<td><p _item_id="232">GND</p></td>
+<td><p _item_id="233">GND</p></td>
+<td><p _item_id="234">接地</p></td>
+</tr><tr class="row-even"><td><p _item_id="235">35</p></td>
+<td><p _item_id="236">53</p></td>
+<td><p _item_id="237">I/O/T</p></td>
+<td><p _item_id="238">GPIO53</p></td>
+</tr><tr class="row-odd"><td><p _item_id="239">36</p></td>
+<td><p _item_id="240">46</p></td>
+<td><p _item_id="241">I/O/T</p></td>
+<td><p _item_id="242">GPIO46</p></td>
+</tr><tr class="row-even"><td><p _item_id="243">37</p></td>
+<td><p _item_id="244">47</p></td>
+<td><p _item_id="245">I/O/T</p></td>
+<td><p _item_id="246">GPIO47</p></td>
+</tr><tr class="row-odd"><td><p _item_id="247">38</p></td>
+<td><p _item_id="248">27</p></td>
+<td><p _item_id="249">I/O/T</p></td>
+<td><p _item_id="250">GPIO27</p></td>
+</tr><tr class="row-even"><td><p _item_id="251">39</p></td>
+<td><p _item_id="252">GND</p></td>
+<td><p _item_id="253">GND</p></td>
+<td><p _item_id="254">接地</p></td>
+</tr><tr class="row-odd"><td><p _item_id="255">40</p></td>
+<td><p _item_id="256">NC(45)</p></td>
+<td><p _item_id="257">I/O/T</p></td>
+<td><p _item_id="258">GPIO45 <a class="footnote-reference brackets" href="#id20" id="id17" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a></p></td>
+</tr></tbody></table></div>
+<aside class="footnote-list brackets"><aside class="footnote brackets" id="id18" role="doc-footnote"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id14">1</a><span class="fn-bracket">]</span></span>
+<p _item_id="260">P：电源；I：输入；O：输出；T：可设置为高阻。</p>
+</aside><aside class="footnote brackets" id="id19" role="doc-footnote"><span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id15">1</a>,<a role="doc-backlink" href="#id16">2</a>)</span>
+<p _item_id="262">为启用 GPIO0 与 GPIO1，可将 R61、R59 分别移动到 R199、R197 处以禁用 XTAL_32K 功能。</p>
+</aside><aside class="footnote brackets" id="id20" role="doc-footnote"><span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id17">3</a><span class="fn-bracket">]</span></span>
+<p _item_id="264">为启用 GPIO45，可将 R231 移动到 R100 以禁用 SD_PWRn 功能。</p>
+</aside></aside></section></section></section><section id="id21"><h2 _item_id="265">硬件版本<a class="headerlink" href="#id21" title="此标题的永久链接"></a></h2>
+<p _item_id="266">该开发板为最新硬件，尚未有历史版本。</p>
+</section><section id="id22"><h2 _item_id="267">相关文档<a class="headerlink" href="#id22" title="此标题的永久链接"></a></h2>
+<ul class="simple"><li><p _item_id="268"><a class="reference external" href="https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-v1.4-schematics.pdf">ESP32-P4-Function-EV-Board v1.4 原理图</a> (PDF)</p></li>
+<li><p _item_id="269"><a class="reference external" href="https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-v1.4-pcb-layout.pdf">ESP32-P4-Function-EV-Board v1.4 PCB 布局图</a> (PDF)</p></li>
+<li><p _item_id="270"><a class="reference external" href="https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-v1.4-dimensions.pdf">ESP32-P4-Function-EV-Board v1.4 尺寸图</a> (PDF)</p></li>
+<li><p _item_id="271"><a class="reference external" href="https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-v1.4-dimensions.dxf">ESP32-P4-Function-EV-Board v1.4 尺寸图源文件</a> (DXF) - 可使用 <a class="reference external" href="https://viewer.autodesk.com/">Autodesk Viewer</a> 查看</p></li>
+<li><p _item_id="272"><a class="reference external" href="https://dl.espressif.com/dl/schematics/1.0K-GT-15PB_specification.pdf">1.0K-GT-15PB 规格书</a> (PDF)</p></li>
+<li><p _item_id="273"><a class="reference external" href="https://dl.espressif.com/dl/schematics/camera_datasheet.pdf">摄像头规格书</a> (PDF)</p></li>
+<li><p _item_id="274"><a class="reference external" href="https://dl.espressif.com/dl/schematics/display_datasheet.pdf">显示屏规格书</a> (PDF)</p></li>
+<li><p _item_id="275"><a class="reference external" href="https://dl.espressif.com/dl/schematics/display_driver_chip_EK73217BCGA_datasheet.pdf">显示屏驱动芯片 EK73217BCGA 规格书</a> (PDF)</p></li>
+<li><p _item_id="276"><a class="reference external" href="https://dl.espressif.com/dl/schematics/display_driver_chip_EK79007AD_datasheet.pdf">显示屏驱动芯片 EK79007AD 规格书</a> (PDF)</p></li>
+<li><p _item_id="277"><a class="reference external" href="https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-lcd-subboard-schematics.pdf">显示屏适配板原理图</a> (PDF)</p></li>
+<li><p _item_id="278"><a class="reference external" href="https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-lcd-subboard-pcb-layout.pdf">显示屏适配板 PCB 布局图</a> (PDF)</p></li>
+<li><p _item_id="279"><a class="reference external" href="https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-camera-subboard-schematics.pdf">摄像头适配板原理图</a> (PDF)</p></li>
+<li><p _item_id="280"><a class="reference external" href="https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-camera-subboard-pcb-layout.pdf">摄像头适配板 PCB 布局图</a> (PDF)</p></li>
+</ul><p _item_id="281">有关本开发板的更多设计文档，请联系我们的商务部门 <a class="reference external" href="mailto:sales%40espressif.com">sales<span>@</span>espressif<span>.</span>com</a>。</p>
+</section></section></div>
+             </div>
+          </div>
+      </div>
+    </section></div>
+
+  </body></html>

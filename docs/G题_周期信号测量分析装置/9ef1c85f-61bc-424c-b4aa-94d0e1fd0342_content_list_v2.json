@@ -1,0 +1,1119 @@
+[
+    [
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "2026年全国大学生电子设计竞赛赛区赛(TI杯)暨模拟电子系统设计专题赛选拔赛赛题"
+                    }
+                ],
+                "level": 1
+            },
+            "bbox": [
+                250,
+                95,
+                823,
+                152
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "参赛注意事项"
+                    }
+                ]
+            },
+            "bbox": [
+                425,
+                165,
+                571,
+                181
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（1）7 月 29 日 8:00 竞赛正式开始。每支参赛队可在赛区发布题目中任选一题，必须在竞赛第一天将竞赛选题上报赛区组委会。参赛队中有本科生成员即为本科参赛队，建议赛区对本科组参赛队和高职高专组参赛队分开评审及评奖。"
+                    }
+                ]
+            },
+            "bbox": [
+                139,
+                185,
+                868,
+                233
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（2）参赛队认真填写《登记表》内容，填写好的《登记表》交赛场巡视员暂时保存。"
+                    }
+                ]
+            },
+            "bbox": [
+                139,
+                234,
+                789,
+                250
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（3）参赛者必须是有正式学籍的全日制在校本科、高职高专学生，并出示能够证明参赛者学生身份的有效证件（如学生证）随时备查。"
+                    }
+                ]
+            },
+            "bbox": [
+                139,
+                250,
+                868,
+                282
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（4）每队严格限制3 人，开赛后不得中途更换队员。"
+                    }
+                ]
+            },
+            "bbox": [
+                139,
+                282,
+                542,
+                298
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（5）竞赛期间，可使用各种图书资料和网络资源，但不得在学校指定竞赛场地外进行设计制作，不得以任何方式与他人交流，包括教师在内的非参赛队员必须迴避，对违纪参赛队取消评审资格。"
+                    }
+                ]
+            },
+            "bbox": [
+                139,
+                299,
+                868,
+                346
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（6）8月1日20:00 竞赛结束，上交设计报告、制作实物及《登记表》，由专人封存。"
+                    }
+                ]
+            },
+            "bbox": [
+                137,
+                347,
+                848,
+                382
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "周期信号测量分析装置（G 题）"
+                    }
+                ],
+                "level": 2
+            },
+            "bbox": [
+                307,
+                397,
+                675,
+                420
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "一、任务"
+                    }
+                ],
+                "level": 2
+            },
+            "bbox": [
+                127,
+                432,
+                231,
+                451
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "设计制作周期信号测量分析装置（以下简称为装置），可对信号源输出的周期信号u 进行测量与分析，信号源输出阻抗为 50Ω。装置既能在显示屏上稳定显示u 的波形图或电压频谱图，也能稳定显示u 的时域或频域相关参数值，频率分辨率 500Hz。装置组成框图如图1所示。"
+                    }
+                ]
+            },
+            "bbox": [
+                127,
+                464,
+                868,
+                554
+            ]
+        },
+        {
+            "type": "image",
+            "content": {
+                "image_source": {
+                    "path": "images/0fd45ef73c6d32b2a061ff61e7a9760a6ddf473a3d4b728e61a9482a5f38fe5a.jpg"
+                },
+                "content": "",
+                "image_caption": [
+                    {
+                        "type": "text",
+                        "content": "图 1 装置组成框图"
+                    }
+                ],
+                "image_footnote": []
+            },
+            "bbox": [
+                337,
+                565,
+                663,
+                669
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "二、要求"
+                    }
+                ],
+                "level": 2
+            },
+            "bbox": [
+                127,
+                703,
+                231,
+                722
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "1. 装置输入 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u = u _ { \\mathrm { a } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "，其电压峰峰值 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "U _ { \\mathrm { p p } } { = } 1 0 0 \\mathrm { m V } { \\sim } 2 5 0 \\mathrm { m V }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "，所有频率成分均在10kHz~200kHz 范围内。下列四项要求在启动装置后，每一项完成时间不超过 2 秒。"
+                    }
+                ]
+            },
+            "bbox": [
+                127,
+                728,
+                868,
+                770
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（1）键控选择一屏显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { a } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的1个或者 3个完整周期波形。（6分）"
+                    }
+                ]
+            },
+            "bbox": [
+                176,
+                775,
+                759,
+                793
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（2）显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { a } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压峰峰值 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "U _ { \\mathfrak { p p } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "、有效值 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "U _ { \\mathrm { m s } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "，误差的绝对值均≤5mV；显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { a } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的基频值 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "f _ { \\mathrm { a l } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "，误差的绝对值≤1kHz。（13分）"
+                    }
+                ]
+            },
+            "bbox": [
+                127,
+                800,
+                868,
+                841
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（3）定性显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { a } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压频谱图。（5 分）"
+                    }
+                ]
+            },
+            "bbox": [
+                176,
+                847,
+                537,
+                864
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（4）显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { a } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压频谱各分量的幅值，误差的绝对值≤5mV。（9分）"
+                    }
+                ]
+            },
+            "bbox": [
+                176,
+                871,
+                800,
+                888
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "2．装置输入 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u = u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "，其电压峰峰值为 50mV~250mV，所有频率成分均在"
+                    }
+                ]
+            },
+            "bbox": [
+                168,
+                895,
+                868,
+                912
+            ]
+        },
+        {
+            "type": "page_header",
+            "content": {
+                "page_header_content": [
+                    {
+                        "type": "text",
+                        "content": "8 电 Design"
+                    }
+                ]
+            },
+            "bbox": [
+                50,
+                78,
+                201,
+                145
+            ]
+        },
+        {
+            "type": "page_number",
+            "content": {
+                "page_number_content": [
+                    {
+                        "type": "text",
+                        "content": "G - 1 / 3"
+                    }
+                ]
+            },
+            "bbox": [
+                465,
+                927,
+                532,
+                940
+            ]
+        }
+    ],
+    [
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "10kHz~500kHz 范围内。下列四项要求在启动装置后，每一项完成时间不超过 2 秒。"
+                    }
+                ]
+            },
+            "bbox": [
+                129,
+                90,
+                867,
+                108
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（1）键控选择一屏显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的1个或者 3个完整周期波形。（6分）"
+                    }
+                ]
+            },
+            "bbox": [
+                176,
+                114,
+                761,
+                131
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（2）显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压峰峰值 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "U _ { \\mathfrak { p p } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "、有效值 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "U _ { \\mathrm { m s } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "，误差的绝对值均≤5mV；显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的基频值 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "f _ { \\mathrm { { b l } } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "，误差的绝对值≤1kHz。（13分）"
+                    }
+                ]
+            },
+            "bbox": [
+                127,
+                137,
+                868,
+                179
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（3）定性显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压频谱图。（5 分）"
+                    }
+                ]
+            },
+            "bbox": [
+                176,
+                185,
+                536,
+                202
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（4）显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压频谱各分量的幅值，误差的绝对值≤5mV。（9分）"
+                    }
+                ]
+            },
+            "bbox": [
+                176,
+                208,
+                800,
+                225
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "3．装置输入 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u = u _ { \\mathrm { b } } + u _ { \\mathrm { J } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "，其中被测信号 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压峰峰值为 50mV~250mV，所有频率成分均在 10kHz~500kHz范围内；单频干扰 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { J } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压峰峰值为200mV、频率 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "f _ { \\mathrm { J } }"
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "{ \\geqslant } 1 \\mathrm { M H z }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "。要求装置能在抑制单频干扰 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { J } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "影响的基础上，完成下列四项要求，在启动装置后，每一项完成时间不超过2秒。"
+                    }
+                ]
+            },
+            "bbox": [
+                127,
+                231,
+                867,
+                322
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（1）键控选择一屏显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的1个或者 3个完整周期波形。（6分）"
+                    }
+                ]
+            },
+            "bbox": [
+                176,
+                326,
+                759,
+                344
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（2）显示信号 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压峰峰值 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "U _ { \\mathrm { p p } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "、有效值 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "U _ { \\mathrm { m s } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "，误差的绝对值均≤5mV；显示"
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的基频值 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "f _ { \\mathrm { { b l } } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "，误差的绝对值≤1kHz。（15 分）"
+                    }
+                ]
+            },
+            "bbox": [
+                129,
+                351,
+                868,
+                394
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（3）定性显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压频谱图。（5 分）"
+                    }
+                ]
+            },
+            "bbox": [
+                176,
+                399,
+                536,
+                416
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "（4）显示 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压频谱各分量的幅值，误差的绝对值≤5mV。（8分）"
+                    }
+                ]
+            },
+            "bbox": [
+                176,
+                423,
+                798,
+                439
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "4．设计报告（20分）"
+                    }
+                ],
+                "level": 2
+            },
+            "bbox": [
+                168,
+                445,
+                361,
+                464
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "三、说明"
+                    }
+                ],
+                "level": 2
+            },
+            "bbox": [
+                127,
+                476,
+                230,
+                498
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "1. 装置测量与分析的信号 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { a } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "或 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "是由基波分量与1个或者2个谐波分量组合而成的周期信号。"
+                    }
+                ]
+            },
+            "bbox": [
+                127,
+                512,
+                868,
+                554
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "2. 装置在时域测量分析状态下，测量显示的电压有效值应为“真有效值”。"
+                    }
+                ]
+            },
+            "bbox": [
+                166,
+                560,
+                835,
+                577
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "3．装置在频域测量分析状态下，显示的 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { a } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "或 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "电压频谱应为在正频率轴上分布的频率分量。如信号源输出的由基波与其三次、四次谐波组合而成的周期信号表达式为 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u = U _ { \\mathrm { 1 } } \\sin \\left( 2 \\pi \\times 1 0 . 5 \\times 1 0 ^ { 3 } t \\right) + U _ { \\mathrm { 3 } } \\sin \\left( 2 \\pi \\times 3 1 . 5 \\times 1 0 ^ { 3 } t \\right) + U _ { \\mathrm { 4 } } \\sin \\left( 2 \\pi \\times 4 2 . 0 \\times 1 0 ^ { 3 } t \\right) \\left( \\mathrm { m V } \\times \\mathrm { , } \\mathrm { ~ m } \\right)"
+                    },
+                    {
+                        "type": "text",
+                        "content": "）时，装置显示的电压频谱各分量的频率和幅值应为："
+                    }
+                ]
+            },
+            "bbox": [
+                127,
+                586,
+                868,
+                678
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "10.5 kHz，U mV 31.5 kHz，U<sub>3</sub> mV 42.0kHz， "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "U _ { 4 }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "mV"
+                    }
+                ]
+            },
+            "bbox": [
+                163,
+                686,
+                329,
+                753
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "4．定性显示电压频谱图：显示电压频谱图的坐标不一定加刻度，频谱图中正频率轴上离散谱线的根数、谱线频率相对位置、谱线长度之间的相对比例与装置输入信号 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { a } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "或 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "u _ { \\mathrm { b } }"
+                    },
+                    {
+                        "type": "text",
+                        "content": "的电压频谱大体吻合即可。"
+                    }
+                ]
+            },
+            "bbox": [
+                127,
+                760,
+                870,
+                829
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "5．装置采用单路5V直流稳压电源供电。"
+                    }
+                ]
+            },
+            "bbox": [
+                168,
+                835,
+                532,
+                853
+            ]
+        },
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "6. 装置的显示屏尺寸 "
+                    },
+                    {
+                        "type": "equation_inline",
+                        "content": "\\geqslant 6"
+                    },
+                    {
+                        "type": "text",
+                        "content": "英寸。"
+                    }
+                ]
+            },
+            "bbox": [
+                168,
+                859,
+                447,
+                876
+            ]
+        },
+        {
+            "type": "page_footer",
+            "content": {
+                "page_footer_content": [
+                    {
+                        "type": "text",
+                        "content": "G - 2 / 3"
+                    }
+                ]
+            },
+            "bbox": [
+                465,
+                927,
+                532,
+                940
+            ]
+        }
+    ],
+    [
+        {
+            "type": "paragraph",
+            "content": {
+                "paragraph_content": [
+                    {
+                        "type": "text",
+                        "content": "7．本题信号源输出电缆阻抗 50Ω，电缆两端均为 BNC 接头（电缆应带至测试现场备用），参赛装置电路板上需焊接BNC 接头座，作为装置输入信号端口。信号源可使用具有“谐波发生器”功能的信号发生器，设置其输出信号u的基波与谐波分量幅度与频率值，各参数设置值作为相应参数测量的标称值。允许参赛队携带自用信号发生器参加作品测试。"
+                    }
+                ]
+            },
+            "bbox": [
+                127,
+                90,
+                870,
+                203
+            ]
+        },
+        {
+            "type": "title",
+            "content": {
+                "title_content": [
+                    {
+                        "type": "text",
+                        "content": "四、评分标准"
+                    }
+                ],
+                "level": 2
+            },
+            "bbox": [
+                129,
+                212,
+                278,
+                231
+            ]
+        },
+        {
+            "type": "table",
+            "content": {
+                "image_source": {
+                    "path": "images/3f20157ad8e209e711a0896514247c98f031f337501494661cc9c4187ce8af03.jpg"
+                },
+                "table_caption": [],
+                "table_footnote": [],
+                "html": "<table><tr><td></td><td>项目</td><td>主要内容</td><td>满分</td></tr><tr><td rowspan=\"6\">设计报告</td><td>方案论证</td><td>比较与选择,方案描述。</td><td>3</td></tr><tr><td>理论分析与计算</td><td>系统相关参数设计</td><td>5</td></tr><tr><td>电路与程序设计</td><td>系统组成,原理框图与各部分电路图,系统软件与流程图。</td><td>5</td></tr><tr><td>测试方案与测试结果</td><td>测试结果完整性,测试结果分析。</td><td>5</td></tr><tr><td>设计报告结构及规范性</td><td>摘要,正文结构规范,图表的完整与准确性。</td><td>2</td></tr><tr><td colspan=\"2\">合计</td><td>20</td></tr><tr><td rowspan=\"4\">要求</td><td colspan=\"2\">完成第1项</td><td>33</td></tr><tr><td colspan=\"2\">完成第2项</td><td>33</td></tr><tr><td colspan=\"2\">完成第3项</td><td>34</td></tr><tr><td colspan=\"2\">合计</td><td>100</td></tr><tr><td colspan=\"3\">总分</td><td>120</td></tr></table>",
+                "table_type": "complex_table",
+                "table_nest_level": 1
+            },
+            "bbox": [
+                139,
+                239,
+                857,
+                536
+            ]
+        },
+        {
+            "type": "page_number",
+            "content": {
+                "page_number_content": [
+                    {
+                        "type": "text",
+                        "content": "G - 3 / 3"
+                    }
+                ]
+            },
+            "bbox": [
+                465,
+                927,
+                532,
+                940
+            ]
+        }
+    ]
+]

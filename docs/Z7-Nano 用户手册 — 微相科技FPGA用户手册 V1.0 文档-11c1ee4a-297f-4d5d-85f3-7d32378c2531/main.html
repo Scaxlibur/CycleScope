@@ -1,0 +1,505 @@
+<html class="writer-html5" lang="zh-CN" data-readthedocs-tool="sphinx" data-readthedocs-tool-theme="readthedocs"><body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="z7-nano"><h1 _item_id="2"><strong>Z7-Nano 用户手册</strong><a class="headerlink" href="#z7-nano" title="此标题的永久链接"></a></h1>
+<section id="id1"><h2 _item_id="4">开发环境<a class="headerlink" href="#id1" title="此标题的永久链接"></a></h2>
+<p _item_id="5">赛灵思Vivado 2018.3</p>
+<p _item_id="6"><a class="reference external" href="https://www.xilinx.com">https://www.xilinx.com</a></p>
+</section><section id="id2"><h2 _item_id="7">微信公众号<a class="headerlink" href="#id2" title="此标题的永久链接"></a></h2>
+<p _item_id="8"><img alt="../../_images/Wechat17.png" src="../../_images/Wechat17.png"></p>
+</section><section id="id3"><h2 _item_id="9">●1. 概述<a class="headerlink" href="#id3" title="此标题的永久链接"></a></h2>
+<p _item_id="10">Z7 Nano 是一款基于 Xilinx Zynq-7000 SoC（XC7Z010 或 XC7Z020）的开发板，配备高达 4Gb 的 DDR3/L SDRAM、128MB SPI 闪存、千兆以太网 PHY 收发器、USB PHY 收发器以及简单的 供电方式。该开发板提供商业版（XC7Z010、XC7Z020）和工业版（XC7Z020），可根据需求提供定制版本，定制需求可能需要满足最低订购量，请联系我们的销售团队获取更多信息：<a class="reference external" href="mailto:sales%40microphase.cn">sales<span>@</span>microphase<span>.</span>cn</a>。</p>
+<section id="id4"><h3 _item_id="11">○板卡布局<a class="headerlink" href="#id4" title="此标题的永久链接"></a></h3>
+<p _item_id="12"><img alt="../../_images/Z7NANO_BOARD_LAYOUT.png" src="../../_images/Z7NANO_BOARD_LAYOUT.png"></p>
+</section><section id="id5"><h3 _item_id="13">○资源特性<a class="headerlink" href="#id5" title="此标题的永久链接"></a></h3>
+<ul class="simple"><li><p>Xilinx Zynq™ XC7Z010-1CLG400C（仅限 7010 版本），<br>Xilinx Zynq™ XC7Z020-2CLG400C（仅限 7020 版本）</p></li>
+<li><p _item_id="16">DDR3：1 个 4Gbit DDR3（MT41J256M16HA-125:K 或等效型号）。</p></li>
+<li><p _item_id="17">按键：1 个用户按键，由 PL 控制。</p></li>
+<li><p _item_id="18">LED：2 个用户 LED，1 个 PS 控制，1 个 PL 控制。</p></li>
+<li><p _item_id="19">GPIO：2 个 40 针扩展端口（2.54mm 间距），72 个 3.3V 电压的 IO。</p></li>
+<li><p _item_id="20">USB JTAG：1 个板载 JTAG 电路，可通过 USB 电缆调试和下载 ZYNQ 系统。</p></li>
+<li><p _item_id="21">HDMI：1 个 HDMI 视频输出接口，可实现 1080P 视频图像。</p></li>
+<li><p>PHY ETH：2 个 10/100/1000M 以太网 RJ45 接口，可用于以太网数据交换或其他应用。<br>         1 个 PS 控制，1 个 PL 控制。</p></li>
+<li><p _item_id="24">USB Host：1 个 USB Host。</p></li>
+<li><p _item_id="25">SD 卡：1 个 SD 卡，用于存储操作系统镜像和文件系统。</p></li>
+<li><p _item_id="26">USB UART：1 个 USB UART 接口，用于与 PC 进行串行通信。</p></li>
+<li><p>时钟：1 个 33.33MHz 有源晶振，为 PS 系统提供稳定时钟。<br>        1 个 50MHz 有源晶振，为 PL 逻辑提供额外时钟。</p></li>
+</ul></section><section id="id6"><h3 _item_id="29">○系统框图<a class="headerlink" href="#id6" title="此标题的永久链接"></a></h3>
+<p _item_id="30"><img alt="../../_images/Z7_NANO-BLOCK_DIAGRAM.png" src="../../_images/Z7_NANO-BLOCK_DIAGRAM.png"></p>
+</section><section id="id7"><h3 _item_id="31">○<strong>机械尺寸</strong><a class="headerlink" href="#id7" title="此标题的永久链接"></a></h3>
+<p _item_id="32"><img alt="../../_images/Z7NANO_MECH.jpg" src="../../_images/Z7NANO_MECH.jpg"></p>
+</section></section><section id="id8"><h2 _item_id="33">●2. 硬件资源<a class="headerlink" href="#id8" title="此标题的永久链接"></a></h2>
+<section id="fpga"><h3 _item_id="34">○FPGA<a class="headerlink" href="#fpga" title="此标题的永久链接"></a></h3>
+<ul><li><p _item_id="35">667 MHz dual-core Cortex-A9 processor</p></li>
+<li><p _item_id="36">DDR3L memory controller with 8 DMA channels and 4</p></li>
+<li><p _item_id="37">High-Performance AXI3 Slave ports</p></li>
+<li><p _item_id="38">High-bandwidth peripheral controllers: 1G Ethernet, USB 2.0, SDIO</p></li>
+<li><p _item_id="39">Low-bandwidth peripheral controllers: SPI, UART, CAN, I2C</p></li>
+<li><p _item_id="40">Programmable from JTAG, Quad-SPI flash, and microSD card</p></li>
+<li><p _item_id="41">Programmable logic equivalent to Artix-7 FPGA</p>
+<p>LUTs: 17,600 (7010)<br>     53,200(7020)<br>DSP Slices: 80 (7010)<br>          220 (7020)<br>Logic Cells: 28K (7010)<br>          85K(7020)<br>Flip-Flops: 35,200 (7010)<br>         106,400 (7020)<br>Total Block RAM: 2.1Mb (7010)<br>                4.9Mb (7020)</p>
+</li>
+<li><p _item_id="52">Analog Mixed Signal (AMS) / XADC:  2x 12 bit, MSPS ADCs with up to 17 Differential Inputs</p></li>
+<li><p _item_id="53">Security: AES &amp; SHA 256b Decryption &amp; Authentication for Secure Programmable Logic Config</p></li>
+</ul></section><section id="ddr3"><h3 _item_id="54">○DDR3<a class="headerlink" href="#ddr3" title="此标题的永久链接"></a></h3>
+<p _item_id="55">板载 1 个 16bit 512M DDR3/L SDRAM 芯片。</p>
+<div class="wy-table-responsive"><table border="1" class="docutils" _item_id="56"><thead><tr><th style="text-align: center;">位置</th>
+<th style="text-align: center;">型号</th>
+<th style="text-align: center;">容量</th>
+<th style="text-align: center;">制造商</th>
+</tr></thead><tbody><tr><td style="text-align: center;">U4</td>
+<td style="text-align: center;">MT41K256M16</td>
+<td style="text-align: center;">256M x 16bit</td>
+<td style="text-align: center;">美光</td>
+</tr></tbody></table></div><div class="wy-table-responsive"><table border="1" class="docutils" _item_id="57"><thead><tr><th>信号名称</th>
+<th>引脚编号</th>
+<th>信号名称</th>
+<th>引脚编号</th>
+</tr></thead><tbody><tr><td>PS_DDR3_A0</td>
+<td>N2</td>
+<td>PS_DDR3_D0</td>
+<td>C3</td>
+</tr><tr><td>PS_DDR3_A1</td>
+<td>K2</td>
+<td>PS_DDR3_D1</td>
+<td>B3</td>
+</tr><tr><td>PS_DDR3_A2</td>
+<td>M3</td>
+<td>PS_DDR3_D2</td>
+<td>A2</td>
+</tr><tr><td>PS_DDR3_A3</td>
+<td>K3</td>
+<td>PS_DDR3_D3</td>
+<td>A4</td>
+</tr><tr><td>PS_DDR3_A4</td>
+<td>M4</td>
+<td>PS_DDR3_D4</td>
+<td>D3</td>
+</tr><tr><td>PS_DDR3_A5</td>
+<td>L1</td>
+<td>PS_DDR3_D5</td>
+<td>D1</td>
+</tr><tr><td>PS_DDR3_A6</td>
+<td>L4</td>
+<td>PS_DDR3_D6</td>
+<td>C1</td>
+</tr><tr><td>PS_DDR3_A7</td>
+<td>K4</td>
+<td>PS_DDR3_D7</td>
+<td>E1</td>
+</tr><tr><td>PS_DDR3_A8</td>
+<td>K1</td>
+<td>PS_DDR3_D8</td>
+<td>E2</td>
+</tr><tr><td>PS_DDR3_A9</td>
+<td>J4</td>
+<td>PS_DDR3_D9</td>
+<td>E3</td>
+</tr><tr><td>PS_DDR3_A10</td>
+<td>F5</td>
+<td>PS_DDR3_D10</td>
+<td>G3</td>
+</tr><tr><td>PS_DDR3_A11</td>
+<td>G4</td>
+<td>PS_DDR3_D11</td>
+<td>H3</td>
+</tr><tr><td>PS_DDR3_A12</td>
+<td>E4</td>
+<td>PS_DDR3_D12</td>
+<td>J3</td>
+</tr><tr><td>PS_DDR3_A13</td>
+<td>D4</td>
+<td>PS_DDR3_D13</td>
+<td>H2</td>
+</tr><tr><td>PS_DDR3_A14</td>
+<td>F4</td>
+<td>PS_DDR3_D14</td>
+<td>H1</td>
+</tr><tr><td>PS_DDR3_BA0</td>
+<td>L5</td>
+<td>PS_DDR3_D15</td>
+<td>J1</td>
+</tr><tr><td>PS_DDR3_BA1</td>
+<td>R4</td>
+<td>PS_DDR3_DQS_N0</td>
+<td>B2</td>
+</tr><tr><td>PS_DDR3_BA2</td>
+<td>J5</td>
+<td>PS_DDR3_DQS_N1</td>
+<td>F2</td>
+</tr><tr><td>PS_DDR3_NCAS</td>
+<td>P5</td>
+<td>PS_DDR3_DQS_P0</td>
+<td>C2</td>
+</tr><tr><td>PS_DDR3_CKE</td>
+<td>N3</td>
+<td>PS_DDR3_DQS_P1</td>
+<td>G2</td>
+</tr><tr><td>PS_DDR3_CLK_N</td>
+<td>M2</td>
+<td>PS_DDR3_NRST</td>
+<td>B4</td>
+</tr><tr><td>PS_DDR3_CLK_P</td>
+<td>L2</td>
+<td>PS_DDR3_ODT</td>
+<td>N5</td>
+</tr><tr><td>PS_DDR3_NCS</td>
+<td>N1</td>
+<td>PS_DDR3_NRAS</td>
+<td>P4</td>
+</tr><tr><td>PS_DDR3_DM0</td>
+<td>A1</td>
+<td>PS_DDR3_NWE</td>
+<td>M5</td>
+</tr><tr><td>PS_DDR3_DM1</td>
+<td>F1</td>
+<td></td>
+<td></td>
+</tr></tbody></table></div></section><section id="id9"><h3 _item_id="58">○千兆以太网<a class="headerlink" href="#id9" title="此标题的永久链接"></a></h3>
+<p _item_id="59">RTL8211F芯片支持10/100/1000M网络传输速率，并通过RGMII接口与Zynq7000 PS的MAC层通信。它支持MDI/MDX自适应、多种速率自适应、主/从自适应以及MDIO总线支持，用于PHY寄存器管理。</p>
+</section><section id="usb-host"><h3 _item_id="60">○USB Host<a class="headerlink" href="#usb-host" title="此标题的永久链接"></a></h3>
+<p _item_id="61">板载 USB 2.0 收发器为 USB3320C-EZK，支持 ULPI 标准接口。它与 ZYNQ 的总线接口连接，以实现高速 USB2.0 Host 模式数据通信。</p>
+<p _item_id="62"><img alt="../../_images/USB_HOST.png" src="../../_images/USB_HOST.png"></p>
+</section><section id="usb-uart"><h3 _item_id="63">○USB UART<a class="headerlink" href="#usb-uart" title="此标题的永久链接"></a></h3>
+<p _item_id="64">提供了一个 USB 转 UART 芯片 CH340，用于用户连接到主机 PC。</p>
+<div class="wy-table-responsive"><table border="1" class="docutils" _item_id="65"><thead><tr><th style="text-align: center;">信号名称</th>
+<th style="text-align: center;">引脚名称</th>
+<th style="text-align: center;">引脚编号</th>
+<th style="text-align: center;">说明</th>
+</tr></thead><tbody><tr><td style="text-align: center;">UART_TX</td>
+<td style="text-align: center;">PS_MIO15_500</td>
+<td style="text-align: center;">C8</td>
+<td style="text-align: center;">UART 数据输出</td>
+</tr><tr><td style="text-align: center;">UART_RX</td>
+<td style="text-align: center;">PS_MIO14_500</td>
+<td style="text-align: center;">C5</td>
+<td style="text-align: center;">UART 数据输入</td>
+</tr></tbody></table></div></section><section id="usb-jtag"><h3 _item_id="66">○USB JTAG<a class="headerlink" href="#usb-jtag" title="此标题的永久链接"></a></h3>
+<p _item_id="67">我们在板上集成了 JTAG 下载和调试电路，使用户能够通过 USB 线开发和调试 ZYNQ。</p>
+</section><section id="id10"><h3 _item_id="68">○启动配置<a class="headerlink" href="#id10" title="此标题的永久链接"></a></h3>
+<p _item_id="69">Z7-Nano 的启动设置包括 JTAG、QSPI 和 SD 模式，这些模式由 J1 的 MODE 输入信号控制。用户可以通过跳线帽更改模式。启动模式配置如下表所示。</p>
+<p _item_id="70"><img alt="../../_images/BOOTMODE2.png" src="../../_images/BOOTMODE2.png"></p>
+</section><section id="quad-spi"><h3 _item_id="71">○Quad-SPI 闪存<a class="headerlink" href="#quad-spi" title="此标题的永久链接"></a></h3>
+<p _item_id="72">板载 128M Quad-SPI 闪存 W25Q128JVSIQ，用于存储 FPGA 初始配置、用户应用程序和数据。</p>
+<div class="wy-table-responsive"><table border="1" class="docutils" _item_id="73"><thead><tr><th style="text-align: center;">位置</th>
+<th style="text-align: center;">型号</th>
+<th style="text-align: center;">容量</th>
+<th style="text-align: center;">制造商</th>
+</tr></thead><tbody><tr><td style="text-align: center;">U2</td>
+<td style="text-align: center;">W25Q128JVSIQ</td>
+<td style="text-align: center;">128M 字节</td>
+<td style="text-align: center;">华邦</td>
+</tr></tbody></table></div></section><section id="id11"><h3 _item_id="74">○时钟<a class="headerlink" href="#id11" title="此标题的永久链接"></a></h3>
+<p _item_id="75">一个 33.33 MHz 有源晶振为 PS 系统提供稳定时钟，另一个 50 MHz 有源晶振为 PL 逻辑提供额外时钟。</p>
+<div class="wy-table-responsive"><table border="1" class="docutils" _item_id="76"><thead><tr><th style="text-align: center;">位置</th>
+<th style="text-align: center;">信号名称</th>
+<th style="text-align: center;">频率</th>
+<th style="text-align: center;">引脚编号</th>
+</tr></thead><tbody><tr><td style="text-align: center;">Y1</td>
+<td style="text-align: center;">PS_CLK_33d3</td>
+<td style="text-align: center;">33.333MHz</td>
+<td style="text-align: center;">E7</td>
+</tr><tr><td style="text-align: center;">U3</td>
+<td style="text-align: center;">PL_CLK_50M</td>
+<td style="text-align: center;">50MHz</td>
+<td style="text-align: center;">N18</td>
+</tr></tbody></table></div></section><section id="id12"><h3 _item_id="77">○复位<a class="headerlink" href="#id12" title="此标题的永久链接"></a></h3>
+<p _item_id="78">我们提供了一个按键（K1），可用作 FPGA 上运行的设计的“复位”信号。</p>
+</section><section id="micro-sd"><h3 _item_id="79">○Micro SD<a class="headerlink" href="#micro-sd" title="此标题的永久链接"></a></h3>
+<p _item_id="80">板卡提供了一个 Micro SD 卡接口，允许用户访问 SD 卡存储器。它还提供了 ZYNQ 芯片的引导加载程序、Linux 操作系统内核、文件系统和其他用户数据文件的存储。</p>
+</section><section id="hdmi"><h3 _item_id="81">○HDMI<a class="headerlink" href="#hdmi" title="此标题的永久链接"></a></h3>
+<p _item_id="82">一个 HDMI 视频输出接口，可实现 1080P 视频图像。</p>
+</section><section id="led"><h3 _item_id="83">○LED<a class="headerlink" href="#led" title="此标题的永久链接"></a></h3>
+<p _item_id="84">我们提供了两个 LED 供用户使用。当 FPGA 的相应引脚处于低电平时，LED 会亮起。</p>
+<div class="wy-table-responsive"><table border="1" class="docutils" _item_id="85"><thead><tr><th style="text-align: center;">位置</th>
+<th style="text-align: center;">信号名称</th>
+<th style="text-align: center;">引脚编号</th>
+<th style="text-align: center;">说明</th>
+</tr></thead><tbody><tr><td style="text-align: center;">D4</td>
+<td style="text-align: center;">PS_LED1</td>
+<td style="text-align: center;">E6</td>
+<td style="text-align: center;">PS LED1</td>
+</tr><tr><td style="text-align: center;">D3</td>
+<td style="text-align: center;">GPIO1_17N</td>
+<td style="text-align: center;">R14</td>
+<td style="text-align: center;">PL LED1</td>
+</tr></tbody></table></div></section><section id="id13"><h3 _item_id="86">○按键<a class="headerlink" href="#id13" title="此标题的永久链接"></a></h3>
+<p _item_id="87">我们提供了一个按键供用户使用。按下按键时，对应引脚将处于低电平。</p>
+<div class="wy-table-responsive"><table border="1" class="docutils" _item_id="88"><thead><tr><th style="text-align: center;">位置</th>
+<th style="text-align: center;">信号名称</th>
+<th style="text-align: center;">引脚编号</th>
+<th style="text-align: center;">说明</th>
+</tr></thead><tbody><tr><td style="text-align: center;">K2</td>
+<td style="text-align: center;">GPIO1_17P</td>
+<td style="text-align: center;">P14</td>
+<td style="text-align: center;">PL KEY1</td>
+</tr></tbody></table></div></section><section id="gpio"><h3 _item_id="89">○GPIO<a class="headerlink" href="#gpio" title="此标题的永久链接"></a></h3>
+<p _item_id="90">该设备配备了最多 72 个用户 IO 引脚，可用于各种自定义应用。所有用户 IO 都经过长度匹配，可用作差分对。</p>
+<p _item_id="91"><strong>JP1:</strong></p>
+<div class="wy-table-responsive"><table border="1" class="docutils" _item_id="92"><thead><tr><th style="text-align: center;">引脚</th>
+<th style="text-align: center;">信号名称</th>
+<th style="text-align: center;">引脚编号</th>
+<th style="text-align: center;">引脚</th>
+<th style="text-align: center;">信号名称</th>
+<th style="text-align: center;">引脚编号</th>
+</tr></thead><tbody><tr><td style="text-align: center;">1</td>
+<td style="text-align: center;">GPIO1_0P</td>
+<td style="text-align: center;">N17</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">GPIO1_0N</td>
+<td style="text-align: center;">P18</td>
+</tr><tr><td style="text-align: center;">3</td>
+<td style="text-align: center;">GPIO1_1P</td>
+<td style="text-align: center;">R16</td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">GPIO1_1N</td>
+<td style="text-align: center;">R17</td>
+</tr><tr><td style="text-align: center;">5</td>
+<td style="text-align: center;">GPIO1_2P</td>
+<td style="text-align: center;">T17</td>
+<td style="text-align: center;">6</td>
+<td style="text-align: center;">GPIO1_2N</td>
+<td style="text-align: center;">R18</td>
+</tr><tr><td style="text-align: center;">7</td>
+<td style="text-align: center;">GPIO1_3P</td>
+<td style="text-align: center;">T16</td>
+<td style="text-align: center;">8</td>
+<td style="text-align: center;">GPIO1_3N</td>
+<td style="text-align: center;">U17</td>
+</tr><tr><td style="text-align: center;">9</td>
+<td style="text-align: center;">GPIO1_4P</td>
+<td style="text-align: center;">W18</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">GPIO1_4N</td>
+<td style="text-align: center;">W19</td>
+</tr><tr><td style="text-align: center;">11</td>
+<td style="text-align: center;">VCC_5V</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">12</td>
+<td style="text-align: center;">GND</td>
+<td style="text-align: center;"></td>
+</tr><tr><td style="text-align: center;">13</td>
+<td style="text-align: center;">GPIO1_5P</td>
+<td style="text-align: center;">Y18</td>
+<td style="text-align: center;">14</td>
+<td style="text-align: center;">GPIO1_5N</td>
+<td style="text-align: center;">Y19</td>
+</tr><tr><td style="text-align: center;">15</td>
+<td style="text-align: center;">GPIO1_6P</td>
+<td style="text-align: center;">Y16</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">GPIO1_6N</td>
+<td style="text-align: center;">Y17</td>
+</tr><tr><td style="text-align: center;">17</td>
+<td style="text-align: center;">GPIO1_7P</td>
+<td style="text-align: center;">V17</td>
+<td style="text-align: center;">18</td>
+<td style="text-align: center;">GPIO1_7N</td>
+<td style="text-align: center;">V18</td>
+</tr><tr><td style="text-align: center;">19</td>
+<td style="text-align: center;">GPIO1_8P</td>
+<td style="text-align: center;">V16</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">GPIO1_8N</td>
+<td style="text-align: center;">W16</td>
+</tr><tr><td style="text-align: center;">21</td>
+<td style="text-align: center;">GPIO1_9P</td>
+<td style="text-align: center;">V15</td>
+<td style="text-align: center;">22</td>
+<td style="text-align: center;">GPIO1_9N</td>
+<td style="text-align: center;">W15</td>
+</tr><tr><td style="text-align: center;">23</td>
+<td style="text-align: center;">GPIO1_10P</td>
+<td style="text-align: center;">U14</td>
+<td style="text-align: center;">24</td>
+<td style="text-align: center;">GPIO1_10N</td>
+<td style="text-align: center;">U15</td>
+</tr><tr><td style="text-align: center;">25</td>
+<td style="text-align: center;">GPIO1_11P</td>
+<td style="text-align: center;">U13</td>
+<td style="text-align: center;">26</td>
+<td style="text-align: center;">GPIO1_11N</td>
+<td style="text-align: center;">V13</td>
+</tr><tr><td style="text-align: center;">27</td>
+<td style="text-align: center;">GPIO1_12P</td>
+<td style="text-align: center;">T12</td>
+<td style="text-align: center;">28</td>
+<td style="text-align: center;">GPIO1_12N</td>
+<td style="text-align: center;">U12</td>
+</tr><tr><td style="text-align: center;">29</td>
+<td style="text-align: center;">VCC_3V3</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">GND</td>
+<td style="text-align: center;"></td>
+</tr><tr><td style="text-align: center;">31</td>
+<td style="text-align: center;">GPIO1_13P</td>
+<td style="text-align: center;">W14</td>
+<td style="text-align: center;">32</td>
+<td style="text-align: center;">GPIO1_13N</td>
+<td style="text-align: center;">Y14</td>
+</tr><tr><td style="text-align: center;">33</td>
+<td style="text-align: center;">GPIO1_14P</td>
+<td style="text-align: center;">V12</td>
+<td style="text-align: center;">34</td>
+<td style="text-align: center;">GPIO1_14N</td>
+<td style="text-align: center;">W13</td>
+</tr><tr><td style="text-align: center;">35</td>
+<td style="text-align: center;">GPIO1_15P</td>
+<td style="text-align: center;">T14</td>
+<td style="text-align: center;">36</td>
+<td style="text-align: center;">GPIO1_15N</td>
+<td style="text-align: center;">T15</td>
+</tr><tr><td style="text-align: center;">37</td>
+<td style="text-align: center;">GPIO1_16P</td>
+<td style="text-align: center;">T11</td>
+<td style="text-align: center;">38</td>
+<td style="text-align: center;">GPIO1_16N</td>
+<td style="text-align: center;">T10</td>
+</tr><tr><td style="text-align: center;">39</td>
+<td style="text-align: center;">GPIO1_17P</td>
+<td style="text-align: center;">P14</td>
+<td style="text-align: center;">40</td>
+<td style="text-align: center;">GPIO1_17N</td>
+<td style="text-align: center;">R14</td>
+</tr></tbody></table></div><p _item_id="93"><strong>JP2:</strong></p>
+<div class="wy-table-responsive"><table border="1" class="docutils" _item_id="94"><thead><tr><th style="text-align: center;">引脚</th>
+<th style="text-align: center;">信号名称</th>
+<th style="text-align: center;">引脚编号</th>
+<th style="text-align: center;">引脚</th>
+<th style="text-align: center;">信号名称</th>
+<th style="text-align: center;">引脚编号</th>
+</tr></thead><tbody><tr><td style="text-align: center;">1</td>
+<td style="text-align: center;">GPIO2_0P</td>
+<td style="text-align: center;">H15</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">GPIO2_0N</td>
+<td style="text-align: center;">G15</td>
+</tr><tr><td style="text-align: center;">3</td>
+<td style="text-align: center;">GPIO2_1P</td>
+<td style="text-align: center;">F16</td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">GPIO2_1N</td>
+<td style="text-align: center;">F17</td>
+</tr><tr><td style="text-align: center;">5</td>
+<td style="text-align: center;">GPIO2_2P</td>
+<td style="text-align: center;">E17</td>
+<td style="text-align: center;">6</td>
+<td style="text-align: center;">GPIO2_2N</td>
+<td style="text-align: center;">D18</td>
+</tr><tr><td style="text-align: center;">7</td>
+<td style="text-align: center;">GPIO2_3P</td>
+<td style="text-align: center;">E18</td>
+<td style="text-align: center;">8</td>
+<td style="text-align: center;">GPIO2_3N</td>
+<td style="text-align: center;">E19</td>
+</tr><tr><td style="text-align: center;">9</td>
+<td style="text-align: center;">GPIO2_4P</td>
+<td style="text-align: center;">G17</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">GPIO2_4N</td>
+<td style="text-align: center;">G18</td>
+</tr><tr><td style="text-align: center;">11</td>
+<td style="text-align: center;">VCC_5V</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">12</td>
+<td style="text-align: center;">GND</td>
+<td style="text-align: center;"></td>
+</tr><tr><td style="text-align: center;">13</td>
+<td style="text-align: center;">GPIO2_5P</td>
+<td style="text-align: center;">H16</td>
+<td style="text-align: center;">14</td>
+<td style="text-align: center;">GPIO2_5N</td>
+<td style="text-align: center;">H17</td>
+</tr><tr><td style="text-align: center;">15</td>
+<td style="text-align: center;">GPIO2_6P</td>
+<td style="text-align: center;">B19</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">GPIO2_6N</td>
+<td style="text-align: center;">A20</td>
+</tr><tr><td style="text-align: center;">17</td>
+<td style="text-align: center;">GPIO2_7P</td>
+<td style="text-align: center;">C20</td>
+<td style="text-align: center;">18</td>
+<td style="text-align: center;">GPIO2_7N</td>
+<td style="text-align: center;">B20</td>
+</tr><tr><td style="text-align: center;">19</td>
+<td style="text-align: center;">GPIO2_8P</td>
+<td style="text-align: center;">D19</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">GPIO2_8N</td>
+<td style="text-align: center;">D20</td>
+</tr><tr><td style="text-align: center;">21</td>
+<td style="text-align: center;">GPIO2_9P</td>
+<td style="text-align: center;">J18</td>
+<td style="text-align: center;">22</td>
+<td style="text-align: center;">GPIO2_9N</td>
+<td style="text-align: center;">H18</td>
+</tr><tr><td style="text-align: center;">23</td>
+<td style="text-align: center;">GPIO2_10P</td>
+<td style="text-align: center;">F19</td>
+<td style="text-align: center;">24</td>
+<td style="text-align: center;">GPIO2_10N</td>
+<td style="text-align: center;">F20</td>
+</tr><tr><td style="text-align: center;">25</td>
+<td style="text-align: center;">GPIO2_11P</td>
+<td style="text-align: center;">G19</td>
+<td style="text-align: center;">26</td>
+<td style="text-align: center;">GPIO2_11N</td>
+<td style="text-align: center;">G20</td>
+</tr><tr><td style="text-align: center;">27</td>
+<td style="text-align: center;">GPIO2_12P</td>
+<td style="text-align: center;">J20</td>
+<td style="text-align: center;">28</td>
+<td style="text-align: center;">GPIO2_12N</td>
+<td style="text-align: center;">H20</td>
+</tr><tr><td style="text-align: center;">29</td>
+<td style="text-align: center;">VCC_3V3</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">GND</td>
+<td style="text-align: center;"></td>
+</tr><tr><td style="text-align: center;">31</td>
+<td style="text-align: center;">GPIO2_13P</td>
+<td style="text-align: center;">K16</td>
+<td style="text-align: center;">32</td>
+<td style="text-align: center;">GPIO2_13N</td>
+<td style="text-align: center;">J16</td>
+</tr><tr><td style="text-align: center;">33</td>
+<td style="text-align: center;">GPIO2_14P</td>
+<td style="text-align: center;">K19</td>
+<td style="text-align: center;">34</td>
+<td style="text-align: center;">GPIO2_14N</td>
+<td style="text-align: center;">J19</td>
+</tr><tr><td style="text-align: center;">35</td>
+<td style="text-align: center;">GPIO2_15P</td>
+<td style="text-align: center;">L16</td>
+<td style="text-align: center;">36</td>
+<td style="text-align: center;">GPIO2_15N</td>
+<td style="text-align: center;">L17</td>
+</tr><tr><td style="text-align: center;">37</td>
+<td style="text-align: center;">GPIO2_16P</td>
+<td style="text-align: center;">M19</td>
+<td style="text-align: center;">38</td>
+<td style="text-align: center;">GPIO2_16N</td>
+<td style="text-align: center;">M20</td>
+</tr><tr><td style="text-align: center;">39</td>
+<td style="text-align: center;">GPIO2_17P</td>
+<td style="text-align: center;">L19</td>
+<td style="text-align: center;">40</td>
+<td style="text-align: center;">GPIO2_17N</td>
+<td style="text-align: center;">L20</td>
+</tr></tbody></table></div></section></section><section id="id14"><h2 _item_id="95">●3.相关文档<a class="headerlink" href="#id14" title="此标题的永久链接"></a></h2>
+<ul class="simple"><li><p _item_id="96"><a class="reference external" href="https://swnatyr2ph.feishu.cn/file/IiZKbjNpJonjHPx8bZfcs4knn1g">Z7-NANO_R21_Schematic</a>(PDF)</p></li>
+<li><p _item_id="97"><a class="reference external" href="https://swnatyr2ph.feishu.cn/file/SYtxb0NBPo8P9Wxwc2OcRDtdnXb">Z7-NANO_R20_Dimensions</a>(PDF)</p></li>
+<li><p _item_id="98"><a class="reference external" href="https://swnatyr2ph.feishu.cn/file/LsOnbJD3LoSD3uxNIXKcnt3cneh">Z7-NANO_R20_Dimensions source file</a> (DXF)</p></li>
+</ul></section></section></div>
+          </div>
+          </div>
+      </div>
+    </section></div>
+  </body></html>

@@ -1,0 +1,6 @@
+# Codex 私人项目驾驶舱
+/.codex/
+/tool-of-rei/
+
+# 本地编辑器配置
+/.vscode/
