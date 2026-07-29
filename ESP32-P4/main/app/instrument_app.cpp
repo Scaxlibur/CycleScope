@@ -46,6 +46,42 @@ lv_obj_t *style_metric(lv_obj_t *card, const char *title, const char *value, int
     return value_label;
 }
 
+void format_peak_summary(char *buffer, size_t buffer_size, const SpectrumDisplayFrame &spectrum)
+{
+    if (spectrum.peak_count >= 3U) {
+        const unsigned extra_peaks = spectrum.peak_count > 3U ? spectrum.peak_count - 3U : 0U;
+        if (extra_peaks > 0U) {
+            snprintf(buffer, buffer_size, "%.2fk %.0fmV  •  %.2fk %.0fmV  •  %.2fk %.0fmV  •  +%u",
+                     static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
+                     static_cast<double>(spectrum.peaks[0].amplitude_volts_peak * 1000.0F),
+                     static_cast<double>(spectrum.peaks[1].frequency_hz / 1000.0F),
+                     static_cast<double>(spectrum.peaks[1].amplitude_volts_peak * 1000.0F),
+                     static_cast<double>(spectrum.peaks[2].frequency_hz / 1000.0F),
+                     static_cast<double>(spectrum.peaks[2].amplitude_volts_peak * 1000.0F), extra_peaks);
+        } else {
+            snprintf(buffer, buffer_size, "%.2fk %.0fmV  •  %.2fk %.0fmV  •  %.2fk %.0fmV",
+                     static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
+                     static_cast<double>(spectrum.peaks[0].amplitude_volts_peak * 1000.0F),
+                     static_cast<double>(spectrum.peaks[1].frequency_hz / 1000.0F),
+                     static_cast<double>(spectrum.peaks[1].amplitude_volts_peak * 1000.0F),
+                     static_cast<double>(spectrum.peaks[2].frequency_hz / 1000.0F),
+                     static_cast<double>(spectrum.peaks[2].amplitude_volts_peak * 1000.0F));
+        }
+    } else if (spectrum.peak_count == 2U) {
+        snprintf(buffer, buffer_size, "%.2fk %.0fmV  •  %.2fk %.0fmV",
+                 static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
+                 static_cast<double>(spectrum.peaks[0].amplitude_volts_peak * 1000.0F),
+                 static_cast<double>(spectrum.peaks[1].frequency_hz / 1000.0F),
+                 static_cast<double>(spectrum.peaks[1].amplitude_volts_peak * 1000.0F));
+    } else if (spectrum.peak_count == 1U) {
+        snprintf(buffer, buffer_size, "%.2fk %.0fmV",
+                 static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
+                 static_cast<double>(spectrum.peaks[0].amplitude_volts_peak * 1000.0F));
+    } else {
+        snprintf(buffer, buffer_size, "NO SPECTRAL PEAKS");
+    }
+}
+
 }  // namespace
 
 InstrumentApp::InstrumentApp(lv_display_t *display) : display_(display)
@@ -247,7 +283,8 @@ void InstrumentApp::select_view(View view)
         lv_obj_add_flag(plot_subhint_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(spectrum_legend_, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(source_label_, "SOURCE  TEST VECTOR   •   FFT 512   •   500 Hz/bin");
+        lv_label_set_text(source_label_, live_mode_ ? "SOURCE  FPGA SIM   •   FFT 8192   •   LINK LIVE"
+                                                   : "SOURCE  TEST VECTOR   •   FFT 512   •   500 Hz/bin");
         if (!live_mode_) {
             update_spectrum_metrics();
         }
@@ -310,9 +347,8 @@ void InstrumentApp::update_spectrum_metrics()
 void InstrumentApp::on_live_data_timer(lv_timer_t *timer)
 {
     auto *app = static_cast<InstrumentApp *>(lv_timer_get_user_data(timer));
-    DynamicMeasurementFrame frame{};
-    if (app->live_pipeline_.try_receive_latest(&frame)) {
-        app->apply_live_measurement(frame);
+    if (app->live_pipeline_.try_receive_latest(&app->live_frame_)) {
+        app->apply_live_measurement(app->live_frame_);
     }
 }
 
@@ -330,13 +366,21 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
     last_ui_tick_ms_ = now_ms;
     ++ui_frames_applied_;
 
-    // The numeric result remains live for every UI frame.  The time-domain
-    // view retains its M4 min/max reference trace: redrawing ~640 columns for
-    // each live result would monopolize the early-P4 DSI path.  In contrast,
-    // the FFT view has only three spectral lines and can update every frame.
-    if (active_view_ == View::Spectrum && frame.sequence != last_spectrum_render_sequence_) {
-        spectrum_view_.set_lines(frame.spectral_lines);
+    // The UI owns its copy. Core 1 can immediately reuse either dense FFT
+    // buffer after the fixed-capacity display frame reaches this callback.
+    if (ui_frames_applied_ == 1U || frame.sequence != last_spectrum_render_sequence_) {
+        spectrum_view_.set_frame(frame.spectrum);
         last_spectrum_render_sequence_ = frame.sequence;
+    }
+
+    if (ui_frames_applied_ == 1U) {
+        ESP_LOGI("cyclescope_ui",
+                 "Spectrum UI bridge on Core %d: gen=%lu A/B=%u columns=%u peaks=%u Fs=%.4fMHz "
+                 "axis=%.5fMHz",
+                 xPortGetCoreID(), static_cast<unsigned long>(frame.spectrum.generation),
+                 frame.spectrum.source_buffer_index, frame.spectrum.column_count, frame.spectrum.peak_count,
+                 static_cast<double>(frame.sample_rate_hz / 1000000.0F),
+                 static_cast<double>(frame.spectrum.frequency_max_hz / 1000000.0F));
     }
 
     char value[96];
@@ -346,24 +390,18 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
     lv_label_set_text(rms_value_, value);
     snprintf(value, sizeof(value), "%.2f kHz", static_cast<double>(frame.fundamental_hz / 1000.0F));
     lv_label_set_text(fundamental_value_, value);
-    snprintf(value, sizeof(value), "%.1f kS/s", static_cast<double>(frame.sample_rate_hz / 1000.0F));
+    snprintf(value, sizeof(value), "%.3f MS/s", static_cast<double>(frame.sample_rate_hz / 1000000.0F));
     lv_label_set_text(sample_rate_value_, value);
 
-    snprintf(value, sizeof(value), "SOURCE  FPGA SIM   •   FRAME %lu   •   LINK LIVE",
-             static_cast<unsigned long>(frame.sequence));
+    snprintf(value, sizeof(value), "SOURCE  FPGA SIM   •   FFT %u   •   PEAKS %u   •   FRAME %lu",
+             frame.spectrum.fft_size, frame.spectrum.peak_count, static_cast<unsigned long>(frame.sequence));
     lv_label_set_text(source_label_, value);
     snprintf(value, sizeof(value), "%s / LIVE #%lu", active_view_ == View::Time ? "TIME" : "FFT",
              static_cast<unsigned long>(frame.sequence));
     lv_label_set_text(active_view_value_, value);
     snprintf(value, sizeof(value), "LIVE  %lu frames", static_cast<unsigned long>(ui_frames_applied_));
     lv_label_set_text(footer_left_, value);
-    snprintf(value, sizeof(value), "%.2fk %.0fmV  •  %.2fk %.0fmV  •  %.2fk %.0fmV",
-             static_cast<double>(frame.spectral_lines[0].frequency_hz / 1000.0F),
-             static_cast<double>(frame.spectral_lines[0].amplitude_volts_peak * 1000.0F),
-             static_cast<double>(frame.spectral_lines[1].frequency_hz / 1000.0F),
-             static_cast<double>(frame.spectral_lines[1].amplitude_volts_peak * 1000.0F),
-             static_cast<double>(frame.spectral_lines[2].frequency_hz / 1000.0F),
-             static_cast<double>(frame.spectral_lines[2].amplitude_volts_peak * 1000.0F));
+    format_peak_summary(value, sizeof(value), frame.spectrum);
     lv_label_set_text(spectrum_legend_, value);
 
     if (now_ms - last_health_log_ms_ >= 30000U) {

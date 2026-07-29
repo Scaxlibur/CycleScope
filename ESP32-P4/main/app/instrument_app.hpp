@@ -61,6 +61,7 @@ private:
     SpectrumModel spectrum_model_;
     SpectrumView spectrum_view_;
     LiveDataPipeline live_pipeline_;
+    DynamicMeasurementFrame live_frame_{};
     lv_timer_t *live_data_timer_ = nullptr;
     bool live_mode_ = false;
     uint32_t ui_frames_applied_ = 0;

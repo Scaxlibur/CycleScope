@@ -3,12 +3,9 @@
 #include <array>
 #include <cstddef>
 
-namespace cyclescope {
+#include "spectrum_frame.hpp"
 
-struct SpectralLine {
-    float frequency_hz;
-    float amplitude_volts_peak;
-};
+namespace cyclescope {
 
 // A coherent 512-point test vector.  It gives a deterministic 500 Hz FFT-bin
 // spacing and a known fundamental plus two harmonics for M5 validation.
