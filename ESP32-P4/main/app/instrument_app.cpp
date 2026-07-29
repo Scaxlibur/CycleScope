@@ -1,5 +1,7 @@
 #include "instrument_app.hpp"
 
+#include <stdio.h>
+
 #include "esp_log.h"
 
 namespace cyclescope {
@@ -31,7 +33,7 @@ lv_obj_t *create_text(lv_obj_t *parent, const char *text, const lv_font_t *font,
     return label;
 }
 
-void style_metric(lv_obj_t *card, const char *title, const char *value, int32_t x, int32_t y)
+lv_obj_t *style_metric(lv_obj_t *card, const char *title, const char *value, int32_t x, int32_t y)
 {
     lv_obj_set_pos(card, x, y);
 
@@ -40,6 +42,7 @@ void style_metric(lv_obj_t *card, const char *title, const char *value, int32_t 
 
     lv_obj_t *value_label = create_text(card, value, &lv_font_montserrat_22, kText);
     lv_obj_align(value_label, LV_ALIGN_BOTTOM_LEFT, 14, -12);
+    return value_label;
 }
 
 }  // namespace
@@ -52,7 +55,9 @@ void InstrumentApp::start()
 {
     build_layout();
     select_view(View::Time);
-    ESP_LOGI("cyclescope_ui", "Instrument UI skeleton started");
+    select_periods(WaveformView::kPeriodsInCapture);
+    ESP_LOGI("cyclescope_ui", "Instrument UI skeleton started; envelope peak preservation: %s",
+             waveform_.peak_preservation_verified() ? "PASS" : "FAIL");
 }
 
 void InstrumentApp::build_layout()
@@ -100,12 +105,17 @@ void InstrumentApp::build_layout()
 
     mode_label_ = create_text(status, "MODE  TIME DOMAIN", &lv_font_montserrat_12, kAccent);
     lv_obj_align(mode_label_, LV_ALIGN_LEFT_MID, 0, 0);
-    lv_obj_t *source_label = create_text(status, "SOURCE  SYNTHETIC   •   LINK  STANDBY", &lv_font_montserrat_12, kMutedText);
-    lv_obj_align(source_label, LV_ALIGN_RIGHT_MID, 0, 0);
+    source_label_ = create_text(status, "SOURCE  SYNTHETIC   •   LINK  STANDBY", &lv_font_montserrat_12, kMutedText);
+    lv_obj_align(source_label_, LV_ALIGN_RIGHT_MID, 0, 0);
 
     lv_obj_t *plot_card = create_card(screen, kScreenPadding, content_top, plot_width, content_height);
     plot_title_ = create_text(plot_card, "TIME DOMAIN", &lv_font_montserrat_18, kText);
     lv_obj_align(plot_title_, LV_ALIGN_TOP_LEFT, 18, 16);
+
+    one_period_button_ = create_period_button(plot_card, "1P", plot_width - 132);
+    three_period_button_ = create_period_button(plot_card, "3P", plot_width - 68);
+    lv_obj_add_event_cb(one_period_button_, on_one_period_clicked, LV_EVENT_CLICKED, this);
+    lv_obj_add_event_cb(three_period_button_, on_three_periods_clicked, LV_EVENT_CLICKED, this);
 
     lv_obj_t *divider = lv_obj_create(plot_card);
     lv_obj_set_size(divider, plot_width - 36, 1);
@@ -114,11 +124,15 @@ void InstrumentApp::build_layout()
     lv_obj_set_style_border_width(divider, 0, 0);
     lv_obj_set_style_radius(divider, 0, 0);
 
-    plot_hint_ = create_text(plot_card, "WAITING FOR SYNTHETIC SIGNAL PIPELINE", &lv_font_montserrat_16, kTrace);
+    plot_hint_ = create_text(plot_card, "M4 WAVEFORM READY", &lv_font_montserrat_16, kTrace);
     lv_obj_align(plot_hint_, LV_ALIGN_CENTER, 0, -4);
 
-    lv_obj_t *plot_subhint = create_text(plot_card, "M4 ADDS TRACE, GRID, SCALING, AND PERIOD SELECT", &lv_font_montserrat_12, kMutedText);
-    lv_obj_align(plot_subhint, LV_ALIGN_CENTER, 0, 26);
+    plot_subhint_ = create_text(plot_card, "M5 ADDS THE DISCRETE SPECTRUM", &lv_font_montserrat_12, kMutedText);
+    lv_obj_align(plot_subhint_, LV_ALIGN_CENTER, 0, 26);
+
+    waveform_.create(plot_card, 18, 72, plot_width - 36, content_height - 126);
+    timebase_label_ = create_text(plot_card, "500 mV/div   •   3 periods   •   30.0 us span", &lv_font_montserrat_12, kMutedText);
+    lv_obj_align(timebase_label_, LV_ALIGN_BOTTOM_LEFT, 18, -18);
 
     lv_obj_t *metrics = create_card(screen, kScreenPadding * 2 + plot_width, content_top, kMetricsWidth, content_height);
     lv_obj_t *metrics_title = create_text(metrics, "MEASUREMENTS", &lv_font_montserrat_18, kText);
@@ -127,13 +141,13 @@ void InstrumentApp::build_layout()
     constexpr int32_t metric_width = 116;
     constexpr int32_t metric_height = 94;
     lv_obj_t *vpp = create_card(metrics, 14, 58, metric_width, metric_height);
-    style_metric(vpp, "Vpp", "-- mV", 14, 58);
+    vpp_value_ = style_metric(vpp, "Vpp", "-- V", 14, 58);
     lv_obj_t *rms = create_card(metrics, 148, 58, metric_width, metric_height);
-    style_metric(rms, "RMS", "-- mV", 148, 58);
+    rms_value_ = style_metric(rms, "RMS", "-- V", 148, 58);
     lv_obj_t *fundamental = create_card(metrics, 14, 166, metric_width, metric_height);
-    style_metric(fundamental, "F0", "-- kHz", 14, 166);
+    fundamental_value_ = style_metric(fundamental, "F0", "-- kHz", 14, 166);
     lv_obj_t *sample_rate = create_card(metrics, 148, 166, metric_width, metric_height);
-    style_metric(sample_rate, "Fs", "-- MS/s", 148, 166);
+    sample_rate_value_ = style_metric(sample_rate, "Fs", "-- MS/s", 148, 166);
 
     lv_obj_t *summary = create_card(metrics, 14, 278, kMetricsWidth - 28, 118);
     lv_obj_t *summary_title = create_text(summary, "ACTIVE VIEW", &lv_font_montserrat_12, kMutedText);
@@ -154,7 +168,7 @@ void InstrumentApp::build_layout()
 
     lv_obj_t *footer_left = create_text(footer, "UI READY", &lv_font_montserrat_12, kAccent);
     lv_obj_align(footer_left, LV_ALIGN_LEFT_MID, 14, 0);
-    lv_obj_t *footer_right = create_text(footer, "M3  •  DISPLAY / TOUCH VERIFIED", &lv_font_montserrat_12, kMutedText);
+    lv_obj_t *footer_right = create_text(footer, "M4  •  MIN/MAX ENVELOPE RENDERING", &lv_font_montserrat_12, kMutedText);
     lv_obj_align(footer_right, LV_ALIGN_RIGHT_MID, -14, 0);
 }
 
@@ -202,9 +216,54 @@ void InstrumentApp::select_view(View view)
 
     lv_label_set_text(mode_label_, is_time ? "MODE  TIME DOMAIN" : "MODE  FREQUENCY DOMAIN");
     lv_label_set_text(plot_title_, is_time ? "TIME DOMAIN" : "FREQUENCY DOMAIN");
-    lv_label_set_text(plot_hint_, is_time ? "WAITING FOR SYNTHETIC SIGNAL PIPELINE"
-                                          : "WAITING FOR SYNTHETIC SPECTRUM PIPELINE");
+    waveform_.set_visible(is_time);
+    if (is_time) {
+        lv_obj_remove_flag(one_period_button_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(three_period_button_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(plot_hint_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(plot_subhint_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(source_label_, "SOURCE  SYNTHETIC   •   LINK  STANDBY");
+        update_time_metrics();
+    } else {
+        lv_obj_add_flag(one_period_button_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(three_period_button_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(plot_hint_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(plot_subhint_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(plot_hint_, "WAITING FOR SYNTHETIC SPECTRUM PIPELINE");
+        lv_label_set_text(source_label_, "SOURCE  SYNTHETIC   •   LINK  STANDBY");
+    }
     lv_label_set_text(active_view_value_, is_time ? "TIME" : "FFT");
+}
+
+void InstrumentApp::select_periods(uint8_t periods)
+{
+    waveform_.set_periods(periods);
+    set_mode_button_selected(one_period_button_, periods == 1);
+    set_mode_button_selected(three_period_button_, periods == 3);
+
+    char timebase[72];
+    const float span_us = static_cast<float>(periods) * 1000000.0F / waveform_.fundamental_hz();
+    snprintf(timebase, sizeof(timebase), "500 mV/div   •   %u period%s   •   %.1f us span", periods,
+             periods == 1 ? "" : "s", static_cast<double>(span_us));
+    lv_label_set_text(timebase_label_, timebase);
+    update_time_metrics();
+    ESP_LOGI("cyclescope_ui", "Waveform view set to %u period(s); envelope peak preservation: %s", periods,
+             waveform_.peak_preservation_verified() ? "PASS" : "FAIL");
+}
+
+void InstrumentApp::update_time_metrics()
+{
+    char value[24];
+    snprintf(value, sizeof(value), "%.3f V", static_cast<double>(waveform_.peak_to_peak_volts()));
+    lv_label_set_text(vpp_value_, value);
+    snprintf(value, sizeof(value), "%.3f V", static_cast<double>(waveform_.rms_volts()));
+    lv_label_set_text(rms_value_, value);
+    snprintf(value, sizeof(value), "%.1f kHz", static_cast<double>(waveform_.fundamental_hz() / 1000.0F));
+    lv_label_set_text(fundamental_value_, value);
+    snprintf(value, sizeof(value), "%.1f MS/s", static_cast<double>(waveform_.sample_rate_hz() / 1000000.0F));
+    lv_label_set_text(sample_rate_value_, value);
 }
 
 void InstrumentApp::on_time_view_clicked(lv_event_t *event)
@@ -217,6 +276,33 @@ void InstrumentApp::on_spectrum_view_clicked(lv_event_t *event)
 {
     auto *app = static_cast<InstrumentApp *>(lv_event_get_user_data(event));
     app->select_view(View::Spectrum);
+}
+
+void InstrumentApp::on_one_period_clicked(lv_event_t *event)
+{
+    auto *app = static_cast<InstrumentApp *>(lv_event_get_user_data(event));
+    app->select_periods(1);
+}
+
+void InstrumentApp::on_three_periods_clicked(lv_event_t *event)
+{
+    auto *app = static_cast<InstrumentApp *>(lv_event_get_user_data(event));
+    app->select_periods(3);
+}
+
+lv_obj_t *InstrumentApp::create_period_button(lv_obj_t *parent, const char *text, int32_t x)
+{
+    lv_obj_t *button = lv_button_create(parent);
+    lv_obj_set_pos(button, x, 12);
+    lv_obj_set_size(button, 52, 32);
+    lv_obj_set_style_radius(button, 6, 0);
+    lv_obj_set_style_border_width(button, 1, 0);
+    lv_obj_set_style_border_color(button, lv_color_hex(kCardBorder), 0);
+    lv_obj_set_style_pad_all(button, 0, 0);
+
+    lv_obj_t *label = create_text(button, text, &lv_font_montserrat_12, kText);
+    lv_obj_center(label);
+    return button;
 }
 
 }  // namespace cyclescope
