@@ -14,6 +14,7 @@ constexpr int32_t kStatusHeight = 32;
 constexpr int32_t kFooterHeight = 38;
 constexpr int32_t kMetricsWidth = 278;
 constexpr int32_t kCardRadius = 12;
+constexpr uint32_t kLiveUiPeriodMs = 250;
 
 constexpr uint32_t kBackground = 0x08111B;
 constexpr uint32_t kHeader = 0x0E1D2C;
@@ -59,11 +60,11 @@ void InstrumentApp::start()
     select_view(View::Time);
     live_mode_ = live_pipeline_.start();
     if (live_mode_) {
-        live_data_timer_ = lv_timer_create(on_live_data_timer, 50, this);
+        live_data_timer_ = lv_timer_create(on_live_data_timer, kLiveUiPeriodMs, this);
     }
-    ESP_LOGI("cyclescope_ui", "Instrument UI started; waveform envelope: %s, spectrum vector: %s, M6: %s",
+    ESP_LOGI("cyclescope_ui", "Instrument UI started; waveform envelope: %s, esp-dsp FFT8192: %s",
              waveform_.peak_preservation_verified() ? "PASS" : "FAIL",
-             spectrum_model_.validation_passed() ? "PASS" : "FAIL", live_mode_ ? "RUNNING" : "FAILED");
+             live_mode_ ? "RUNNING" : "FAILED");
 }
 
 void InstrumentApp::build_layout()
@@ -111,7 +112,7 @@ void InstrumentApp::build_layout()
 
     mode_label_ = create_text(status, "MODE  TIME DOMAIN", &lv_font_montserrat_12, kAccent);
     lv_obj_align(mode_label_, LV_ALIGN_LEFT_MID, 0, 0);
-    source_label_ = create_text(status, "SOURCE  SYNTHETIC   •   LINK  STANDBY", &lv_font_montserrat_12, kMutedText);
+    source_label_ = create_text(status, "SOURCE  LOCAL S16 TEST   •   FFT 8192", &lv_font_montserrat_12, kMutedText);
     lv_obj_align(source_label_, LV_ALIGN_RIGHT_MID, 0, 0);
 
     lv_obj_t *plot_card = create_card(screen, kScreenPadding, content_top, plot_width, content_height);
@@ -133,14 +134,14 @@ void InstrumentApp::build_layout()
     plot_hint_ = create_text(plot_card, "M4 WAVEFORM READY", &lv_font_montserrat_16, kTrace);
     lv_obj_align(plot_hint_, LV_ALIGN_CENTER, 0, -4);
 
-    plot_subhint_ = create_text(plot_card, "M5 ADDS THE DISCRETE SPECTRUM", &lv_font_montserrat_12, kMutedText);
+    plot_subhint_ = create_text(plot_card, "ESP-DSP 8192-POINT ANALYSIS", &lv_font_montserrat_12, kMutedText);
     lv_obj_align(plot_subhint_, LV_ALIGN_CENTER, 0, 26);
 
     waveform_.create(plot_card, 18, 72, plot_width - 36, content_height - 126);
     spectrum_view_.create(plot_card, 18, 72, plot_width - 36, content_height - 126, &spectrum_model_);
     timebase_label_ = create_text(plot_card, "500 mV/div   •   3 periods   •   30.0 us span", &lv_font_montserrat_12, kMutedText);
     lv_obj_align(timebase_label_, LV_ALIGN_BOTTOM_LEFT, 18, -18);
-    spectrum_legend_ = create_text(plot_card, "40.0 kHz  400 mV  •  80.0 kHz  120 mV  •  120.0 kHz  60 mV",
+    spectrum_legend_ = create_text(plot_card, "WAITING FOR LOCAL FFT RESULT",
                                    &lv_font_montserrat_12, kMutedText);
     lv_obj_align(spectrum_legend_, LV_ALIGN_BOTTOM_LEFT, 18, -18);
     lv_obj_add_flag(spectrum_legend_, LV_OBJ_FLAG_HIDDEN);
@@ -179,7 +180,7 @@ void InstrumentApp::build_layout()
 
     footer_left_ = create_text(footer, "UI READY", &lv_font_montserrat_12, kAccent);
     lv_obj_align(footer_left_, LV_ALIGN_LEFT_MID, 14, 0);
-    lv_obj_t *footer_right = create_text(footer, "M6  •  QUEUED LIVE DATA", &lv_font_montserrat_12, kMutedText);
+    lv_obj_t *footer_right = create_text(footer, "ESP-DSP  •  FFT 8192", &lv_font_montserrat_12, kMutedText);
     lv_obj_align(footer_right, LV_ALIGN_RIGHT_MID, -14, 0);
 }
 
@@ -236,7 +237,7 @@ void InstrumentApp::select_view(View view)
         lv_obj_add_flag(plot_subhint_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(spectrum_legend_, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(source_label_, "SOURCE  SYNTHETIC   •   LINK  STANDBY");
+        lv_label_set_text(source_label_, "SOURCE  LOCAL S16 TEST   •   FFT 8192");
         if (!live_mode_) {
             update_time_metrics();
         }
@@ -247,7 +248,7 @@ void InstrumentApp::select_view(View view)
         lv_obj_add_flag(plot_subhint_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(spectrum_legend_, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(source_label_, "SOURCE  TEST VECTOR   •   FFT 512   •   500 Hz/bin");
+        lv_label_set_text(source_label_, "SOURCE  LOCAL S16 TEST   •   FFT 8192   •   495.91 Hz/bin");
         if (!live_mode_) {
             update_spectrum_metrics();
         }
@@ -296,15 +297,6 @@ void InstrumentApp::update_spectrum_metrics()
     snprintf(value, sizeof(value), "%.1f kS/s", static_cast<double>(spectrum_model_.sample_rate_hz() / 1000.0F));
     lv_label_set_text(sample_rate_value_, value);
 
-    const auto &lines = spectrum_model_.lines();
-    ESP_LOGI("cyclescope_fft", "M5 FFT: F0 %.1f kHz, lines %.0f/%.0f/%.0f mV, Vpp %.6f V, RMS %.6f V, %s",
-             static_cast<double>(spectrum_model_.fundamental_hz() / 1000.0F),
-             static_cast<double>(lines[0].amplitude_volts_peak * 1000.0F),
-             static_cast<double>(lines[1].amplitude_volts_peak * 1000.0F),
-             static_cast<double>(lines[2].amplitude_volts_peak * 1000.0F),
-             static_cast<double>(spectrum_model_.voltage_peak_to_peak()),
-             static_cast<double>(spectrum_model_.true_rms_volts()),
-             spectrum_model_.validation_passed() ? "PASS" : "FAIL");
 }
 
 void InstrumentApp::on_live_data_timer(lv_timer_t *timer)
@@ -346,10 +338,10 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
     lv_label_set_text(rms_value_, value);
     snprintf(value, sizeof(value), "%.2f kHz", static_cast<double>(frame.fundamental_hz / 1000.0F));
     lv_label_set_text(fundamental_value_, value);
-    snprintf(value, sizeof(value), "%.1f kS/s", static_cast<double>(frame.sample_rate_hz / 1000.0F));
+    snprintf(value, sizeof(value), "%.4f MS/s", static_cast<double>(frame.sample_rate_hz / 1000000.0F));
     lv_label_set_text(sample_rate_value_, value);
 
-    snprintf(value, sizeof(value), "SOURCE  FPGA SIM   •   FRAME %lu   •   LINK LIVE",
+    snprintf(value, sizeof(value), "SOURCE  LOCAL S16 TEST   •   FFT8192 FRAME %lu",
              static_cast<unsigned long>(frame.sequence));
     lv_label_set_text(source_label_, value);
     snprintf(value, sizeof(value), "%s / LIVE #%lu", active_view_ == View::Time ? "TIME" : "FFT",
@@ -357,22 +349,36 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
     lv_label_set_text(active_view_value_, value);
     snprintf(value, sizeof(value), "LIVE  %lu frames", static_cast<unsigned long>(ui_frames_applied_));
     lv_label_set_text(footer_left_, value);
-    snprintf(value, sizeof(value), "%.2fk %.0fmV  •  %.2fk %.0fmV  •  %.2fk %.0fmV",
-             static_cast<double>(frame.spectral_lines[0].frequency_hz / 1000.0F),
-             static_cast<double>(frame.spectral_lines[0].amplitude_volts_peak * 1000.0F),
-             static_cast<double>(frame.spectral_lines[1].frequency_hz / 1000.0F),
-             static_cast<double>(frame.spectral_lines[1].amplitude_volts_peak * 1000.0F),
-             static_cast<double>(frame.spectral_lines[2].frequency_hz / 1000.0F),
-             static_cast<double>(frame.spectral_lines[2].amplitude_volts_peak * 1000.0F));
+    if (frame.spectral_line_count >= 3) {
+        snprintf(value, sizeof(value), "%.2fk %.0fmV  •  %.2fk %.0fmV  •  %.2fk %.0fmV",
+                 static_cast<double>(frame.spectral_lines[0].frequency_hz / 1000.0F),
+                 static_cast<double>(frame.spectral_lines[0].amplitude_volts_peak * 1000.0F),
+                 static_cast<double>(frame.spectral_lines[1].frequency_hz / 1000.0F),
+                 static_cast<double>(frame.spectral_lines[1].amplitude_volts_peak * 1000.0F),
+                 static_cast<double>(frame.spectral_lines[2].frequency_hz / 1000.0F),
+                 static_cast<double>(frame.spectral_lines[2].amplitude_volts_peak * 1000.0F));
+    } else {
+        snprintf(value, sizeof(value), "%.2fk %.0fmV  •  %.2fk %.0fmV",
+                 static_cast<double>(frame.spectral_lines[0].frequency_hz / 1000.0F),
+                 static_cast<double>(frame.spectral_lines[0].amplitude_volts_peak * 1000.0F),
+                 static_cast<double>(frame.spectral_lines[1].frequency_hz / 1000.0F),
+                 static_cast<double>(frame.spectral_lines[1].amplitude_volts_peak * 1000.0F));
+    }
     lv_label_set_text(spectrum_legend_, value);
 
     if (now_ms - last_health_log_ms_ >= 30000U) {
         last_health_log_ms_ = now_ms;
         const PipelineStats stats = live_pipeline_.stats();
-        ESP_LOGI("cyclescope_m6", "health: rx=%lu analyzed=%lu published=%lu ui=%lu dropped=%lu max_ui_gap=%lums free=%lu",
+        ESP_LOGI("cyclescope_fft",
+                 "health: src=%lu analyzed=%lu published=%lu ui=%lu stale=%lu failures=%lu "
+                 "fft_us(last/avg/max)=%lu/%lu/%lu selftest=%s max_ui_gap=%lums free=%lu",
                  static_cast<unsigned long>(stats.received_frames), static_cast<unsigned long>(stats.analyzed_frames),
                  static_cast<unsigned long>(stats.published_frames), static_cast<unsigned long>(ui_frames_applied_),
-                 static_cast<unsigned long>(stats.dropped_raw_frames), static_cast<unsigned long>(maximum_ui_gap_ms_),
+                 static_cast<unsigned long>(stats.dropped_raw_frames), static_cast<unsigned long>(stats.fft_failures),
+                 static_cast<unsigned long>(stats.last_analysis_us),
+                 static_cast<unsigned long>(stats.average_analysis_us),
+                 static_cast<unsigned long>(stats.maximum_analysis_us), stats.fft_self_test_passed ? "PASS" : "FAIL",
+                 static_cast<unsigned long>(maximum_ui_gap_ms_),
                  static_cast<unsigned long>(esp_get_free_heap_size()));
     }
 }

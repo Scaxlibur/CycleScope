@@ -15,3 +15,5 @@ dependencies:
   # Keep the BSP-compatible 1.5.10 release until Espressif republishes a fix.
   espressif/esp_codec_dev:
     version: "1.5.10"
+  espressif/esp-dsp:
+    version: "1.8.2"

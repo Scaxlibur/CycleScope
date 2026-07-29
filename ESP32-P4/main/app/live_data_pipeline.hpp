@@ -8,7 +8,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
-#include "spectrum_model.hpp"
+#include "fft_processor.hpp"
 
 namespace cyclescope {
 
@@ -21,7 +21,9 @@ struct DynamicMeasurementFrame {
     float true_rms_volts;
     float fundamental_hz;
     float sample_rate_hz;
-    std::array<SpectralLine, SpectrumModel::kLineCount> spectral_lines;
+    uint32_t analysis_time_us;
+    uint32_t spectral_line_count;
+    std::array<SpectralLine, kMaximumSpectralLines> spectral_lines;
 };
 
 struct PipelineStats {
@@ -29,6 +31,11 @@ struct PipelineStats {
     uint32_t analyzed_frames;
     uint32_t published_frames;
     uint32_t dropped_raw_frames;
+    uint32_t fft_failures;
+    uint32_t last_analysis_us;
+    uint32_t average_analysis_us;
+    uint32_t maximum_analysis_us;
+    bool fft_self_test_passed;
 };
 
 class LiveDataPipeline {
@@ -41,21 +48,32 @@ private:
     struct RawCaptureFrame {
         uint32_t sequence;
         uint32_t capture_time_ms;
-        float phase;
     };
 
     static void receiver_task(void *context);
     static void analysis_task(void *context);
-    DynamicMeasurementFrame analyze(const RawCaptureFrame &raw) const;
+    bool analyze(const RawCaptureFrame &raw, DynamicMeasurementFrame *result);
+    bool allocate_test_samples();
+    void generate_test_samples();
+    static bool validate_self_test(const FftAnalysisResult &result);
 
     QueueHandle_t raw_queue_ = nullptr;
     QueueHandle_t ui_queue_ = nullptr;
     TaskHandle_t receiver_task_handle_ = nullptr;
     TaskHandle_t analysis_task_handle_ = nullptr;
+    FftProcessor8192 fft_processor_;
+    int16_t *test_samples_ = nullptr;
+    bool self_test_logged_ = false;
     std::atomic<uint32_t> received_frames_{0};
     std::atomic<uint32_t> analyzed_frames_{0};
     std::atomic<uint32_t> published_frames_{0};
     std::atomic<uint32_t> dropped_raw_frames_{0};
+    std::atomic<uint32_t> fft_failures_{0};
+    std::atomic<uint32_t> last_analysis_us_{0};
+    std::atomic<uint32_t> average_analysis_us_{0};
+    std::atomic<uint32_t> maximum_analysis_us_{0};
+    std::atomic<bool> fft_self_test_passed_{false};
+    uint64_t cumulative_analysis_us_ = 0;
 };
 
 }  // namespace cyclescope

@@ -23,6 +23,16 @@ dependencies:
       registry_url: https://components.espressif.com
       type: service
     version: 0.5.3
+  espressif/esp-dsp:
+    component_hash: ed9ac175b14e0414399a2b33c525579414b5bad19a2a67b12ea212def96f9a98
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.2'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.8.2
   espressif/esp32_p4_function_ev_board_noglib:
     component_hash: f7e88277ccccb20778a38725279a7560fb30d780b00f34fd94f7768021dc90ab
     dependencies:
@@ -468,11 +478,12 @@ dependencies:
       type: service
     version: 9.4.0
 direct_dependencies:
+- espressif/esp-dsp
 - espressif/esp32_p4_function_ev_board_noglib
 - espressif/esp_codec_dev
 - espressif/esp_lvgl_adapter
 - idf
 - lvgl/lvgl
-manifest_hash: ad2b5570714a5ddaa7e6323f5d0b7682e12066a7e7313bad655eb5257bd59109
+manifest_hash: 8d6bea27866fde9ade6ec5dde18289ccccd94dcec0e129115d3dddb959a47cbe
 target: esp32p4
 version: 3.0.0

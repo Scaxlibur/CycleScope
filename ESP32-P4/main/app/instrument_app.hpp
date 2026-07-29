@@ -67,7 +67,7 @@ private:
     uint32_t last_ui_tick_ms_ = 0;
     uint32_t maximum_ui_gap_ms_ = 0;
     uint32_t last_health_log_ms_ = 0;
-    uint32_t last_spectrum_render_sequence_ = 0;
+    uint32_t last_spectrum_render_sequence_ = 0xFFFFFFFFU;
 };
 
 }  // namespace cyclescope

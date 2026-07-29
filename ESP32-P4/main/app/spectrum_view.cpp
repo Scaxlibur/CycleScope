@@ -96,6 +96,10 @@ void SpectrumView::draw(lv_event_t *event) const
     const float nyquist_hz = model_->sample_rate_hz() / 2.0F;
     for (size_t index = 0; index < lines_.size(); ++index) {
         const SpectralLine &spectral_line = lines_[index];
+        if (!(spectral_line.amplitude_volts_peak > 0.0F) || spectral_line.frequency_hz < 0.0F
+            || spectral_line.frequency_hz > nyquist_hz) {
+            continue;
+        }
         const int32_t x = coords.x1 + static_cast<int32_t>(spectral_line.frequency_hz * static_cast<float>(width) / nyquist_hz);
         const float normalized = spectral_line.amplitude_volts_peak / kMaximumDisplayAmplitude;
         const int32_t y = coords.y2 - static_cast<int32_t>(normalized * static_cast<float>(height));
