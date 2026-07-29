@@ -1,5 +1,7 @@
 #include "cslp_udp_receiver.hpp"
 
+#include "sdkconfig.h"
+
 #include <cerrno>
 #include <cstring>
 #include <inttypes.h>
@@ -16,7 +18,7 @@ namespace {
 constexpr char kTag[] = "cslp_rx";
 constexpr char kLocalIp[] = "192.168.10.3";
 constexpr char kNetmask[] = "255.255.255.0";
-constexpr char kFpgaIp[] = "192.168.10.2";
+constexpr char kFpgaIp[] = CONFIG_CYCLESCOPE_CSLP_PEER_IPV4;
 constexpr int kSocketReceiveBufferBytes = 64 * 1024;
 constexpr int kSocketTimeoutMs = 20;
 constexpr uint64_t kControlTimeoutUs = 100000;

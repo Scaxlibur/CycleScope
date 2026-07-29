@@ -8,6 +8,7 @@ idf_component_register(
         "app/spectrum_view.cpp"
         "app/live_data_pipeline.cpp"
         "app/cslp_protocol.cpp"
+        "app/cslp_frame_diagnostic.cpp"
         "app/cslp_udp_receiver.cpp"
     INCLUDE_DIRS
         "."
