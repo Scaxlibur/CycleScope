@@ -7,14 +7,28 @@
 #include <assert.h>
 
 #include "esp_check.h"
+#include "esp_log.h"
 #include "esp_lv_adapter.h"
 #include "bsp/display.h"
 
+#include "cslp_udp_receiver.hpp"
 #include "instrument_app.hpp"
 #include "lvgl_adapter_init.h"
 
+namespace {
+
+constexpr char kTag[] = "cyclescope";
+
+}  // namespace
+
 extern "C" void app_main(void)
 {
+    const esp_err_t receiver_error = cyclescope::cslp_udp_receiver().start();
+    if (receiver_error != ESP_OK) {
+        ESP_LOGE(kTag, "CSLP UDP receiver did not start: %s",
+                 esp_err_to_name(receiver_error));
+    }
+
     const bsp_display_cfg_t cfg = {
         .hw_cfg = {
             .hdmi_resolution = BSP_HDMI_RES_NONE,

@@ -7,6 +7,8 @@ idf_component_register(
         "app/spectrum_model.cpp"
         "app/spectrum_view.cpp"
         "app/live_data_pipeline.cpp"
+        "app/cslp_protocol.cpp"
+        "app/cslp_udp_receiver.cpp"
     INCLUDE_DIRS
         "."
         "app"
@@ -14,6 +16,12 @@ idf_component_register(
         lvgl__lvgl
         espressif__esp_lvgl_adapter
         espressif__esp32_p4_function_ev_board_noglib
+        espressif__ethernet_init
+        esp_eth
+        esp_event
+        esp_netif
+        esp_timer
+        lwip
 )
 
 idf_component_get_property(LVGL_LIB lvgl__lvgl COMPONENT_LIB)
