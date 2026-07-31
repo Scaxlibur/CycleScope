@@ -19,4 +19,5 @@
 /ESP32-P4/.idf-component-cache/
 /ESP32-P4/.xdg-cache/
 
+# FPGA的真实发送数据包，用于重放给ESP32-P4测试
 /source_data_for_test/
