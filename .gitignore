@@ -7,29 +7,19 @@
 # 本地编辑器配置
 /.vscode/
 
+# Python 本地缓存
+__pycache__/
+*.py[cod]
+
 # ESP-IDF 生成文件
 /ESP32-P4/build/
 /ESP32-P4/managed_components/
 /ESP32-P4/sdkconfig
 /ESP32-P4/sdkconfig.old
 
-# Xilinx Vivado：可由工程源重新生成的缓存、仿真和实现产物。
-# 保留 prj1.xpr、prj1.srcs/、自定义 IP 源码和导出的 .xsa（PS 的硬件接口）。
+# Xilinx Vivado：当前工程只以 rtl/、constraints/、scripts/ 和 sim/ 为事实源。
+# 旧 prj1/project_1 工程不再忽略，误拷回来时必须让 git status 显示出来。
 /Zynq_7010_PL/.Xil/
-/Zynq_7010_PL/prj1.cache/
-/Zynq_7010_PL/prj1.gen/
-/Zynq_7010_PL/prj1.hw/
-/Zynq_7010_PL/prj1.ip_user_files/
-/Zynq_7010_PL/prj1.runs/
-/Zynq_7010_PL/prj1.sim/
-/Zynq_7010_PL/prj1.srcs/utils_1/imports/
-/Zynq_7010_PL/project_1.cache/
-/Zynq_7010_PL/project_1.gen/
-/Zynq_7010_PL/project_1.hw/
-/Zynq_7010_PL/project_1.ip_user_files/
-/Zynq_7010_PL/project_1.runs/
-/Zynq_7010_PL/project_1.sim/
-/Zynq_7010_PL/project_1.srcs/utils_1/imports/
 /Zynq_7010_PL/build/
 /Zynq_7010_PL/**/managed_prj/
 /Zynq_7010_PL/**/xsim.dir/
@@ -39,13 +29,15 @@
 /Zynq_7010_PL/*.wdb
 /Zynq_7010_PL/*.pb
 /Zynq_7010_PL/dfx_runtime.txt
-# 工程 IP 仓库指向已解压的 */src/ 目录；这些 ZIP 是可再打包的副本。
-/Zynq_7010_PL/ad7608_ip.zip
-/Zynq_7010_PL/ad9744_ip.zip
-/Zynq_7010_PL/ad9744_ip/src.zip
 
-# Xilinx Vitis：IDE 状态、生成的平台/BSP 和编译数据库。
-# 保留 lwip_udp_perf_server/src/ 及各组件的 vitis-comp.json、app.yaml 配置。
+# 从 worktree 根目录启动 Vivado/WaveBench 时产生的本地日志与测量包。
+# 正式证据复制到已忽略的 tool-of-rei 后保留，不能混入版本控制。
+/data/
+/vivado*.jou
+/vivado*.log
+
+# Xilinx Vitis：当前 PS 事实源只有 cyclescope_cslp/；忽略可重建的 IDE、
+# BSP、platform、日志和编译数据库，旧 platform/应用目录不再专门隐藏。
 /Zynq_7010_PS/.rigel_lopper/
 /Zynq_7010_PS/_ide/
 /Zynq_7010_PS/**/_ide/
@@ -57,7 +49,6 @@
 /Zynq_7010_PS/**/logs/
 /Zynq_7010_PS/.Xil/
 /Zynq_7010_PS/.metadata/
-/Zynq_7010_PS/platform/hw/
-/Zynq_7010_PS/platform/ps7_cortexa9_0/
-/Zynq_7010_PS/platform/resources/
-/Zynq_7010_PS/platform/zynq_fsbl/
+
+#参考文件
+/references/

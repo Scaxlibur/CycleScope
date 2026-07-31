@@ -2,7 +2,8 @@
 
 module ad9226_frontend #(
     parameter bit ADC_OFFSET_BINARY = 1'b1,
-    parameter bit INVERT_POLARITY   = 1'b0
+    parameter bit INVERT_POLARITY   = 1'b0,
+    parameter bit ADC_REVERSE_BITS  = 1'b0
 ) (
     input  logic               clk,
     input  logic               rst_n,
@@ -16,12 +17,24 @@ module ad9226_frontend #(
 
     logic signed [12:0] centered_code;
     logic signed [12:0] normalized_code;
+    logic        [11:0] ordered_adc_data;
+
+    genvar data_bit;
+    generate
+        if (ADC_REVERSE_BITS) begin : generate_reversed_adc_bits
+            for (data_bit = 0; data_bit < 12; data_bit = data_bit + 1) begin : generate_bit
+                assign ordered_adc_data[data_bit] = adc_data[11-data_bit];
+            end
+        end else begin : generate_direct_adc_bits
+            assign ordered_adc_data = adc_data;
+        end
+    endgenerate
 
     always_comb begin
         if (ADC_OFFSET_BINARY) begin
-            centered_code = $signed({1'b0, adc_data}) - 13'sd2048;
+            centered_code = $signed({1'b0, ordered_adc_data}) - 13'sd2048;
         end else begin
-            centered_code = $signed({adc_data[11], adc_data});
+            centered_code = $signed({ordered_adc_data[11], ordered_adc_data});
         end
 
         if (INVERT_POLARITY) begin

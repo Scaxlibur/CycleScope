@@ -2,6 +2,8 @@
 
 module tb_fir_decimator_16;
 
+    import fir_coeffs_pkg::*;
+
     localparam real FS_HZ = 65_000_000.0;
     localparam real PI = 3.14159265358979323846;
 
@@ -10,18 +12,23 @@ module tb_fir_decimator_16;
     logic s_valid = 1'b0;
     logic signed [15:0] s_sample = '0;
     logic s_otr = 1'b0;
+    logic [63:0] s_tick = '0;
     logic m_valid;
     logic signed [15:0] m_sample;
     logic m_otr;
+    logic [63:0] m_tick;
     logic schedule_error;
 
     integer cycle_count;
     integer last_valid_cycle;
+    logic [63:0] last_output_tick;
     integer output_count;
     integer measured_count;
     integer measured_min;
     integer measured_max;
     integer measured_abs_max;
+    integer impulse_peak_abs;
+    logic [63:0] impulse_peak_tick;
     bit seen_otr;
     bit check_spacing;
 
@@ -35,6 +42,13 @@ module tb_fir_decimator_16;
             if (check_spacing && last_valid_cycle >= 0 && (cycle_count - last_valid_cycle) != 16)
                 $fatal(1, "output spacing=%0d, expected 16", cycle_count - last_valid_cycle);
             last_valid_cycle <= cycle_count;
+            if (m_tick !== (64'd15 + 64'(output_count) * 64'd16))
+                $fatal(1, "output tag=%0d expected=%0d at output=%0d",
+                       m_tick, 15 + output_count * 16, output_count);
+            if (output_count > 0 && (m_tick - last_output_tick) != 16)
+                $fatal(1, "output ADC tick spacing=%0d, expected 16",
+                       m_tick - last_output_tick);
+            last_output_tick <= m_tick;
             output_count <= output_count + 1;
             if (output_count >= 512) begin
                 measured_count <= measured_count + 1;
@@ -47,6 +61,12 @@ module tb_fir_decimator_16;
             end
             if (m_otr)
                 seen_otr <= 1'b1;
+            if (($signed(m_sample) < 0 ? -$signed(m_sample) : $signed(m_sample)) >
+                impulse_peak_abs) begin
+                impulse_peak_abs <=
+                    ($signed(m_sample) < 0 ? -$signed(m_sample) : $signed(m_sample));
+                impulse_peak_tick <= m_tick;
+            end
         end
         if (schedule_error)
             $fatal(1, "FIR MAC schedule overlap");
@@ -58,19 +78,45 @@ module tb_fir_decimator_16;
             s_valid = 1'b0;
             s_sample = '0;
             s_otr = 1'b0;
+            s_tick = '0;
             cycle_count = 0;
             last_valid_cycle = -1;
+            last_output_tick = '0;
             output_count = 0;
             measured_count = 0;
             measured_min = 32767;
             measured_max = -32768;
             measured_abs_max = 0;
+            impulse_peak_abs = 0;
+            impulse_peak_tick = '0;
             seen_otr = 1'b0;
             check_spacing = 1'b0;
             repeat (8) @(posedge clk);
             rst_n = 1'b1;
             repeat (2) @(posedge clk);
             check_spacing = 1'b1;
+        end
+    endtask
+
+    task automatic drive_impulse(
+        input integer impulse_index,
+        input integer amplitude,
+        input integer input_samples
+    );
+        integer index;
+        begin
+            for (index = 0; index < input_samples; index = index + 1) begin
+                @(negedge clk);
+                s_valid = 1'b1;
+                s_sample = (index == impulse_index) ? amplitude : 0;
+                s_otr = 1'b0;
+                s_tick = index;
+            end
+            @(negedge clk);
+            s_valid = 1'b0;
+            s_sample = '0;
+            s_otr = 1'b0;
+            repeat (160) @(posedge clk);
         end
     endtask
 
@@ -91,6 +137,7 @@ module tb_fir_decimator_16;
                 s_valid = 1'b1;
                 s_sample = code;
                 s_otr = inject_otr && (index == 1001);
+                s_tick = index;
             end
             @(negedge clk);
             s_valid = 1'b0;
@@ -120,6 +167,19 @@ module tb_fir_decimator_16;
         if (measured_abs_max > 4)
             $fatal(1, "1 MHz stopband residual=%0d exceeds fixed-point limit", measured_abs_max);
         $display("STOP_TONE abs_max=%0d outputs=%0d", measured_abs_max, output_count);
+
+        reset_measurement();
+        drive_impulse(9, 2000, 2048);
+        if (FIR_GROUP_DELAY_ADC_TICKS != 694)
+            $fatal(1, "unexpected FIR group delay=%0d", FIR_GROUP_DELAY_ADC_TICKS);
+        if (impulse_peak_abs == 0 || impulse_peak_tick != (9 + FIR_GROUP_DELAY_ADC_TICKS))
+            $fatal(1, "impulse peak abs=%0d newest_tick=%0d expected=%0d",
+                   impulse_peak_abs, impulse_peak_tick,
+                   9 + FIR_GROUP_DELAY_ADC_TICKS);
+        $display("GROUP_DELAY_PASS ticks=%0d equivalent_tick=%0d peak_abs=%0d",
+                 FIR_GROUP_DELAY_ADC_TICKS,
+                 impulse_peak_tick - FIR_GROUP_DELAY_ADC_TICKS,
+                 impulse_peak_abs);
 
         $display("TEST_PASS tb_fir_decimator_16");
         $finish;

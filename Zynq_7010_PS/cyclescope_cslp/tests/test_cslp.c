@@ -1,6 +1,7 @@
 #include "cslp_control.h"
 #include "cslp_frame_pool.h"
 #include "cslp_protocol.h"
+#include "cslp_time.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,9 @@
         }                                                                       \
     } while (0)
 
+#define TEST_CPU_CLOCK_HZ 666666687ULL
+#define TEST_COUNTS_PER_SECOND TEST_CPU_CLOCK_HZ / 2ULL
+
 static const uint8_t golden_wave[82] = {
     0x43, 0x53, 0x4c, 0x50, 0x01, 0x20, 0x00, 0x48,
     0x11, 0x22, 0x33, 0x44, 0x01, 0x02, 0x03, 0x04,
@@ -28,6 +32,45 @@ static const uint8_t golden_wave[82] = {
     0x00, 0x80, 0xff, 0xff, 0x00, 0x00, 0x01, 0x00,
     0xff, 0x7f
 };
+
+static void test_tick_conversion(void)
+{
+    const uint64_t counts_per_second =
+        (uint64_t)(TEST_COUNTS_PER_SECOND);
+    const uint64_t one_day_ticks = counts_per_second * 86400ULL;
+
+    CHECK(counts_per_second == 333333343ULL);
+    CHECK(cslp_ticks_to_us(counts_per_second, counts_per_second) ==
+          1000000ULL);
+    CHECK(one_day_ticks > UINT64_MAX / 1000000ULL);
+    CHECK(cslp_ticks_to_us(one_day_ticks, counts_per_second) ==
+          86400000000ULL);
+    CHECK(cslp_ticks_to_us(counts_per_second + counts_per_second / 2ULL,
+                           counts_per_second) == 1499999ULL);
+
+    CHECK(cslp_adc_elapsed_ticks_to_us(0U) == 0U);
+    CHECK(cslp_adc_elapsed_ticks_to_us(32U) == 0U);
+    CHECK(cslp_adc_elapsed_ticks_to_us(33U) == 1U);
+    CHECK(cslp_adc_elapsed_ticks_to_us(65U) == 1U);
+    CHECK(cslp_adc_elapsed_ticks_to_us(3250000U) == 50000U);
+
+    {
+        uint64_t mapped = 0U;
+
+        CHECK(cslp_adc_tick_to_monotonic_us(
+            3251000U, 1000U, 7000000U, &mapped));
+        CHECK(mapped == 7050000U);
+        CHECK(cslp_adc_tick_to_monotonic_us(
+            50U, UINT64_MAX - 99U, 123U, &mapped));
+        CHECK(mapped == 125U);
+        CHECK(!cslp_adc_tick_to_monotonic_us(
+            99U, 100U, 0U, &mapped));
+        CHECK(!cslp_adc_tick_to_monotonic_us(
+            165U, 100U, UINT64_MAX, &mapped));
+        CHECK(!cslp_adc_tick_to_monotonic_us(
+            100U, 100U, 0U, NULL));
+    }
+}
 
 static void test_crc_and_golden_packet(void)
 {
@@ -290,6 +333,7 @@ static void test_frame_ownership(void)
 
 int main(void)
 {
+    test_tick_conversion();
     test_crc_and_golden_packet();
     test_fixed_fragmentation();
     test_control_state_and_idempotency();

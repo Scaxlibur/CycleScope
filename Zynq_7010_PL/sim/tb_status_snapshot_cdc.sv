@@ -7,17 +7,17 @@ module tb_status_snapshot_cdc;
     logic src_rst_n = 1'b0;
     logic dst_rst_n = 1'b0;
     logic [31:0] source_counter = '0;
-    logic [63:0] source_data;
-    logic [63:0] snapshot_data;
+    logic [191:0] source_data;
+    logic [191:0] snapshot_data;
     logic snapshot_valid;
     int snapshots_seen = 0;
 
     always #6.5 src_clk = ~src_clk;
     always #5.0 dst_clk = ~dst_clk;
 
-    assign source_data = {~source_counter, source_counter};
+    assign source_data = {6{source_counter}};
 
-    status_snapshot_cdc #(.WIDTH(64)) dut (
+    status_snapshot_cdc #(.WIDTH(192)) dut (
         .src_clk,
         .src_rst_n,
         .src_data(source_data),
@@ -36,8 +36,12 @@ module tb_status_snapshot_cdc;
 
     always_ff @(posedge dst_clk) begin
         if (dst_rst_n && snapshot_valid) begin
-            if (snapshot_data[63:32] !== ~snapshot_data[31:0])
-                $fatal(1, "torn snapshot: %016h", snapshot_data);
+            if (snapshot_data[191:160] !== snapshot_data[31:0] ||
+                snapshot_data[159:128] !== snapshot_data[31:0] ||
+                snapshot_data[127:96] !== snapshot_data[31:0] ||
+                snapshot_data[95:64] !== snapshot_data[31:0] ||
+                snapshot_data[63:32] !== snapshot_data[31:0])
+                $fatal(1, "torn 192-bit snapshot: %048h", snapshot_data);
             snapshots_seen <= snapshots_seen + 1;
         end
     end

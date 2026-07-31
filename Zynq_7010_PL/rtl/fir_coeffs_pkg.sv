@@ -4,6 +4,9 @@ package fir_coeffs_pkg;
 
     localparam int COEFF_WIDTH = 18;
     localparam int COEFF_FRAC  = 17;
+    localparam int STAGE1_DECIMATION = 4;
+    localparam int STAGE2_DECIMATION = 4;
+    localparam int STAGE3_DECIMATION = 1;
 
     // Fs=65 MHz, decimate by 4. Passband needed by later stages: 0..1 MHz.
     // Stopband begins at 15.25 MHz to protect the final 0..1 MHz band from aliasing.
@@ -50,5 +53,14 @@ package fir_coeffs_pkg;
         -18'sd74,    -18'sd31,     18'sd23,     18'sd30,     18'sd5,
         -18'sd11,    -18'sd8,      18'sd0,      18'sd2
     };
+
+    // Each stage tags its output with the newest raw ADC input participating
+    // in that convolution. For the three odd, symmetric FIRs the equivalent
+    // sample time is therefore this many 65 MHz ADC clocks earlier.
+    localparam int FIR_GROUP_DELAY_ADC_TICKS =
+        ((STAGE1_TAPS - 1) / 2) +
+        STAGE1_DECIMATION * ((STAGE2_TAPS - 1) / 2) +
+        STAGE1_DECIMATION * STAGE2_DECIMATION *
+            ((STAGE3_TAPS - 1) / 2);
 
 endpackage

@@ -14,6 +14,12 @@ module cyclescope_pipeline_bd (
     input  wire        capture_enable,
     input  wire        clear_stats,
     input  wire        test_pattern,
+    input  wire  [1:0] test_mode,
+    input  wire [11:0] test_amplitude,
+    input  wire [31:0] test_phase_increment,
+    input  wire        inject_otr_toggle,
+    input  wire        inject_overflow_toggle,
+    input  wire        inject_frame_drop_toggle,
     (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 m_axis TDATA" *)
     output wire [15:0] m_axis_tdata,
     (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 m_axis TKEEP" *)
@@ -30,10 +36,16 @@ module cyclescope_pipeline_bd (
     input  wire        spi_mosi,
     output wire        spi_miso,
     output wire [31:0] frame_id,
-    output wire [31:0] status_word
+    output wire [31:0] status_word,
+    output wire [63:0] frame_timestamp_tick,
+    output wire [63:0] adc_tick
 );
 
-    cyclescope_pipeline pipeline_i (
+    // Keep the full-system default on the direct mapping. A reverse-order
+    // diagnostic image must be an explicit, separately identified build.
+    cyclescope_pipeline #(
+        .ADC_REVERSE_BITS(1'b0)
+    ) pipeline_i (
         .adc_clk(adc_clk),
         .adc_rst_n(adc_rst_n),
         .adc_data_a(adc_data_a),
@@ -41,6 +53,12 @@ module cyclescope_pipeline_bd (
         .capture_enable(capture_enable),
         .clear_stats(clear_stats),
         .test_pattern(test_pattern),
+        .test_mode(test_mode),
+        .test_amplitude(test_amplitude),
+        .test_phase_increment(test_phase_increment),
+        .inject_otr_toggle(inject_otr_toggle),
+        .inject_overflow_toggle(inject_overflow_toggle),
+        .inject_frame_drop_toggle(inject_frame_drop_toggle),
         .m_axis_tdata(m_axis_tdata),
         .m_axis_tkeep(m_axis_tkeep),
         .m_axis_tvalid(m_axis_tvalid),
@@ -51,7 +69,9 @@ module cyclescope_pipeline_bd (
         .spi_mosi(spi_mosi),
         .spi_miso(spi_miso),
         .frame_id(frame_id),
-        .status_word(status_word)
+        .status_word(status_word),
+        .frame_timestamp_tick(frame_timestamp_tick),
+        .adc_tick(adc_tick)
     );
 
 endmodule

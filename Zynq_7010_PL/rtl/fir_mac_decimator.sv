@@ -16,9 +16,11 @@ module fir_mac_decimator #(
     input  logic                           s_valid,
     input  logic signed [INPUT_WIDTH-1:0]  s_sample,
     input  logic                           s_otr,
+    input  logic                    [63:0] s_tick,
     output logic                           m_valid,
     output logic signed [OUTPUT_WIDTH-1:0] m_sample,
     output logic                           m_otr,
+    output logic                    [63:0] m_tick,
     output logic                           schedule_error
 );
 
@@ -36,18 +38,21 @@ module fir_mac_decimator #(
     logic issue_active;
     logic [TAP_W-1:0] issue_base;
     logic issue_otr;
+    logic [63:0] issue_tick;
 
     logic signed [PRODUCT_WIDTH-1:0] product_pipe [0:LANES-1];
     logic product_valid;
     logic product_first;
     logic product_last;
     logic product_otr;
+    logic [63:0] product_tick;
 
     logic signed [ACC_WIDTH-1:0] pair_pipe [0:PAIRS-1];
     logic pair_valid;
     logic pair_first;
     logic pair_last;
     logic pair_otr;
+    logic [63:0] pair_tick;
 
     logic signed [ACC_WIDTH-1:0] pair_sum_comb;
     logic signed [ACC_WIDTH-1:0] group_sum_pipe;
@@ -55,6 +60,7 @@ module fir_mac_decimator #(
     logic group_first;
     logic group_last;
     logic group_otr;
+    logic [63:0] group_tick;
 
     logic signed [ACC_WIDTH-1:0] accumulator;
     logic signed [ACC_WIDTH-1:0] accumulated_group;
@@ -105,25 +111,30 @@ module fir_mac_decimator #(
             m_valid        <= 1'b0;
             m_sample       <= '0;
             m_otr          <= 1'b0;
+            m_tick         <= '0;
             schedule_error <= 1'b0;
             decim_count    <= '0;
             otr_accum      <= 1'b0;
             issue_active   <= 1'b0;
             issue_base     <= '0;
             issue_otr      <= 1'b0;
+            issue_tick     <= '0;
             product_valid  <= 1'b0;
             product_first  <= 1'b0;
             product_last   <= 1'b0;
             product_otr    <= 1'b0;
+            product_tick   <= '0;
             pair_valid     <= 1'b0;
             pair_first     <= 1'b0;
             pair_last      <= 1'b0;
             pair_otr       <= 1'b0;
+            pair_tick      <= '0;
             group_sum_pipe <= '0;
             group_valid    <= 1'b0;
             group_first    <= 1'b0;
             group_last     <= 1'b0;
             group_otr      <= 1'b0;
+            group_tick     <= '0;
             accumulator    <= '0;
             for (i = 0; i < TAPS; i = i + 1) begin
                 delay_line[i] <= '0;
@@ -156,6 +167,7 @@ module fir_mac_decimator #(
                         issue_active <= 1'b1;
                         issue_base   <= '0;
                         issue_otr    <= otr_accum | s_otr;
+                        issue_tick   <= s_tick;
                     end
                     otr_accum <= 1'b0;
                 end else begin
@@ -177,6 +189,7 @@ module fir_mac_decimator #(
                 product_first <= (issue_base == 0);
                 product_last  <= ((issue_base + LANES) >= TAPS);
                 product_otr   <= issue_otr;
+                product_tick  <= issue_tick;
                 if ((issue_base + LANES) >= TAPS) begin
                     issue_active <= 1'b0;
                     issue_base   <= '0;
@@ -190,6 +203,7 @@ module fir_mac_decimator #(
             pair_first <= product_first;
             pair_last  <= product_last;
             pair_otr   <= product_otr;
+            pair_tick  <= product_tick;
             if (product_valid) begin
                 for (pair_seq = 0; pair_seq < PAIRS; pair_seq = pair_seq + 1) begin
                     if ((2 * pair_seq + 1) < LANES)
@@ -205,6 +219,7 @@ module fir_mac_decimator #(
             group_first <= pair_first;
             group_last  <= pair_last;
             group_otr   <= pair_otr;
+            group_tick  <= pair_tick;
             if (pair_valid)
                 group_sum_pipe <= pair_sum_comb;
 
@@ -214,6 +229,7 @@ module fir_mac_decimator #(
                     m_sample    <= round_and_saturate(accumulated_group);
                     m_valid     <= 1'b1;
                     m_otr       <= group_otr;
+                    m_tick      <= group_tick;
                     accumulator <= '0;
                 end else begin
                     accumulator <= accumulated_group;

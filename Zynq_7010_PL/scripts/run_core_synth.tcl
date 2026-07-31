@@ -10,6 +10,7 @@ create_project -in_memory -part xc7z010clg400-1
 read_verilog -sv [list \
     [file join $pl_root rtl fir_coeffs_pkg.sv] \
     [file join $pl_root rtl ad9226_frontend.sv] \
+    [file join $pl_root rtl test_pattern_generator.sv] \
     [file join $pl_root rtl fir_mac_decimator.sv] \
     [file join $pl_root rtl fir_decimator_16.sv] \
     [file join $pl_root rtl frame_ram.sv] \
@@ -21,8 +22,6 @@ synth_design -top cyclescope_pipeline -mode out_of_context -part xc7z010clg400-1
 report_utilization -file [file join $report_root utilization.rpt]
 report_timing_summary -delay_type min_max -report_unconstrained -check_timing_verbose \
     -file [file join $report_root timing_summary.rpt]
-report_cdc -details -from [get_clocks adc_sample_clk] -to [get_clocks spi_sclk_ext] \
-    -file [file join $report_root cdc.rpt]
 report_methodology -file [file join $report_root methodology.rpt]
 write_checkpoint -force [file join $build_root cyclescope_pipeline_synth.dcp]
 
