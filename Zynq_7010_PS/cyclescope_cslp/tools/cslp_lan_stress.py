@@ -582,7 +582,9 @@ class StressClient:
     def __init__(self, args: argparse.Namespace) -> None:
         validate_network_configuration(args)
         self.args = args
-        self.session_id = secrets.randbits(32) or 1
+        self.session_id = (
+            0 if args.passive_mirror else secrets.randbits(32) or 1
+        )
         self.control_seq = 1
         self.config_id = 0
         self.device_boot_id = 0
@@ -621,6 +623,13 @@ class StressClient:
         self.disable_ack_latency_us: float | None = None
         self.frames_completed_at_disable_ack: int | None = None
         self.disable_trigger_frame_id: int | None = None
+        self.mirror_control_responses: dict[tuple[int, int], bytes] = {}
+        self.mirror_control_replays = 0
+        self.mirror_control_seq_conflicts = 0
+        self.mirror_disable_ack_seen = False
+        self.mirror_handshake_types: set[int] = set()
+        self.passive_session_transitions = 0
+        self.network_writes = 0
         self.nic_before = read_nic_stats(args.interface)
         self.nic_after = dict(self.nic_before)
         self.capture_dir: Path | None = args.capture_dir
@@ -705,14 +714,41 @@ class StressClient:
             raise
         if packet.header.version != VERSION:
             raise ProtocolError("unexpected protocol version")
-        if packet.header.session_id != self.session_id:
+        if getattr(self.args, "passive_mirror", False):
+            if packet.header.session_id == 0:
+                raise ProtocolError("passive mirror received zero session id")
+            if self.session_id == 0:
+                self.session_id = packet.header.session_id
+            elif packet.header.session_id != self.session_id:
+                if packet.header.message_type != MSG_HELLO_ACK:
+                    raise ProtocolError("unexpected passive-mirror session id")
+                self._adopt_new_passive_session(packet.header.session_id)
+        elif packet.header.session_id != self.session_id:
             raise ProtocolError("unexpected session id")
         return packet, arrival_ns
+
+    def _adopt_new_passive_session(self, session_id: int) -> None:
+        self.session_id = session_id
+        self.config_id = 0
+        self.device_boot_id = 0
+        self.assemblies.clear()
+        self.active_frame_id = None
+        self.completed_frame_ids.clear()
+        self.last_wave_seq = None
+        self.last_status_seq = None
+        self.last_frame_id = None
+        self.last_frame_timestamp_us = None
+        self.wave_metadata_identity = None
+        self.mirror_control_responses.clear()
+        self.mirror_handshake_types.clear()
+        self.mirror_disable_ack_seen = False
+        self.passive_session_transitions += 1
 
     def exchange(self, request: bytes, ack_type: int, sequence: int) -> ParsedPacket:
         for attempt in range(self.args.control_retries):
             if attempt:
                 self.counters.control_retries += 1
+            self.network_writes += 1
             self.socket.sendto(request, self.remote)
             deadline = time.monotonic() + self.args.control_timeout
             while True:
@@ -841,8 +877,14 @@ class StressClient:
     def consume(self, packet: ParsedPacket, arrival_ns: int) -> WaveChunk | None:
         message_type = packet.header.message_type
         if message_type == MSG_WAVE_DATA:
+            if getattr(self.args, "passive_mirror", False) and self.config_id == 0:
+                self.config_id = parse_wave(packet).config_id
             return self.consume_wave(packet, arrival_ns)
         if message_type == MSG_STATUS:
+            if getattr(self.args, "passive_mirror", False) and self.config_id == 0:
+                values = STATUS_PAYLOAD.unpack(packet.payload)
+                if values[2] != 0:
+                    self.config_id = values[2]
             self.consume_status(packet, arrival_ns)
             return None
         if message_type in (
@@ -851,8 +893,72 @@ class StressClient:
             MSG_ENABLE_PUSH_ACK,
             MSG_DISABLE_PUSH_ACK,
         ):
+            if getattr(self.args, "passive_mirror", False):
+                self.consume_mirrored_control(packet, arrival_ns)
             return None
         raise ProtocolError(f"unexpected message type 0x{message_type:02x}")
+
+    def consume_mirrored_control(
+        self, packet: ParsedPacket, arrival_ns: int
+    ) -> None:
+        message_type = packet.header.message_type
+        status = validate_control_ack(
+            packet, message_type, packet.header.message_seq
+        )
+        key = (message_type, packet.header.message_seq)
+        previous = self.mirror_control_responses.get(key)
+        if previous is not None:
+            if previous == packet.raw:
+                self.mirror_control_replays += 1
+                return
+            if status != STATUS_SEQ_CONFLICT:
+                raise ProtocolError(
+                    "mirrored control response changed without SEQ_CONFLICT"
+                )
+            self.mirror_control_seq_conflicts += 1
+            return
+        self.mirror_control_responses[key] = packet.raw
+
+        if status != STATUS_OK:
+            if status == STATUS_SEQ_CONFLICT:
+                self.mirror_control_seq_conflicts += 1
+                return
+            raise ProtocolError(f"mirrored control ACK failed with status {status}")
+        self.mirror_handshake_types.add(message_type)
+        if message_type == MSG_HELLO_ACK:
+            selected_version = packet.payload[2]
+            caps, max_samples, self.device_boot_id = struct.unpack_from(
+                ">III", packet.payload, 4
+            )
+            if (
+                selected_version != VERSION
+                or caps != REQUIRED_CAPS
+                or max_samples != FRAME_SAMPLES
+                or self.device_boot_id == 0
+            ):
+                raise ProtocolError("mirrored HELLO_ACK capability mismatch")
+        elif message_type == MSG_CONFIG_ACK:
+            self.config_id, rate, samples, period = struct.unpack_from(
+                ">IIII", packet.payload, 4
+            )
+            sample_format, channels, filter_profile = struct.unpack_from(
+                ">BBH", packet.payload, 20
+            )
+            max_frame_samples = struct.unpack_from(">I", packet.payload, 24)[0]
+            if (
+                self.config_id == 0
+                or rate != SAMPLE_RATE_HZ
+                or samples != FRAME_SAMPLES
+                or period != FRAME_PERIOD_US
+                or sample_format != SAMPLE_FORMAT_S16_LE
+                or channels != CHANNEL_COUNT
+                or filter_profile != FILTER_PROFILE
+                or max_frame_samples != FRAME_SAMPLES
+            ):
+                raise ProtocolError("mirrored CONFIG_ACK profile mismatch")
+        elif message_type == MSG_DISABLE_PUSH_ACK:
+            self.mirror_disable_ack_seen = True
+            self.disable_ack_ns = arrival_ns
 
     def consume_wave(self, packet: ParsedPacket, arrival_ns: int) -> WaveChunk | None:
         if self.first_wave_ns is None:
@@ -1230,6 +1336,86 @@ class StressClient:
                 print(f"NIC_FINAL_STATS_FAILED {error}", file=sys.stderr)
         return self.report()
 
+    def run_passive_mirror(self) -> dict[str, Any]:
+        attempt_started_ns = time.monotonic_ns()
+        print(
+            f"CSLP_PASSIVE_MIRROR local={self.args.local_ip}:{self.args.local_port} "
+            f"source={self.args.remote_ip}:{self.args.remote_port} "
+            f"frames={self.args.frames} source_mode={self.args.source_mode} "
+            f"rcvbuf={self.actual_receive_buffer}",
+            flush=True,
+        )
+        self.run_started_ns = attempt_started_ns
+        deadline = time.monotonic() + self.args.run_timeout
+        try:
+            while time.monotonic() < deadline:
+                try:
+                    packet, arrival_ns = self.receive(
+                        min(1.5, deadline - time.monotonic())
+                    )
+                except socket.timeout:
+                    continue
+                self.consume(packet, arrival_ns)
+                if (
+                    self.mirror_disable_ack_seen
+                    and self.counters.frames_completed >= self.args.frames
+                ):
+                    self.observe_post_disable()
+                    break
+            if self.counters.frames_completed < self.args.frames:
+                raise TimeoutError("passive mirror frame target was not reached")
+            if not self.mirror_disable_ack_seen:
+                raise TimeoutError("passive mirror did not observe DISABLE_PUSH_ACK")
+        except Exception as error:
+            failure = f"{type(error).__name__}: {error}"
+            self.runtime_failures.append(failure)
+            print(f"CSLP_PASSIVE_MIRROR_RUNTIME_ERROR={failure}", file=sys.stderr)
+        finally:
+            self.run_finished_ns = time.monotonic_ns()
+            try:
+                self.nic_after = read_nic_stats(self.args.interface)
+            except Exception as error:
+                failure = f"NIC final stats: {type(error).__name__}: {error}"
+                self.runtime_failures.append(failure)
+
+        report = self.report()
+        failures = report["failures"]
+        if self.session_id == 0:
+            failures.append("passive mirror did not lock a session")
+        if self.config_id == 0:
+            failures.append("passive mirror did not lock a config_id")
+        if self.counters.frames_completed != self.args.frames:
+            failures.append(
+                "passive mirror completed "
+                f"{self.counters.frames_completed} frames, expected {self.args.frames}"
+            )
+        expected_wave_packets = self.args.frames * CHUNK_COUNT
+        if self.counters.wave_packets != expected_wave_packets:
+            failures.append(
+                "passive mirror received "
+                f"{self.counters.wave_packets} WAVE packets, expected "
+                f"{expected_wave_packets}"
+            )
+        if not self.mirror_disable_ack_seen:
+            failures.append("passive mirror DISABLE_PUSH_ACK is missing")
+        if self.network_writes != 0:
+            failures.append(f"passive mirror performed {self.network_writes} writes")
+        report.update(
+            {
+                "pass": not failures,
+                "mode": "passive-mirror",
+                "network_writes": self.network_writes,
+                "mirror_control_replays": self.mirror_control_replays,
+                "mirror_control_seq_conflicts": self.mirror_control_seq_conflicts,
+                "mirror_handshake_types": sorted(self.mirror_handshake_types),
+                "mirror_disable_ack_seen": self.mirror_disable_ack_seen,
+                "passive_session_transitions": self.passive_session_transitions,
+                "expected_passive_frames": self.args.frames,
+                "expected_passive_wave_packets": expected_wave_packets,
+            }
+        )
+        return report
+
     def report(self) -> dict[str, Any]:
         if self.assemblies:
             self.counters.incomplete_frames += len(self.assemblies)
@@ -1513,8 +1699,13 @@ class StressClient:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--passive-mirror",
+        action="store_true",
+        help="strict receive-only mirror mode; never sends CSLP control",
+    )
     parser.add_argument("--local-ip", default="192.168.10.4")
-    parser.add_argument("--local-port", type=int, default=50001)
+    parser.add_argument("--local-port", type=int)
     parser.add_argument("--remote-ip", default="192.168.10.2")
     parser.add_argument("--remote-port", type=int, default=50000)
     parser.add_argument("--interface", default="enp2s0")
@@ -1570,6 +1761,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--capture-dir", type=Path)
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
+    if args.local_port is None:
+        args.local_port = 50002 if args.passive_mirror else 50001
     try:
         local_address = ipaddress.IPv4Address(args.local_ip)
         remote_address = ipaddress.IPv4Address(args.remote_ip)
@@ -1653,6 +1846,7 @@ def partial_failure_report(
     failure = f"{phase}: {type(error).__name__}: {error}"
     return {
         "pass": False,
+        "mode": "passive-mirror" if args.passive_mirror else "active-control",
         "failures": [failure],
         "runtime_failures": [failure],
         "phase": phase,
@@ -1692,7 +1886,9 @@ def main() -> int:
     report: dict[str, Any] | None = None
     try:
         client = StressClient(args)
-        report = client.run()
+        report = (
+            client.run_passive_mirror() if args.passive_mirror else client.run()
+        )
     except Exception as error:
         actual_receive_buffer = (
             client.actual_receive_buffer if client is not None else None

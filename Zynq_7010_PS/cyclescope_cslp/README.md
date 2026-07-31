@@ -18,6 +18,7 @@ make test
 make adc-analysis-test
 make vitis
 make vitis-lan-test
+make vitis-mirror
 ```
 
 这些命令只运行主机测试或重建软件，不会生成 bitstream、下载板卡或自行发送真实
@@ -67,6 +68,49 @@ python3 tools/cslp_lan_stress.py \
 
 上述数值只是命令格式示例，不是本板当前校准结果。未提供非零ID时，LAN工具维持旧
 行为，只接受`calibration_id=0`且`CALIBRATED`清除；可额外显式门禁名义比例和偏置。
+
+### M12 双目的地诊断镜像
+
+正式控制对端仍只有`192.168.10.3:50001`。诊断构建在每个主发送被lwIP接受后，才用
+独立pbuf把同一份CSLP应用数据报best-effort发送到电脑`192.168.10.4:50002`。镜像
+不会创建第二个session，不会重新递增序号或计算CRC；电脑缺席、ARP未解析、pbuf分配
+失败或镜像`udp_sendto`失败均不得改变主链返回值、帧所有权或正式STATUS计数。
+
+镜像默认关闭；以下目标固定主端为`.3`、镜像为`.4:50002`，真实ADC校准清单仍由
+调用者显式提供：
+
+```bash
+CSLP_CALIBRATION_MANIFEST=/absolute/path/to/calibration-build-manifest.json \
+make vitis-mirror
+```
+
+电脑镜像端使用严格只收不发模式。启动后可从完整握手ACK开始，也可从首个合法
+STATUS/WAVE中途锁定session/config；该模式报告中的`network_writes`必须为0：
+
+```bash
+ping -I 192.168.10.4 -c 2 192.168.10.2
+
+python3 tools/cslp_lan_stress.py \
+  --passive-mirror \
+  --local-ip 192.168.10.4 --local-port 50002 \
+  --remote-ip 192.168.10.2 --remote-port 50000 \
+  --source-mode real-adc \
+  --expected-calibration-id 25030 \
+  --expected-scale-uv-per-lsb 516 \
+  --expected-offset-uv -6761 \
+  --frames 101 --report reports/mirror.json
+```
+
+若同一pcap同时捕获`.2→.3:50001`和`.2→.4:50002`，可直接验证两条CSLP载荷序列
+数量、顺序和字节完全一致：
+
+```bash
+python3 tools/cslp_mirror_pcap_compare.py reports/fpga-primary-mirror.pcap \
+  --report reports/mirror-compare.json
+```
+
+电脑临时绑定`.3`模拟主端时必须先探测地址冲突，并用退出陷阱保证测试成功、失败或
+中断后都执行`ip addr del 192.168.10.3/24 dev enp2s0`；不得把`.3`遗留到P4接管时。
 
 `vitis-lan-test` 是电脑端 LAN 诊断构建：启用 PL 测试源，并仅接受
 `192.168.10.4` 的控制请求。默认图样是 ramp；也可在构建前设置

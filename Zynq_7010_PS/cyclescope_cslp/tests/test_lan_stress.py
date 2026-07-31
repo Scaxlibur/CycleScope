@@ -1,4 +1,5 @@
 import importlib.util
+import inspect
 import io
 import ipaddress
 from pathlib import Path
@@ -144,6 +145,18 @@ def build_status(*, sequence, flags=0, reserved=0):
     return replace_flags(message, flags)
 
 
+def build_ack(message_type, sequence, payload, session_id=0xAABBCCDD):
+    return stress.parse_datagram(
+        stress.build_message(
+            message_type,
+            session_id,
+            sequence,
+            payload,
+            timestamp_us=123,
+        )
+    )
+
+
 def bare_status_client():
     client = stress.StressClient.__new__(stress.StressClient)
     client.counters = stress.Counters()
@@ -193,6 +206,7 @@ def bare_wave_client():
 
 def default_args(**overrides):
     values = {
+        "passive_mirror": False,
         "local_ip": "192.168.10.4",
         "local_port": 50001,
         "remote_ip": "192.168.10.2",
@@ -247,6 +261,100 @@ class LanStressProtocolTests(unittest.TestCase):
         self.assertEqual(chunk.frame_id, 42)
         self.assertEqual(chunk.samples_in_chunk, 5)
         self.assertEqual(chunk.samples, bytes.fromhex("00 80 FF FF 00 00 01 00 FF 7F"))
+
+    def test_passive_mirror_control_replay_and_seq_conflict_are_distinct(self):
+        client = stress.StressClient.__new__(stress.StressClient)
+        client.args = SimpleNamespace(passive_mirror=True)
+        client.config_id = 0
+        client.device_boot_id = 0
+        client.mirror_control_responses = {}
+        client.mirror_control_replays = 0
+        client.mirror_control_seq_conflicts = 0
+        client.mirror_disable_ack_seen = False
+        client.mirror_handshake_types = set()
+        client.disable_ack_ns = None
+
+        hello_payload = struct.pack(
+            ">HBBIII",
+            stress.STATUS_OK,
+            stress.VERSION,
+            0,
+            stress.REQUIRED_CAPS,
+            stress.FRAME_SAMPLES,
+            0x10203040,
+        )
+        hello = build_ack(stress.MSG_HELLO_ACK, 1, hello_payload)
+        client.consume_mirrored_control(hello, 1000)
+        self.assertEqual(client.device_boot_id, 0x10203040)
+
+        config_payload = struct.pack(
+            ">HHIIIIBBHI",
+            stress.STATUS_OK,
+            0,
+            7,
+            stress.SAMPLE_RATE_HZ,
+            stress.FRAME_SAMPLES,
+            stress.FRAME_PERIOD_US,
+            stress.SAMPLE_FORMAT_S16_LE,
+            stress.CHANNEL_COUNT,
+            stress.FILTER_PROFILE,
+            stress.FRAME_SAMPLES,
+        )
+        config = build_ack(stress.MSG_CONFIG_ACK, 2, config_payload)
+        client.consume_mirrored_control(config, 2000)
+        client.consume_mirrored_control(config, 3000)
+        self.assertEqual(client.config_id, 7)
+        self.assertEqual(client.mirror_control_replays, 1)
+
+        conflict_payload = struct.pack(">H", stress.STATUS_SEQ_CONFLICT) + bytes(26)
+        conflict = build_ack(stress.MSG_CONFIG_ACK, 2, conflict_payload)
+        client.consume_mirrored_control(conflict, 4000)
+        self.assertEqual(client.mirror_control_seq_conflicts, 1)
+
+        disable = build_ack(
+            stress.MSG_DISABLE_PUSH_ACK,
+            4,
+            struct.pack(">HH", stress.STATUS_OK, 0),
+        )
+        client.consume_mirrored_control(disable, 5000)
+        self.assertTrue(client.mirror_disable_ack_seen)
+        self.assertEqual(client.disable_ack_ns, 5000)
+
+    def test_passive_mirror_late_join_locks_config_from_wave(self):
+        client = bare_wave_client()
+        client.args.passive_mirror = True
+        client.config_id = 0
+        packet = build_frame_packets(
+            frame_id=1, timestamp_us=1234567, sequence_start=100
+        )[0]
+        client.consume(packet, 1000)
+        self.assertEqual(client.config_id, 7)
+
+    def test_passive_mirror_entrypoint_contains_no_network_send(self):
+        source = inspect.getsource(stress.StressClient.run_passive_mirror)
+        self.assertNotIn("sendto(", source)
+        with mock.patch.object(
+            sys,
+            "argv",
+            ["cslp_lan_stress.py", "--passive-mirror", "--frames", "2"],
+        ):
+            args = stress.parse_args()
+        self.assertTrue(args.passive_mirror)
+        self.assertEqual(args.local_port, 50002)
+
+    def test_network_write_counter_tracks_control_retries(self):
+        client = stress.StressClient.__new__(stress.StressClient)
+        client.args = SimpleNamespace(control_retries=2, control_timeout=0.01)
+        client.counters = stress.Counters()
+        client.network_writes = 0
+        client.socket = mock.Mock()
+        client.remote = ("192.168.10.2", 50000)
+        client.receive = mock.Mock(side_effect=stress.socket.timeout)
+
+        with self.assertRaises(TimeoutError):
+            client.exchange(b"request", stress.MSG_HELLO_ACK, 1)
+        self.assertEqual(client.network_writes, 2)
+        self.assertEqual(client.socket.sendto.call_count, 2)
 
     def test_wave_requires_nonzero_frame_id_and_scale(self):
         payload = bytes(stress.FULL_CHUNK_SAMPLES * 2)

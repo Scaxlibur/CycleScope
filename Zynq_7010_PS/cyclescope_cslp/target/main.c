@@ -1,11 +1,13 @@
 #include "cslp_control.h"
 #include "cslp_dma_zynq.h"
+#include "cslp_mirror_policy.h"
 #include "cslp_protocol.h"
 #include "cslp_time.h"
 #include "platform.h"
 #include "platform_config.h"
 
 #include "lwip/init.h"
+#include "lwip/etharp.h"
 #include "lwip/inet.h"
 #include "lwip/ip_addr.h"
 #include "lwip/pbuf.h"
@@ -27,6 +29,8 @@
 #define CSLP_REMOTE_PORT 50001U
 #define CSLP_CHUNK_SPACING_US 500ULL
 #define CSLP_STATUS_PERIOD_US 500000ULL
+#define CSLP_MIRROR_ARP_RETRY_US 1000000ULL
+#define CSLP_MIRROR_REPORT_PERIOD_US 5000000ULL
 #define CSLP_IPV4_HEADER_BYTES 20U
 #define CSLP_UDP_HEADER_BYTES 8U
 #define CSLP_REQUIRED_NETIF_MTU \
@@ -82,6 +86,18 @@
 #define CSLP_WAVE_CALIBRATION_ID 0U
 #endif
 
+#ifndef CSLP_MIRROR_ENABLED
+#define CSLP_MIRROR_ENABLED 0
+#endif
+
+#ifndef CSLP_MIRROR_IPV4_LAST_OCTET
+#define CSLP_MIRROR_IPV4_LAST_OCTET 4
+#endif
+
+#ifndef CSLP_MIRROR_UDP_PORT
+#define CSLP_MIRROR_UDP_PORT 50002U
+#endif
+
 #if CSLP_DEFAULT_TEST_PATTERN != 0 && CSLP_DEFAULT_TEST_PATTERN != 1
 #error "CSLP_DEFAULT_TEST_PATTERN must be 0 or 1"
 #endif
@@ -100,6 +116,30 @@
 
 #if CSLP_PEER_IPV4_LAST_OCTET < 1 || CSLP_PEER_IPV4_LAST_OCTET > 254
 #error "CSLP_PEER_IPV4_LAST_OCTET must be in 1..254"
+#endif
+
+#if CSLP_MIRROR_ENABLED != 0 && CSLP_MIRROR_ENABLED != 1
+#error "CSLP_MIRROR_ENABLED must be 0 or 1"
+#endif
+
+#if CSLP_MIRROR_IPV4_LAST_OCTET < 1 || CSLP_MIRROR_IPV4_LAST_OCTET > 254
+#error "CSLP_MIRROR_IPV4_LAST_OCTET must be in 1..254"
+#endif
+
+#if CSLP_MIRROR_UDP_PORT < 1U || CSLP_MIRROR_UDP_PORT > 65535U
+#error "CSLP_MIRROR_UDP_PORT must be in 1..65535"
+#endif
+
+#if CSLP_MIRROR_ENABLED && \
+    (CSLP_MIRROR_IPV4_LAST_OCTET == 2 || \
+     CSLP_MIRROR_IPV4_LAST_OCTET == CSLP_PEER_IPV4_LAST_OCTET)
+#error "enabled mirror IPv4 must differ from local and primary peer"
+#endif
+
+#if CSLP_MIRROR_ENABLED && \
+    (CSLP_MIRROR_UDP_PORT == CSLP_LOCAL_PORT || \
+     CSLP_MIRROR_UDP_PORT == CSLP_REMOTE_PORT)
+#error "enabled mirror UDP port must differ from 50000 and 50001"
 #endif
 
 #if CSLP_WAVE_SCALE_UV_PER_LSB == 0U
@@ -140,6 +180,14 @@ typedef struct {
     uint32_t fifo_overflow_frames;
     uint32_t last_frame_id;
     uint32_t pending_test_faults;
+#if CSLP_MIRROR_ENABLED
+    ip_addr_t mirror_address;
+    cslp_mirror_stats_t mirror;
+    uint32_t mirror_arp_requests;
+    uint32_t mirror_arp_request_failures;
+    uint64_t next_mirror_arp_request_us;
+    uint64_t next_mirror_report_us;
+#endif
 } cslp_app_t;
 
 static struct netif server_netif;
@@ -208,10 +256,10 @@ static bool source_is_expected(const ip_addr_t *address)
     return ip_addr_cmp(address, &expected);
 }
 
-static bool send_datagram(const ip_addr_t *address,
-                          uint16_t port,
-                          const uint8_t *bytes,
-                          size_t length)
+static bool send_one_datagram(const ip_addr_t *address,
+                              uint16_t port,
+                              const uint8_t *bytes,
+                              size_t length)
 {
     struct pbuf *packet;
     err_t error;
@@ -226,6 +274,75 @@ static bool send_datagram(const ip_addr_t *address,
         error = udp_sendto(app.udp, packet, address, port);
     pbuf_free(packet);
     return error == ERR_OK;
+}
+
+#if CSLP_MIRROR_ENABLED
+typedef struct {
+    const ip_addr_t *primary_address;
+    uint16_t primary_port;
+} cslp_fanout_context_t;
+
+static bool fanout_send(void *context,
+                        cslp_fanout_destination_t destination,
+                        const uint8_t *bytes,
+                        size_t length)
+{
+    const cslp_fanout_context_t *fanout =
+        (const cslp_fanout_context_t *)context;
+
+    if (destination == CSLP_FANOUT_PRIMARY)
+        return send_one_datagram(fanout->primary_address,
+                                 fanout->primary_port, bytes, length);
+    return send_one_datagram(&app.mirror_address, CSLP_MIRROR_UDP_PORT,
+                             bytes, length);
+}
+
+static bool mirror_arp_is_ready(void)
+{
+    struct eth_addr *ethernet_address;
+    const ip4_addr_t *ipv4_address;
+
+    return etharp_find_addr(&server_netif, ip_2_ip4(&app.mirror_address),
+                            &ethernet_address, &ipv4_address) >= 0;
+}
+
+static void request_mirror_arp_if_due(uint64_t current_us)
+{
+    err_t error;
+
+    if (current_us < app.next_mirror_arp_request_us)
+        return;
+    app.next_mirror_arp_request_us =
+        current_us + CSLP_MIRROR_ARP_RETRY_US;
+    ++app.mirror_arp_requests;
+    error = etharp_request(&server_netif, ip_2_ip4(&app.mirror_address));
+    if (error != ERR_OK)
+        ++app.mirror_arp_request_failures;
+}
+#endif
+
+static bool send_datagram(const ip_addr_t *address,
+                          uint16_t port,
+                          const uint8_t *bytes,
+                          size_t length)
+{
+#if CSLP_MIRROR_ENABLED
+    cslp_fanout_context_t context = {
+        .primary_address = address,
+        .primary_port = port,
+    };
+    bool mirror_ready = mirror_arp_is_ready();
+    bool primary_ok = cslp_send_primary_then_mirror(
+        &app.mirror, mirror_ready, bytes, length, fanout_send, &context);
+
+    if (!primary_ok)
+        return false;
+    if (!mirror_ready)
+        request_mirror_arp_if_due(now_us());
+    return true;
+#else
+    return send_one_datagram(address, port, bytes, length);
+#endif
 }
 
 static void abort_wave(void)
@@ -439,6 +556,24 @@ static void service_status(uint64_t current_us)
                         datagram_bytes);
 }
 
+#if CSLP_MIRROR_ENABLED
+static void service_mirror_report(uint64_t current_us)
+{
+    if (current_us < app.next_mirror_report_us)
+        return;
+    app.next_mirror_report_us = current_us + CSLP_MIRROR_REPORT_PERIOD_US;
+    xil_printf("CYCLESCOPE_MIRROR_STATS attempted=%lu queued=%lu "
+               "send_failures=%lu arp_unresolved=%lu arp_requests=%lu "
+               "arp_request_failures=%lu\r\n",
+               (unsigned long)app.mirror.datagrams_attempted,
+               (unsigned long)app.mirror.datagrams_queued,
+               (unsigned long)app.mirror.send_failures,
+               (unsigned long)app.mirror.arp_unresolved,
+               (unsigned long)app.mirror_arp_requests,
+               (unsigned long)app.mirror_arp_request_failures);
+}
+#endif
+
 static int start_application(void)
 {
     err_t error;
@@ -459,6 +594,14 @@ static int start_application(void)
         return XST_FAILURE;
     cslp_dma_zynq_clear_pl_stats();
     app.pending_test_faults = CSLP_DEFAULT_TEST_FAULTS;
+#if CSLP_MIRROR_ENABLED
+    IP4_ADDR(ip_2_ip4(&app.mirror_address), 192, 168, 10,
+             CSLP_MIRROR_IPV4_LAST_OCTET);
+    IP_SET_TYPE_VAL(app.mirror_address, IPADDR_TYPE_V4);
+    app.mirror.enabled = true;
+    app.next_mirror_arp_request_us = now_us();
+    app.next_mirror_report_us = now_us() + CSLP_MIRROR_REPORT_PERIOD_US;
+#endif
 
     app.udp = udp_new_ip_type(IPADDR_TYPE_V4);
     if (app.udp == NULL)
@@ -480,6 +623,11 @@ static int start_application(void)
                CSLP_DEFAULT_TEST_FAULTS, CSLP_WAVE_CALIBRATION_ID,
                (unsigned long)CSLP_WAVE_SCALE_UV_PER_LSB,
                (long)CSLP_WAVE_OFFSET_UV);
+#if CSLP_MIRROR_ENABLED
+    xil_printf("CYCLESCOPE_MIRROR enabled destination=192.168.10.%u:%u "
+               "policy=primary-first-best-effort\r\n",
+               CSLP_MIRROR_IPV4_LAST_OCTET, CSLP_MIRROR_UDP_PORT);
+#endif
     return XST_SUCCESS;
 }
 
@@ -548,5 +696,8 @@ int main(void)
         service_wave(current_us);
         service_disable_ack(current_us);
         service_status(current_us);
+#if CSLP_MIRROR_ENABLED
+        service_mirror_report(current_us);
+#endif
     }
 }

@@ -11,14 +11,16 @@ HOST_SOURCES := \
 	src/cslp_frame_pool.c \
 	tests/test_cslp.c
 LAN_PY_TESTS := \
+	tests/test_mirror_profile.py \
 	tests/test_calibration_profile.py \
 	tests/test_adc_analyze.py \
 	tests/test_adc_capture.py \
 	tests/test_lan_stress.py \
+	tests/test_mirror_pcap_compare.py \
 	tests/test_pcap_analyze.py \
 	tests/test_test_pattern_analyze.py
 
-.PHONY: all test adc-analysis-test vitis vitis-lan-test clean
+.PHONY: all test adc-analysis-test vitis vitis-lan-test vitis-mirror clean
 
 all: test vitis
 
@@ -42,6 +44,12 @@ vitis:
 vitis-lan-test:
 	@source /tools/Xilinx/2025.1/Vitis/settings64.sh >/dev/null 2>&1 && \
 		CSLP_TEST_PATTERN=1 CSLP_PEER_IPV4_LAST_OCTET=4 \
+		vitis -s scripts/build_vitis.py
+
+vitis-mirror:
+	@source /tools/Xilinx/2025.1/Vitis/settings64.sh >/dev/null 2>&1 && \
+		CSLP_PEER_IPV4_LAST_OCTET=3 CSLP_MIRROR_ENABLED=1 \
+		CSLP_MIRROR_IPV4_LAST_OCTET=4 CSLP_MIRROR_UDP_PORT=50002 \
 		vitis -s scripts/build_vitis.py
 
 clean:

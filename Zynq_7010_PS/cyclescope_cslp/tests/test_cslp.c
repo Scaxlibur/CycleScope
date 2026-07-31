@@ -1,5 +1,6 @@
 #include "cslp_control.h"
 #include "cslp_frame_pool.h"
+#include "cslp_mirror_policy.h"
 #include "cslp_protocol.h"
 #include "cslp_time.h"
 
@@ -331,6 +332,97 @@ static void test_frame_ownership(void)
     CHECK(cslp_frame_pool_acquire_latest_tx(&pool) < 0);
 }
 
+typedef struct {
+    cslp_fanout_destination_t calls[2];
+    const uint8_t *bytes[2];
+    size_t lengths[2];
+    unsigned int call_count;
+    bool primary_result;
+    bool mirror_result;
+} fake_fanout_t;
+
+static bool fake_fanout_send(void *context,
+                             cslp_fanout_destination_t destination,
+                             const uint8_t *bytes,
+                             size_t length)
+{
+    fake_fanout_t *fake = (fake_fanout_t *)context;
+    unsigned int index = fake->call_count++;
+
+    CHECK(index < 2U);
+    fake->calls[index] = destination;
+    fake->bytes[index] = bytes;
+    fake->lengths[index] = length;
+    return destination == CSLP_FANOUT_PRIMARY ? fake->primary_result
+                                               : fake->mirror_result;
+}
+
+static fake_fanout_t fresh_fake(void)
+{
+    fake_fanout_t fake;
+
+    memset(&fake, 0, sizeof(fake));
+    fake.primary_result = true;
+    fake.mirror_result = true;
+    return fake;
+}
+
+static void test_primary_then_mirror_policy(void)
+{
+    static const uint8_t datagram[] = {0x43, 0x53, 0x4c, 0x50};
+    cslp_mirror_stats_t mirror = {.enabled = true};
+    fake_fanout_t fake = fresh_fake();
+
+    CHECK(cslp_send_primary_then_mirror(
+        &mirror, true, datagram, sizeof(datagram), fake_fanout_send, &fake));
+    CHECK(fake.call_count == 2U);
+    CHECK(fake.calls[0] == CSLP_FANOUT_PRIMARY);
+    CHECK(fake.calls[1] == CSLP_FANOUT_MIRROR);
+    CHECK(fake.bytes[0] == datagram && fake.bytes[1] == datagram);
+    CHECK(fake.lengths[0] == sizeof(datagram));
+    CHECK(fake.lengths[1] == sizeof(datagram));
+    CHECK(mirror.datagrams_attempted == 1U);
+    CHECK(mirror.datagrams_queued == 1U);
+    CHECK(mirror.send_failures == 0U);
+    CHECK(mirror.arp_unresolved == 0U);
+
+    mirror = (cslp_mirror_stats_t){.enabled = true};
+    fake = fresh_fake();
+    fake.primary_result = false;
+    CHECK(!cslp_send_primary_then_mirror(
+        &mirror, true, datagram, sizeof(datagram), fake_fanout_send, &fake));
+    CHECK(fake.call_count == 1U);
+    CHECK(fake.calls[0] == CSLP_FANOUT_PRIMARY);
+    CHECK(mirror.datagrams_attempted == 0U);
+    CHECK(mirror.datagrams_queued == 0U);
+    CHECK(mirror.send_failures == 0U);
+
+    mirror = (cslp_mirror_stats_t){.enabled = true};
+    fake = fresh_fake();
+    fake.mirror_result = false;
+    CHECK(cslp_send_primary_then_mirror(
+        &mirror, true, datagram, sizeof(datagram), fake_fanout_send, &fake));
+    CHECK(fake.call_count == 2U);
+    CHECK(mirror.datagrams_attempted == 1U);
+    CHECK(mirror.datagrams_queued == 0U);
+    CHECK(mirror.send_failures == 1U);
+
+    mirror = (cslp_mirror_stats_t){.enabled = true};
+    fake = fresh_fake();
+    CHECK(cslp_send_primary_then_mirror(
+        &mirror, false, datagram, sizeof(datagram), fake_fanout_send, &fake));
+    CHECK(fake.call_count == 1U);
+    CHECK(mirror.arp_unresolved == 1U);
+    CHECK(mirror.datagrams_attempted == 0U);
+
+    mirror = (cslp_mirror_stats_t){.enabled = false};
+    fake = fresh_fake();
+    CHECK(cslp_send_primary_then_mirror(
+        &mirror, true, datagram, sizeof(datagram), fake_fanout_send, &fake));
+    CHECK(fake.call_count == 1U);
+    CHECK(mirror.datagrams_attempted == 0U);
+}
+
 int main(void)
 {
     test_tick_conversion();
@@ -338,6 +430,7 @@ int main(void)
     test_fixed_fragmentation();
     test_control_state_and_idempotency();
     test_frame_ownership();
+    test_primary_then_mirror_policy();
     puts("ALL_CSLP_HOST_TESTS_PASS");
     return EXIT_SUCCESS;
 }

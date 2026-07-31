@@ -10,6 +10,7 @@ import subprocess
 import vitis
 
 from cslp_calibration_profile import load_calibration_profile
+from cslp_mirror_profile import MirrorProfile, load_mirror_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,7 +52,7 @@ def calibration_definitions():
     return profile.compile_definitions()
 
 
-def diagnostic_definitions():
+def diagnostic_definitions() -> tuple[str, MirrorProfile]:
     test_pattern = os.environ.get("CSLP_TEST_PATTERN", "0")
     if test_pattern not in ("0", "1"):
         raise RuntimeError("CSLP_TEST_PATTERN must be 0 or 1")
@@ -65,6 +66,7 @@ def diagnostic_definitions():
         ) from error
     if not 1 <= peer_octet <= 254:
         raise RuntimeError("CSLP_PEER_IPV4_LAST_OCTET must be in 1..254")
+    mirror = load_mirror_profile(os.environ, peer_octet)
 
     mode_name = os.environ.get("CSLP_TEST_MODE", "ramp").lower()
     modes = {"ramp": 0, "sine": 1, "multitone": 2}
@@ -103,14 +105,17 @@ def diagnostic_definitions():
         f"faults:0x{fault_mask:02x}"
     )
     print(f"VITIS_PEER_IPV4=192.168.10.{peer_octet}")
-    return (
+    print(f"VITIS_MIRROR={mirror.log_value()}")
+    definitions = (
         f"CSLP_DEFAULT_TEST_PATTERN={test_pattern};"
         f"CSLP_DEFAULT_TEST_MODE={mode};"
         f"CSLP_DEFAULT_TEST_AMPLITUDE={amplitude};"
         f"CSLP_DEFAULT_TEST_PHASE_INCREMENT={phase_increment}U;"
         f"CSLP_DEFAULT_TEST_FAULTS={fault_mask}U;"
-        f"CSLP_PEER_IPV4_LAST_OCTET={peer_octet}"
+        f"CSLP_PEER_IPV4_LAST_OCTET={peer_octet};"
+        f"{mirror.compile_definitions()}"
     )
+    return definitions, mirror
 
 
 def configure_lwip(domain):
@@ -225,6 +230,7 @@ def import_sources(app):
             "cslp_protocol.h",
             "cslp_control.h",
             "cslp_frame_pool.h",
+            "cslp_mirror_policy.h",
             "cslp_time.h",
         ],
     )
@@ -296,9 +302,12 @@ def main():
             template="empty_application",
         )
         import_sources(app)
+        diagnostic_compile_definitions, mirror = diagnostic_definitions()
         app.set_app_config(
             key="USER_COMPILE_DEFINITIONS",
-            values=f"{diagnostic_definitions()};{calibration_definitions()}",
+            values=(
+                f"{diagnostic_compile_definitions};{calibration_definitions()}"
+            ),
         )
         app.set_app_config(
             key="USER_LINK_LIBRARIES", values="lwip220;xiltimer"
@@ -342,6 +351,16 @@ def main():
                 raise RuntimeError(
                     f"generic lwIP PHY backend unexpectedly linked: {forbidden}"
                 )
+        mirror_marker = b"CYCLESCOPE_MIRROR enabled"
+        marker_present = mirror_marker in elf.read_bytes()
+        if marker_present != mirror.enabled:
+            raise RuntimeError(
+                "ELF mirror identity does not match the compile-time profile"
+            )
+        print(
+            "VITIS_MIRROR_ELF_IDENTITY_PASS="
+            f"{'enabled' if marker_present else 'disabled'}"
+        )
         print("VITIS_RTL8211F_FIXED_100_BACKEND_PASS")
         print(f"VITIS_APP_ELF={elf}")
         print("VITIS_BUILD_PASS")
