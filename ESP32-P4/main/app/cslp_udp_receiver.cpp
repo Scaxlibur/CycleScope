@@ -12,6 +12,13 @@
 #include "ethernet_init.h"
 #include "lwip/inet.h"
 
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+#include "cyclescope_receiver_startup_fault_test.hpp"
+#endif
+#if CONFIG_CYCLESCOPE_RUNTIME_FAULT_TEST
+#include "cyclescope_receiver_runtime_fault_test.hpp"
+#endif
+
 namespace cyclescope {
 namespace {
 
@@ -21,6 +28,7 @@ constexpr char kNetmask[] = "255.255.255.0";
 constexpr char kFpgaIp[] = CONFIG_CYCLESCOPE_CSLP_PEER_IPV4;
 constexpr int kSocketReceiveBufferBytes = 64 * 1024;
 constexpr int kSocketTimeoutMs = 20;
+constexpr uint32_t kEthernetStopTimeoutMs = 1000;
 constexpr uint64_t kControlTimeoutUs = 100000;
 constexpr int kControlMaxRetries = 3;
 constexpr uint64_t kFrameAssemblyTimeoutUs = 50000;
@@ -63,8 +71,19 @@ esp_err_t CslpUdpReceiver::start()
         return fail_start(ESP_FAIL);
     }
 
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (!startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::Mutex)) {
+        slot_mutex_ = xSemaphoreCreateMutex();
+    }
+    if (!startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::EventGroup)) {
+        network_events_ = xEventGroupCreate();
+    }
+#else
     slot_mutex_ = xSemaphoreCreateMutex();
     network_events_ = xEventGroupCreate();
+#endif
     if (slot_mutex_ == nullptr || network_events_ == nullptr) {
         ESP_LOGE(kTag, "Unable to allocate receiver synchronization primitives");
         return fail_start(ESP_ERR_NO_MEM);
@@ -76,8 +95,20 @@ esp_err_t CslpUdpReceiver::start()
         return fail_start(network_error);
     }
 
-    if (xTaskCreatePinnedToCore(receiver_task, "cslp_udp_rx", kReceiverTaskStackBytes, this,
-                                kReceiverTaskPriority, &receiver_task_handle_, kReceiverCore) != pdPASS) {
+    BaseType_t task_result = pdFAIL;
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (!startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::ReceiverTask)) {
+        task_result = xTaskCreatePinnedToCore(
+            receiver_task, "cslp_udp_rx", kReceiverTaskStackBytes, this,
+            kReceiverTaskPriority, &receiver_task_handle_, kReceiverCore);
+    }
+#else
+    task_result = xTaskCreatePinnedToCore(
+        receiver_task, "cslp_udp_rx", kReceiverTaskStackBytes, this,
+        kReceiverTaskPriority, &receiver_task_handle_, kReceiverCore);
+#endif
+    if (task_result != pdPASS) {
         ESP_LOGE(kTag, "Unable to create CSLP receiver task");
         receiver_task_handle_ = nullptr;
         return fail_start(ESP_ERR_NO_MEM);
@@ -90,8 +121,53 @@ esp_err_t CslpUdpReceiver::start()
 
 bool CslpUdpReceiver::rollback_start()
 {
-    active_session_id_.store(0, std::memory_order_release);
+    // Close state-changing callbacks first. invalidate_active_stream() takes
+    // slot_mutex_, so it also joins a CONNECTED/GOT_IP callback that passed
+    // the gate immediately before this store on the other core.
+    network_callbacks_enabled_.store(false, std::memory_order_release);
+    invalidate_active_stream();
     close_socket();
+
+    // Keep our handlers registered until the target driver's STOP reaches us.
+    // The following handler unregisters also synchronize with any callback
+    // still running on the default event loop before its context is destroyed.
+    if (ethernet_start_attempted_ && eth_handles_ != nullptr
+        && eth_handle_count_ > 0) {
+        xEventGroupClearBits(network_events_,
+                             kIpReadyBit | kEthernetStoppedBit);
+        if (eth_netif_ != nullptr) {
+            // Clear the configured address while the netif is still alive.
+            // Otherwise esp-netif observes the address disappearing during
+            // STOP and retains one lwIP timeout node for the default 120 s
+            // lost-IP grace period on every startup rollback.
+            const esp_netif_ip_info_t cleared_ip{};
+            const esp_err_t clear_error =
+                esp_netif_set_ip_info(eth_netif_, &cleared_ip);
+            if (clear_error != ESP_OK) {
+                ESP_LOGE(kTag,
+                         "Unable to clear static IPv4 during startup rollback: %s",
+                         esp_err_to_name(clear_error));
+                return false;
+            }
+        }
+        const esp_err_t error = esp_eth_stop(eth_handles_[0]);
+        if (error == ESP_OK) {
+            const EventBits_t stopped = xEventGroupWaitBits(
+                network_events_, kEthernetStoppedBit, pdTRUE, pdTRUE,
+                pdMS_TO_TICKS(kEthernetStopTimeoutMs));
+            if ((stopped & kEthernetStoppedBit) == 0) {
+                ESP_LOGE(kTag,
+                         "Timed out waiting for Ethernet STOP during startup rollback");
+                return false;
+            }
+        } else if (error != ESP_ERR_INVALID_STATE) {
+            ESP_LOGE(kTag,
+                     "Unable to stop Ethernet during startup rollback: %s",
+                     esp_err_to_name(error));
+            return false;
+        }
+    }
+    ethernet_start_attempted_ = false;
 
     bool handlers_removed = true;
     if (ip_event_instance_ != nullptr) {
@@ -120,16 +196,6 @@ bool CslpUdpReceiver::rollback_start()
         ESP_LOGE(kTag, "CSLP startup rollback stopped to avoid dangling event callbacks");
         return false;
     }
-
-    if (ethernet_start_attempted_ && eth_handles_ != nullptr && eth_handle_count_ > 0) {
-        const esp_err_t error = esp_eth_stop(eth_handles_[0]);
-        if (error != ESP_OK && error != ESP_ERR_INVALID_STATE) {
-            ESP_LOGE(kTag, "Unable to stop Ethernet during startup rollback: %s",
-                     esp_err_to_name(error));
-            return false;
-        }
-    }
-    ethernet_start_attempted_ = false;
 
     if (eth_glue_ != nullptr) {
         const esp_err_t error = esp_eth_del_netif_glue(eth_glue_);
@@ -168,19 +234,58 @@ bool CslpUdpReceiver::rollback_start()
 
 esp_err_t CslpUdpReceiver::initialize_ethernet()
 {
-    esp_err_t error = esp_netif_init();
+    const int64_t initialize_started_us = esp_timer_get_time();
+    esp_err_t error = ESP_OK;
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::NetifInit)) {
+        error = ESP_ERR_NO_MEM;
+    } else {
+        error = esp_netif_init();
+    }
+#else
+    error = esp_netif_init();
+#endif
     if (error != ESP_OK && error != ESP_ERR_INVALID_STATE) {
         return error;
     }
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::EventLoop)) {
+        error = ESP_ERR_NO_MEM;
+    } else {
+        error = esp_event_loop_create_default();
+    }
+#else
     error = esp_event_loop_create_default();
+#endif
     if (error != ESP_OK && error != ESP_ERR_INVALID_STATE) {
         return error;
     }
+    const int64_t platform_ready_us = esp_timer_get_time();
 
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::EthernetInit)) {
+        return ESP_ERR_NO_MEM;
+    }
+    if (startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::EmptyEthernetHandles)) {
+        // Model a driver wrapper that reports success but produces no usable
+        // devices. Continue into the real post-call guard below.
+        eth_handles_ = nullptr;
+        eth_handle_count_ = 0;
+        error = ESP_OK;
+    } else {
+        error = ethernet_init_all(&eth_handles_, &eth_handle_count_);
+    }
+#else
     error = ethernet_init_all(&eth_handles_, &eth_handle_count_);
+#endif
     if (error != ESP_OK) {
         return error;
     }
+    const int64_t drivers_ready_us = esp_timer_get_time();
     if (eth_handle_count_ == 0 || eth_handles_ == nullptr) {
         return ESP_ERR_NOT_FOUND;
     }
@@ -189,44 +294,128 @@ esp_err_t CslpUdpReceiver::initialize_ethernet()
                  static_cast<unsigned>(eth_handle_count_));
     }
 
+    esp_netif_inherent_config_t netif_inherent_config =
+        ESP_NETIF_INHERENT_DEFAULT_ETH();
+    netif_inherent_config.flags = static_cast<esp_netif_flags_t>(
+        static_cast<uint32_t>(netif_inherent_config.flags)
+        & ~static_cast<uint32_t>(ESP_NETIF_DHCP_CLIENT));
     esp_netif_config_t netif_config = ESP_NETIF_DEFAULT_ETH();
+    netif_config.base = &netif_inherent_config;
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (!startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::NetifCreate)) {
+        eth_netif_ = esp_netif_new(&netif_config);
+    }
+#else
     eth_netif_ = esp_netif_new(&netif_config);
+#endif
     if (eth_netif_ == nullptr) {
         return ESP_ERR_NO_MEM;
     }
 
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (!startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::NetifGlue)) {
+        eth_glue_ = esp_eth_new_netif_glue(eth_handles_[0]);
+    }
+#else
     eth_glue_ = esp_eth_new_netif_glue(eth_handles_[0]);
+#endif
     if (eth_glue_ == nullptr) {
         return ESP_ERR_NO_MEM;
     }
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::NetifAttach)) {
+        error = ESP_ERR_NO_MEM;
+    } else {
+        error = esp_netif_attach(eth_netif_, eth_glue_);
+    }
+#else
     error = esp_netif_attach(eth_netif_, eth_glue_);
+#endif
     if (error != ESP_OK) {
         return error;
     }
 
-    error = esp_event_handler_instance_register(ETH_EVENT, ESP_EVENT_ANY_ID,
-                                                network_event_handler, this,
-                                                &eth_event_instance_);
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::EthEventHandler)) {
+        error = ESP_ERR_NO_MEM;
+    } else {
+        error = esp_event_handler_instance_register(
+            ETH_EVENT, ESP_EVENT_ANY_ID, network_event_handler, this,
+            &eth_event_instance_);
+    }
+#else
+    error = esp_event_handler_instance_register(
+        ETH_EVENT, ESP_EVENT_ANY_ID, network_event_handler, this,
+        &eth_event_instance_);
+#endif
     if (error != ESP_OK) {
         return error;
     }
-    error = esp_event_handler_instance_register(IP_EVENT, IP_EVENT_ETH_GOT_IP,
-                                                network_event_handler, this,
-                                                &ip_event_instance_);
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::IpEventHandler)) {
+        error = ESP_ERR_NO_MEM;
+    } else {
+        error = esp_event_handler_instance_register(
+            IP_EVENT, IP_EVENT_ETH_GOT_IP, network_event_handler, this,
+            &ip_event_instance_);
+    }
+#else
+    error = esp_event_handler_instance_register(
+        IP_EVENT, IP_EVENT_ETH_GOT_IP, network_event_handler, this,
+        &ip_event_instance_);
+#endif
     if (error != ESP_OK) {
         return error;
     }
+
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::StaticIp)) {
+        error = ESP_ERR_NO_MEM;
+    } else {
+        error = configure_static_ip();
+    }
+#else
+    error = configure_static_ip();
+#endif
+    if (error != ESP_OK) {
+        return error;
+    }
+
+    network_callbacks_enabled_.store(true, std::memory_order_release);
     ethernet_start_attempted_ = true;
-    return esp_eth_start(eth_handles_[0]);
+    const int64_t attach_ready_us = esp_timer_get_time();
+    esp_err_t start_error = ESP_OK;
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (startup_fault_test::consume_receiver_failpoint(
+            startup_fault_test::ReceiverFailPoint::EthernetStart)) {
+        start_error = ESP_ERR_NO_MEM;
+    } else {
+        start_error = esp_eth_start(eth_handles_[0]);
+    }
+#else
+    start_error = esp_eth_start(eth_handles_[0]);
+#endif
+    const int64_t ethernet_started_us = esp_timer_get_time();
+    ESP_LOGI(
+        kTag,
+        "Ethernet startup us: platform=%" PRIi64 " drivers=%" PRIi64
+        " attach=%" PRIi64 " start=%" PRIi64 " total=%" PRIi64,
+        platform_ready_us - initialize_started_us,
+        drivers_ready_us - platform_ready_us,
+        attach_ready_us - drivers_ready_us,
+        ethernet_started_us - attach_ready_us,
+        ethernet_started_us - initialize_started_us);
+    return start_error;
 }
 
 esp_err_t CslpUdpReceiver::configure_static_ip()
 {
-    const esp_err_t dhcp_error = esp_netif_dhcpc_stop(eth_netif_);
-    if (dhcp_error != ESP_OK && dhcp_error != ESP_ERR_ESP_NETIF_DHCP_ALREADY_STOPPED) {
-        return dhcp_error;
-    }
-
     esp_netif_ip_info_t ip_info{};
     ip_info.ip.addr = ipaddr_addr(kLocalIp);
     ip_info.netmask.addr = ipaddr_addr(kNetmask);
@@ -239,14 +428,38 @@ void CslpUdpReceiver::network_event_handler(void *context, esp_event_base_t even
 {
     auto *receiver = static_cast<CslpUdpReceiver *>(context);
     if (event_base == ETH_EVENT) {
+        if (event_data == nullptr || receiver->eth_handles_ == nullptr
+            || receiver->eth_handle_count_ == 0
+            || *static_cast<esp_eth_handle_t *>(event_data)
+                   != receiver->eth_handles_[0]) {
+            return;
+        }
         if (event_id == ETHERNET_EVENT_CONNECTED) {
-            const esp_err_t error = receiver->configure_static_ip();
-            if (error != ESP_OK) {
-                ESP_LOGE(kTag, "Unable to configure static IPv4: %s", esp_err_to_name(error));
+            if (receiver->slot_mutex_ == nullptr) {
+                return;
             }
-        } else if (event_id == ETHERNET_EVENT_DISCONNECTED || event_id == ETHERNET_EVENT_STOP) {
+            xSemaphoreTake(receiver->slot_mutex_, portMAX_DELAY);
+            if (receiver->network_callbacks_enabled_.load(
+                    std::memory_order_acquire)) {
+                // The startup call validates and caches the address before
+                // esp_eth_start().  This second, idempotent call happens after
+                // esp_netif_up(); without a DHCP client it is what publishes
+                // IP_EVENT_ETH_GOT_IP and releases the receiver task.
+                const esp_err_t error = receiver->configure_static_ip();
+                if (error != ESP_OK) {
+                    ESP_LOGE(kTag, "Unable to configure static IPv4: %s",
+                             esp_err_to_name(error));
+                }
+            }
+            xSemaphoreGive(receiver->slot_mutex_);
+        } else if (event_id == ETHERNET_EVENT_DISCONNECTED
+                   || event_id == ETHERNET_EVENT_STOP) {
             xEventGroupClearBits(receiver->network_events_, kIpReadyBit);
-            receiver->active_session_id_.store(0, std::memory_order_release);
+            receiver->invalidate_active_stream();
+            if (event_id == ETHERNET_EVENT_STOP) {
+                xEventGroupSetBits(receiver->network_events_,
+                                   kEthernetStoppedBit);
+            }
             ESP_LOGW(kTag, "Ethernet link down");
         }
         return;
@@ -257,8 +470,17 @@ void CslpUdpReceiver::network_event_handler(void *context, esp_event_base_t even
         if (event->esp_netif != receiver->eth_netif_) {
             return;
         }
-        xEventGroupSetBits(receiver->network_events_, kIpReadyBit);
-        ESP_LOGI(kTag, "Ethernet static IPv4 ready: " IPSTR, IP2STR(&event->ip_info.ip));
+        if (receiver->slot_mutex_ == nullptr) {
+            return;
+        }
+        xSemaphoreTake(receiver->slot_mutex_, portMAX_DELAY);
+        if (receiver->network_callbacks_enabled_.load(
+                std::memory_order_acquire)) {
+            xEventGroupSetBits(receiver->network_events_, kIpReadyBit);
+            ESP_LOGI(kTag, "Ethernet static IPv4 ready: " IPSTR,
+                     IP2STR(&event->ip_info.ip));
+        }
+        xSemaphoreGive(receiver->slot_mutex_);
     }
 }
 
@@ -270,6 +492,9 @@ void CslpUdpReceiver::receiver_task(void *context)
 void CslpUdpReceiver::task_main()
 {
     bool attempted_session = false;
+#if CONFIG_CYCLESCOPE_CSLP_DISABLE_PUSH_TEST
+    bool disable_push_test_pending = true;
+#endif
     while (true) {
         const EventBits_t ready = xEventGroupWaitBits(network_events_, kIpReadyBit, pdFALSE,
                                                       pdTRUE, pdMS_TO_TICKS(500));
@@ -283,12 +508,17 @@ void CslpUdpReceiver::task_main()
         attempted_session = true;
 
         if (!open_socket() || !establish_session()) {
-            active_session_id_.store(0, std::memory_order_release);
+            invalidate_active_stream();
             reset_pending_frames();
             close_socket();
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
         }
+
+#if CONFIG_CYCLESCOPE_CSLP_DISABLE_PUSH_TEST
+        const uint32_t disable_push_test_completed_baseline =
+            relaxed_load(stats_.frames_completed);
+#endif
 
         while ((xEventGroupGetBits(network_events_) & kIpReadyBit) != 0
                && active_session_id_.load(std::memory_order_acquire) != 0) {
@@ -304,6 +534,19 @@ void CslpUdpReceiver::task_main()
 
             const uint64_t current_time = now_us();
             expire_assembly(current_time);
+#if CONFIG_CYCLESCOPE_CSLP_DISABLE_PUSH_TEST
+            if (disable_push_test_pending
+                && relaxed_load(stats_.frames_completed)
+                       - disable_push_test_completed_baseline
+                       >= 8U) {
+                disable_push_test_pending = false;
+                if (!run_disable_push_reconfigure_test()) {
+                    ESP_LOGE(kTag,
+                             "DISABLE/CONFIG/ENABLE lifecycle test failed");
+                    break;
+                }
+            }
+#endif
             if (last_stream_message_us_ != 0
                 && current_time >= last_stream_message_us_
                 && current_time - last_stream_message_us_ > kLinkSilenceTimeoutUs) {
@@ -316,7 +559,7 @@ void CslpUdpReceiver::task_main()
             }
         }
 
-        active_session_id_.store(0, std::memory_order_release);
+        invalidate_active_stream();
         reset_pending_frames();
         close_socket();
         vTaskDelay(pdMS_TO_TICKS(500));
@@ -326,11 +569,22 @@ void CslpUdpReceiver::task_main()
 bool CslpUdpReceiver::open_socket()
 {
     close_socket();
-    socket_fd_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    int socket_type = SOCK_DGRAM;
+#if CONFIG_CYCLESCOPE_RUNTIME_FAULT_TEST
+    if (runtime_fault_test::consume_receiver_runtime_failpoint(
+            runtime_fault_test::ReceiverRuntimeFailPoint::SocketCreate)) {
+        socket_type = -1;
+    }
+#endif
+    socket_fd_ = socket(AF_INET, socket_type, IPPROTO_IP);
     if (socket_fd_ < 0) {
+        stats_.socket_open_failures.fetch_add(1, std::memory_order_relaxed);
         ESP_LOGE(kTag, "socket() failed: errno=%d", errno);
         return false;
     }
+#if CONFIG_CYCLESCOPE_RUNTIME_FAULT_TEST
+    runtime_fault_test::note_receiver_socket_opened(socket_fd_);
+#endif
 
     const int reuse_address = 1;
     if (setsockopt(socket_fd_, SOL_SOCKET, SO_REUSEADDR,
@@ -346,7 +600,16 @@ bool CslpUdpReceiver::open_socket()
         .tv_sec = 0,
         .tv_usec = kSocketTimeoutMs * 1000,
     };
-    if (setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0) {
+    int receive_timeout_fd = socket_fd_;
+#if CONFIG_CYCLESCOPE_RUNTIME_FAULT_TEST
+    if (runtime_fault_test::consume_receiver_runtime_failpoint(
+            runtime_fault_test::ReceiverRuntimeFailPoint::ReceiveTimeout)) {
+        receive_timeout_fd = -1;
+    }
+#endif
+    if (setsockopt(receive_timeout_fd, SOL_SOCKET, SO_RCVTIMEO,
+                   &timeout, sizeof(timeout)) != 0) {
+        stats_.socket_open_failures.fetch_add(1, std::memory_order_relaxed);
         ESP_LOGE(kTag, "SO_RCVTIMEO failed: errno=%d", errno);
         close_socket();
         return false;
@@ -356,8 +619,16 @@ bool CslpUdpReceiver::open_socket()
     local_address.sin_family = AF_INET;
     local_address.sin_port = htons(kLocalPort);
     local_address.sin_addr.s_addr = htonl(INADDR_ANY);
-    if (bind(socket_fd_, reinterpret_cast<sockaddr *>(&local_address),
+    int bind_fd = socket_fd_;
+#if CONFIG_CYCLESCOPE_RUNTIME_FAULT_TEST
+    if (runtime_fault_test::consume_receiver_runtime_failpoint(
+            runtime_fault_test::ReceiverRuntimeFailPoint::Bind)) {
+        bind_fd = -1;
+    }
+#endif
+    if (bind(bind_fd, reinterpret_cast<sockaddr *>(&local_address),
              sizeof(local_address)) != 0) {
+        stats_.socket_open_failures.fetch_add(1, std::memory_order_relaxed);
         ESP_LOGE(kTag, "bind(%u) failed: errno=%d",
                  static_cast<unsigned>(kLocalPort), errno);
         close_socket();
@@ -368,6 +639,7 @@ bool CslpUdpReceiver::open_socket()
     fpga_address_.sin_family = AF_INET;
     fpga_address_.sin_port = htons(kFpgaPort);
     if (inet_pton(AF_INET, kFpgaIp, &fpga_address_.sin_addr) != 1) {
+        stats_.socket_open_failures.fetch_add(1, std::memory_order_relaxed);
         ESP_LOGE(kTag, "Invalid FPGA IPv4 constant");
         close_socket();
         return false;
@@ -381,31 +653,54 @@ bool CslpUdpReceiver::open_socket()
 void CslpUdpReceiver::close_socket()
 {
     if (socket_fd_ >= 0) {
-        shutdown(socket_fd_, SHUT_RDWR);
-        close(socket_fd_);
+        const int socket_to_close = socket_fd_;
+        shutdown(socket_to_close, SHUT_RDWR);
+        const int close_result = close(socket_to_close);
+        if (close_result != 0) {
+            stats_.socket_close_failures.fetch_add(1,
+                                                   std::memory_order_relaxed);
+            ESP_LOGE(kTag, "close(%d) failed: errno=%d", socket_to_close,
+                     errno);
+        }
+#if CONFIG_CYCLESCOPE_RUNTIME_FAULT_TEST
+        runtime_fault_test::note_receiver_socket_closed(socket_to_close,
+                                                        close_result);
+#endif
         socket_fd_ = -1;
     }
 }
 
 bool CslpUdpReceiver::establish_session()
 {
-    active_session_id_.store(0, std::memory_order_release);
+    invalidate_active_stream();
     reset_pending_frames();
-    active_config_id_ = 0;
+    const uint32_t handshake_epoch =
+        active_stream_epoch_.load(std::memory_order_acquire);
     device_boot_id_ = 0;
     const uint32_t initial_session_seed = session_id_ == 0 ? esp_random() : 0;
     session_id_ = receiver_policy::next_session_id(session_id_, initial_session_seed);
     control_sequence_ = esp_random();
-    if (!run_hello() || !run_config() || !run_enable_push()) {
+    uint32_t negotiated_config_id = 0;
+    if (!run_hello() || !run_config(&negotiated_config_id)
+        || !run_enable_push()) {
         ESP_LOGW(kTag, "CSLP session 0x%08" PRIX32 " handshake failed", session_id_);
         return false;
     }
 
+    if (!commit_active_stream(session_id_, negotiated_config_id,
+                              handshake_epoch)) {
+        ESP_LOGW(kTag,
+                 "CSLP session 0x%08" PRIX32
+                 " invalidated before activation",
+                 session_id_);
+        return false;
+    }
+    stats_.sessions_established.fetch_add(1, std::memory_order_relaxed);
     last_stream_message_us_ = now_us();
-    active_session_id_.store(session_id_, std::memory_order_release);
     ESP_LOGI(kTag, "CSLP session ready: session=0x%08" PRIX32
              " boot=%" PRIu32 " config=%" PRIu32,
-             session_id_, device_boot_id_, active_config_id_);
+             session_id_, device_boot_id_,
+             active_config_id_.load(std::memory_order_acquire));
     return true;
 }
 
@@ -466,8 +761,12 @@ bool CslpUdpReceiver::run_hello()
     return true;
 }
 
-bool CslpUdpReceiver::run_config()
+bool CslpUdpReceiver::run_config(uint32_t *negotiated_config_id)
 {
+    if (negotiated_config_id == nullptr) {
+        return false;
+    }
+    *negotiated_config_id = 0;
     const uint32_t sequence = next_control_sequence();
     const size_t length = prepare_request(cslp::MessageType::ConfigSet, sequence, 20);
     if (length == 0) {
@@ -510,7 +809,7 @@ bool CslpUdpReceiver::run_config()
                  frame_sample_count, frame_period_us);
         return false;
     }
-    active_config_id_ = config_id;
+    *negotiated_config_id = config_id;
     return true;
 }
 
@@ -532,6 +831,76 @@ bool CslpUdpReceiver::run_enable_push()
     const auto status = static_cast<cslp::StatusCode>(cslp::read_be16(payload));
     return status == cslp::StatusCode::Ok && cslp::read_be16(payload + 2) == 0;
 }
+
+bool CslpUdpReceiver::run_disable_push()
+{
+    const uint32_t sequence = next_control_sequence();
+    const size_t length =
+        prepare_request(cslp::MessageType::DisablePush, sequence, 0);
+    if (length == 0) {
+        return false;
+    }
+    cslp::finalize_crc32(tx_buffer_.data(), length);
+
+    cslp::CommonHeader response{};
+    if (!transact(length, cslp::MessageType::DisablePushAck, sequence,
+                  &response)
+        || response.payload_bytes != 4) {
+        return false;
+    }
+    const uint8_t *payload = rx_buffer_.data() + cslp::kCommonHeaderBytes;
+    const auto status =
+        static_cast<cslp::StatusCode>(cslp::read_be16(payload));
+    return status == cslp::StatusCode::Ok
+           && cslp::read_be16(payload + 2) == 0;
+}
+
+#if CONFIG_CYCLESCOPE_CSLP_DISABLE_PUSH_TEST
+bool CslpUdpReceiver::run_disable_push_reconfigure_test()
+{
+    const uint32_t previous_config_id =
+        active_config_id_.load(std::memory_order_acquire);
+    disable_test_previous_config_id_.store(previous_config_id,
+                                           std::memory_order_release);
+    disable_test_reconfigured_.store(false, std::memory_order_release);
+    disable_test_in_progress_.store(true, std::memory_order_release);
+    ESP_LOGI(kTag,
+             "Starting DISABLE/CONFIG/ENABLE lifecycle test: session=0x%08"
+             PRIX32 " config=%" PRIu32,
+             session_id_, previous_config_id);
+    if (!run_disable_push()) {
+        disable_test_in_progress_.store(false, std::memory_order_release);
+        return false;
+    }
+
+    // Once DISABLE_PUSH_ACK is accepted, no old-config WAVE may enter the
+    // reassembler. transact() still receives datagrams while CONFIG/ENABLE
+    // are in flight; the active-session gate drops those WAVE packets before
+    // decoding or statistics.
+    invalidate_active_stream();
+    reset_pending_frames();
+    const uint32_t reconfigure_epoch =
+        active_stream_epoch_.load(std::memory_order_acquire);
+    uint32_t negotiated_config_id = 0;
+    if (!run_config(&negotiated_config_id)
+        || negotiated_config_id == previous_config_id || !run_enable_push()
+        || !commit_active_stream(session_id_, negotiated_config_id,
+                                 reconfigure_epoch)) {
+        invalidate_active_stream();
+        disable_test_in_progress_.store(false, std::memory_order_release);
+        return false;
+    }
+
+    last_stream_message_us_ = now_us();
+    disable_test_reconfigured_.store(true, std::memory_order_release);
+    ESP_LOGI(kTag,
+             "DISABLE/CONFIG/ENABLE lifecycle test PASS: session=0x%08"
+             PRIX32 " config=%" PRIu32 "->%" PRIu32,
+             session_id_, previous_config_id,
+             active_config_id_.load(std::memory_order_acquire));
+    return true;
+}
+#endif
 
 bool CslpUdpReceiver::transact(size_t request_length, cslp::MessageType expected_response,
                                uint32_t request_sequence, cslp::CommonHeader *response)
@@ -580,12 +949,22 @@ CslpUdpReceiver::receive_valid_datagram(cslp::CommonHeader *common, size_t *leng
 {
     sockaddr_in source{};
     socklen_t source_length = sizeof(source);
-    const ssize_t received = recvfrom(socket_fd_, rx_buffer_.data(), rx_buffer_.size(), 0,
+    int receive_fd = socket_fd_;
+#if CONFIG_CYCLESCOPE_RUNTIME_FAULT_TEST
+    if (runtime_fault_test::consume_receiver_runtime_failpoint(
+            runtime_fault_test::ReceiverRuntimeFailPoint::RecvfromFatalActive)) {
+        // Exercise lwIP's real EBADF path without closing the live socket.
+        // The normal teardown below remains the sole owner of the real fd.
+        receive_fd = -1;
+    }
+#endif
+    const ssize_t received = recvfrom(receive_fd, rx_buffer_.data(), rx_buffer_.size(), 0,
                                       reinterpret_cast<sockaddr *>(&source), &source_length);
     if (received < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
             return ReceiveResult::Timeout;
         }
+        stats_.recv_fatal_errors.fetch_add(1, std::memory_order_relaxed);
         ESP_LOGE(kTag, "recvfrom failed: errno=%d", errno);
         return ReceiveResult::Fatal;
     }
@@ -674,11 +1053,13 @@ void CslpUdpReceiver::handle_status(const cslp::CommonHeader &common, size_t len
         stats_.metadata_conflicts.fetch_add(1, std::memory_order_relaxed);
         return;
     }
-    if (active_config_id_ != 0 && active_config_id != active_config_id_) {
+    const uint32_t expected_config_id =
+        active_config_id_.load(std::memory_order_acquire);
+    if (expected_config_id != 0 && active_config_id != expected_config_id) {
         stats_.config_mismatches.fetch_add(1, std::memory_order_relaxed);
         ESP_LOGW(kTag, "STATUS config changed from %" PRIu32 " to %" PRIu32,
-                 active_config_id_, active_config_id);
-        active_session_id_.store(0, std::memory_order_release);
+                 expected_config_id, active_config_id);
+        invalidate_active_stream();
         return;
     }
     last_stream_message_us_ = now_us();
@@ -689,7 +1070,7 @@ void CslpUdpReceiver::handle_status(const cslp::CommonHeader &common, size_t len
     }
     if (session_active && device_state != 2) {
         ESP_LOGW(kTag, "FPGA left PUSH_ENABLED; starting a new session");
-        active_session_id_.store(0, std::memory_order_release);
+        invalidate_active_stream();
     }
 }
 
@@ -745,7 +1126,9 @@ bool CslpUdpReceiver::validate_wave(const cslp::CommonHeader &common,
         stats_.metadata_conflicts.fetch_add(1, std::memory_order_relaxed);
         return false;
     }
-    if (active_config_id_ == 0 || wave.config_id != active_config_id_
+    const uint32_t active_config_id =
+        active_config_id_.load(std::memory_order_acquire);
+    if (active_config_id == 0 || wave.config_id != active_config_id
         || wave.sample_rate_hz != kSampleRateHz
         || wave.frame_sample_count != kFrameSampleCount
         || wave.filter_profile != kFilterProfile
@@ -758,6 +1141,12 @@ bool CslpUdpReceiver::validate_wave(const cslp::CommonHeader &common,
 
 void CslpUdpReceiver::handle_wave(const cslp::CommonHeader &common, size_t length)
 {
+    const uint32_t active_session_id =
+        active_session_id_.load(std::memory_order_acquire);
+    if (!receiver_policy::session_is_current(active_session_id, common.session_id)) {
+        return;
+    }
+
     cslp::WaveHeader wave{};
     if (!cslp::decode_wave_header(rx_buffer_.data(), length, common, &wave)) {
         stats_.bad_length.fetch_add(1, std::memory_order_relaxed);
@@ -993,6 +1382,44 @@ void CslpUdpReceiver::reset_pending_frames()
     xSemaphoreGive(slot_mutex_);
 }
 
+void CslpUdpReceiver::invalidate_active_stream()
+{
+    if (slot_mutex_ != nullptr) {
+        xSemaphoreTake(slot_mutex_, portMAX_DELAY);
+    }
+    active_session_id_.store(0, std::memory_order_release);
+    active_config_id_.store(0, std::memory_order_release);
+    active_stream_epoch_.fetch_add(1, std::memory_order_acq_rel);
+    if (slot_mutex_ != nullptr) {
+        xSemaphoreGive(slot_mutex_);
+    }
+}
+
+bool CslpUdpReceiver::commit_active_stream(
+    uint32_t session_id, uint32_t config_id,
+    uint32_t expected_stream_epoch)
+{
+    if (session_id == 0 || config_id == 0 || slot_mutex_ == nullptr
+        || network_events_ == nullptr) {
+        return false;
+    }
+
+    xSemaphoreTake(slot_mutex_, portMAX_DELAY);
+    const bool ip_ready =
+        (xEventGroupGetBits(network_events_) & kIpReadyBit) != 0;
+    const bool unchanged =
+        active_stream_epoch_.load(std::memory_order_acquire)
+            == expected_stream_epoch
+        && active_session_id_.load(std::memory_order_acquire) == 0
+        && active_config_id_.load(std::memory_order_acquire) == 0;
+    if (ip_ready && unchanged) {
+        active_config_id_.store(config_id, std::memory_order_release);
+        active_session_id_.store(session_id, std::memory_order_release);
+    }
+    xSemaphoreGive(slot_mutex_);
+    return ip_ready && unchanged;
+}
+
 void CslpUdpReceiver::reject_frame(uint32_t frame_id)
 {
     if (!receiver_policy::rejection_targets_observed(
@@ -1016,14 +1443,22 @@ bool CslpUdpReceiver::acquire_latest(const FrameCursor &after, FrameView *view)
     xSemaphoreTake(slot_mutex_, portMAX_DELAY);
     if (latest_index_ >= 0) {
         FrameSlot &slot = slots_[latest_index_];
+        const uint32_t stream_epoch_before =
+            active_stream_epoch_.load(std::memory_order_acquire);
         const uint32_t active_session_id =
             active_session_id_.load(std::memory_order_acquire);
+        const uint32_t active_config_id =
+            active_config_id_.load(std::memory_order_acquire);
         const FrameCursor candidate = {
             slot.metadata.session_id,
             slot.metadata.frame_id,
         };
         if (receiver_policy::session_is_current(active_session_id,
                                                 slot.metadata.session_id)
+            && active_config_id != 0
+            && active_config_id == slot.metadata.config_id
+            && stream_epoch_before
+                   == active_stream_epoch_.load(std::memory_order_acquire)
             && receiver_policy::cursor_allows(candidate, after)) {
             slot.state = SlotState::InUse;
             ++slot.lease_generation;
@@ -1035,6 +1470,7 @@ bool CslpUdpReceiver::acquire_latest(const FrameCursor &after, FrameView *view)
             view->metadata = slot.metadata;
             view->slot_index = static_cast<uint8_t>(latest_index_);
             view->lease_generation = slot.lease_generation;
+            view->stream_epoch = stream_epoch_before;
             latest_index_ = -1;
             acquired = true;
         }
@@ -1062,12 +1498,63 @@ bool CslpUdpReceiver::frame_is_current(const FrameView &view) const
                        && slot.metadata.frame_id == view.metadata.frame_id;
     xSemaphoreGive(slot_mutex_);
 
+    return lease_is_current
+           && stream_is_current(view.metadata.session_id,
+                                view.metadata.config_id,
+                                view.stream_epoch);
+}
+
+bool CslpUdpReceiver::stream_is_current(uint32_t session_id,
+                                        uint32_t config_id,
+                                        uint32_t stream_epoch) const
+{
+    const uint32_t epoch_before =
+        active_stream_epoch_.load(std::memory_order_acquire);
+    if (epoch_before != stream_epoch) {
+        return false;
+    }
     const uint32_t active_session_id =
         active_session_id_.load(std::memory_order_acquire);
-    return lease_is_current
-           && receiver_policy::session_is_current(active_session_id,
-                                                  view.metadata.session_id);
+    const uint32_t active_config_id =
+        active_config_id_.load(std::memory_order_acquire);
+    const uint32_t epoch_after =
+        active_stream_epoch_.load(std::memory_order_acquire);
+    return epoch_before == epoch_after
+           && receiver_policy::stream_identity_is_current(
+               active_session_id, active_config_id, epoch_after,
+               session_id, config_id, stream_epoch);
 }
+
+#if CONFIG_CYCLESCOPE_CSLP_DISABLE_PUSH_TEST
+void CslpUdpReceiver::synchronize_disable_push_test(const FrameView &view)
+{
+    if (!disable_test_in_progress_.load(std::memory_order_acquire)
+        || view.metadata.config_id
+               != disable_test_previous_config_id_.load(
+                   std::memory_order_acquire)) {
+        return;
+    }
+
+    ESP_LOGW(kTag,
+             "Holding old-config analysis before publish: frame=%" PRIu32
+             " config=%" PRIu32 " epoch=%" PRIu32,
+             view.metadata.frame_id, view.metadata.config_id,
+             view.stream_epoch);
+    const uint64_t deadline = now_us() + 2000000U;
+    while (!disable_test_reconfigured_.load(std::memory_order_acquire)
+           && disable_test_in_progress_.load(std::memory_order_acquire)
+           && now_us() < deadline) {
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+    const bool reconfigured =
+        disable_test_reconfigured_.load(std::memory_order_acquire);
+    ESP_LOGI(kTag,
+             "Old-config publish latch released: frame=%" PRIu32
+             " reconfigured=%u",
+             view.metadata.frame_id, static_cast<unsigned>(reconfigured));
+    disable_test_in_progress_.store(false, std::memory_order_release);
+}
+#endif
 
 void CslpUdpReceiver::release(FrameView *view)
 {
@@ -1110,12 +1597,21 @@ CslpUdpReceiver::Stats CslpUdpReceiver::stats() const
         .frames_acquired = relaxed_load(stats_.frames_acquired),
         .control_retries = relaxed_load(stats_.control_retries),
         .reconnects = relaxed_load(stats_.reconnects),
+        .socket_open_failures = relaxed_load(stats_.socket_open_failures),
+        .recv_fatal_errors = relaxed_load(stats_.recv_fatal_errors),
+        .socket_close_failures = relaxed_load(stats_.socket_close_failures),
+        .sessions_established = relaxed_load(stats_.sessions_established),
     };
 }
 
 bool CslpUdpReceiver::session_ready() const
 {
     return active_session_id_.load(std::memory_order_acquire) != 0;
+}
+
+bool CslpUdpReceiver::started() const
+{
+    return start_state_.load(std::memory_order_acquire) == StartState::Started;
 }
 
 void CslpUdpReceiver::log_health()
@@ -1140,6 +1636,11 @@ void CslpUdpReceiver::log_health()
              snapshot.config_mismatches, snapshot.metadata_conflicts,
              snapshot.overrange_frames, snapshot.fifo_overflow_frames,
              snapshot.control_retries, snapshot.reconnects);
+    ESP_LOGI(kTag, "health/socket: open_fail=%" PRIu32
+             " recv_fatal=%" PRIu32 " close_fail=%" PRIu32
+             " sessions=%" PRIu32,
+             snapshot.socket_open_failures, snapshot.recv_fatal_errors,
+             snapshot.socket_close_failures, snapshot.sessions_established);
 }
 
 uint64_t CslpUdpReceiver::now_us()

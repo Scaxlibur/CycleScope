@@ -18,3 +18,5 @@
 /ESP32-P4/sdkconfig.old
 /ESP32-P4/.idf-component-cache/
 /ESP32-P4/.xdg-cache/
+
+/source_data_for_test/

@@ -15,6 +15,7 @@ struct FftAnalysisResult {
     float voltage_peak_to_peak = 0.0F;
     float true_rms_volts = 0.0F;
     float fundamental_hz = 0.0F;
+    float fundamental_phase_radians = 0.0F;
     float dc_offset_volts = 0.0F;
     float sample_rate_hz = 0.0F;
     float bin_width_hz = 0.0F;
@@ -39,10 +40,12 @@ public:
     FftProcessor8192 &operator=(const FftProcessor8192 &) = delete;
 
     esp_err_t initialize();
+    void deinitialize();
     esp_err_t process(const int16_t *samples, size_t sample_count, float sample_rate_hz,
-                      int32_t scale_uV_per_lsb, int32_t offset_uV, FftAnalysisResult *result);
+                      uint32_t scale_uV_per_lsb, int32_t offset_uV, FftAnalysisResult *result);
 
     bool initialized() const;
+    bool resources_released() const;
     // The 4097-bin, single-sided voltage spectrum remains owned by this
     // processor and is valid until the next process() call.
     const float *positive_spectrum() const;

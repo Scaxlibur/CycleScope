@@ -1,10 +1,76 @@
 # scratch-of-rei
 
 ## 临时想法
-- FFT 合并中选择保留 main 的 LAN 接收层和 640 列 RGB565 全频谱 UI，让 esp-dsp 的 4097 点单边谱压缩后直接驱动现有显示结构。
+- 当前板上为正式 `.2` freshness normal：size `0x1132f0`，ELF/BIN `c3d6e6853e3d2c3b721e2bcd0dfeb64c88a71bbd30d33f0b5e19cafb069fd448` / `23ae1c37fab06e99e058b70ab0cd62fb1287dbb7bcec721b78bfa0218dec8119`；Flash app 区读回 `/tmp/cyclescope-p4-fpga-formal-app-readback.bin` 与 BIN 逐字节一致。UART `/tmp/cyclescope-p4-fpga-formal-smoke-uart.log` SHA256 `780da7bcbdafa440d2d88e4512d9ba858b367a82105002d4e48bbc6449713901`；45 秒内 42 次 HELLO timeout、0 session ready、0 measurement，阻塞在 FPGA `.2` 未返回 HELLO_ACK。
+- 真实 pcap 重放后正式镜像已再次恢复：新 app 读回 `/tmp/cyclescope-p4-fpga-formal-app-readback-after-real-pcap.bin` SHA256 `23ae1c37…8119`、`cmp IDENTICAL`；恢复 UART `/tmp/cyclescope-p4-formal-restored-after-real-pcap-uart.log` SHA256 `38641307…7356`，显示 ELF `c3d6e6853…` 和 `.3→.2`。后台 FPGA worktree 的 tcpdump 属其他工作流，未终止、未写入。
+- 精确 real-adc 单音：`d-10000Hz-050mVpp` pcap `e88a947e…fef5`，session `01B1B679`，23/23 帧重组后均 `valid=0 lines=1`，属于至少两线产品门禁的预期拒绝；sender/UART `c2449b10…520f / 979ed414…7f9f`。
+- 派生 real-adc H1+H10：10/100 kHz 两份 50 mVpp 捕获逐样点相加，derived SHA `e1777613…b2de`，session `29E84C98`，23 帧，`F0=10000.02 Hz`、`P1/P2=23.557/23.607 mVpk`、UI LIVE→ONLINE STALE→OFFLINE；sender/UART `ba95bff0…35f2 / a23183de…cb2`。必须写明非 FPGA 同时双音捕获。
+- 首次 `.2` 抓包 `/tmp/cyclescope-p4-fpga-formal-smoke.pcap` SHA256 `704e5e5b3234433c01fcfd1b20a306e77e985038120492dc53965c3edd38a4ea`；电脑交换机端口看不到 `.3↔.2` 单播，0 包只说明该观察点不可用，不能据此断言 P4 未发送 HELLO。FPGA/P4 ICMP 均 2/2，电脑 `.5` 已撤掉且 UDP 50000/50001 无本机占用。
+- 最终 freshness 上板：session `7BACBD99` 的 20 帧后持续 STATUS，frame 20 在 `age=1000 ms` 时 `LIVE→ONLINE STALE`，peer-silent 后 `OFFLINE STALE`；session `7BACC34A` 只有 frame 1 measurement 后才 `STALE→LIVE`。STATUS-only UART/sender SHA256 `75a22dd2…6eec / ef61050c…7561`；恢复 UART/sender SHA256 `ae732c0b…531b / dca4f385…d5fe`。主机新鲜度 9 边界 PASS。
+- v5 正式 10k：session `C540EE79`；sender/UART `/tmp/cyclescope-p4-v5-final-10000-{emulator,serial}.log`，SHA256 `49028ab2…b168` / `88cee42d…18d1`；最终 FFT avg/max `17.491/50.210 ms`。50.210 ms 是必须保留的真实单次长尾，但该帧未造成 stale/failure 或计数缺口，不能沿用旧 `<50 ms` 解析门限硬判失败。
+- v5 高阶最终 UART `/tmp/cyclescope-p4-v5-high-harmonic-final-6x100-serial.log`，SHA256 `1c76c822485e18891963d033009b6c87d92179ebe0c723685151db5af3289f2a`；现有 `6x100` 端点 validator PASS，但尚未跨文件冻结 sender/ELF/累计 600 health/篡改负例，不能称严格防伪闭环。v5 residual sender/UART SHA256 `6aec77b7…d93f` / `1fba9a17…c503`，frame 1/100 和 STALE 边沿完整。
+- v5 四边界正式 final4：UART `/tmp/cyclescope-p4-v5-boundary-final4-4x100-serial.log`，SHA256 `6a00bf1010bd6b1165284210b81a9629063f1e7eb0cd785f283bf53eadab16be`；sessions `BA29D2A6`～`BA29D2A9`，累计 completed=`100/200/300/400`，四例 frame 1/100 数值闭环，最后一例后捕获 peer-silent 与 `LIVE→STALE`。四份 sender SHA256 依次为 `a4da0886…0dfb`、`e37ec79c…451a`、`0645c962…c9a9`、`24cbaf0c…d637`，均为 100 帧/1200 包/exit 0；最终 evidence/adversarial SHA256 `36b31e0f…0597 / 259b5ac1…28ce`，final4/final2 与 canonical-log SHA 正例 PASS，70 个日志/内容负例及 1 个 CLI 冲突全部拒绝。
+- 测试夹具硬约束：今后 runner、串口捕获脚本、自测源码、故障注入夹具和生成器统一放 `tool-of-rei/test/`；`/tmp` 只放二进制、原始串口/模拟器日志和 pcap，稳定结论必须提升到项目快照。不要再把夹具源码散落到 `/tmp` 或产品源码目录。
+- 最新验收口径：约 3.5～4.4 秒 PHY/整机启动不判失败，也无需继续压缩；2 秒只从系统完全启动、LAN 会话已建立并持续分析后的 TIME/FFT/1P/3P 按键开始，到真实 panel flush 为止。
+- 历史无夹具正常 `.5` v3：size `0x111d80`，ELF/BIN `22f02f11b455d1a09c01df68da3f1d00cf4aebc4943ae13eac0ce20b7695741c` / `cadd16d32a36758b454d6c653140300d2cdc1b8d00c212cb72a72b8acf7f6da2`。session `306ADB08` 的 600 帧串口/模拟器日志 SHA256 `60ab5cda7d9d7fb225e94a300e1f8def342cbe73a27de4d39c8b060381556b2a` / `dd74ea6b08f93d9ce9086347c6a969a66a2072a70b028a4a1a33616f2dfeb88e`；该镜像已被正式 `.2` 镜像替换。
+- 2026-07-30 串口在线检查：`/dev/ttyUSB0` 的 CP2102N 完成 20 秒硬复位采集，ESP32-P4 v1.0、Display/GT911、两组 FFT 门禁、IP101 Link Up、receiver/UI RUNNING 均正常，无 panic/WDT/abort/heap corruption；未启动 `.5` emulator，因此随后 handshake timeout 属预期。日志 `/tmp/cyclescope-p4-online-check-20260730.log`，SHA256 `bea1ef0c22893a679e1cf25b3efa6e8820583c5e09ac8e797c1afcef1953a155`。
+- 当前 v3 统一板端证据命令：`python3 tool-of-rei/test/cslp_g_v3_sender_evidence.py --current-logs --serial-log /tmp/cyclescope-p4-v3-final-g-matrix-v2-serial.log`，结果为 session `D9AA4EF8`～`D9AA4EFC`、500 帧/6000 包、`completed=100/200/300/400/500`、`axis=0.50000MHz`、`board_result=PASS`；只运行 `--current-logs` 仍必须得到 `board_result=UNPROVEN`。
+- 当前统一 UART SHA256 `416dcaed1bd8fc3f2269e7031bbc3f7a39c3f45c4a25bfc1ed35db5b201765df`；五份 v2 sender SHA256 依次为 `25fc857512a683a1762a088de29671150cfb1045d9029cf924047af5166aaff9`、`db3bdb5c1e8878bfef0d362ccf54f15915af18f5cdea79896afb22c0fdcff438`、`fcf6ab9db37eeb2bdb132d5b3108199af7469ca66111206e506b078412cc575f`、`17d1c33dfe3253ae02e33d094b6bddb8ae7c89f7562d478548b26dea69dd5503`、`dd0fe91cf50b7178d38c4c18e6074d8c0e71b83a25a309c70800c4b8fa8f29be`；滤后残余 S16_LE 仍固定 CRC `0xA818AF89`、码程 `-529…523`。
+- 当前统一证据夹具 SHA256 `abb42513ca05c290980ac9805a364410e5b625abf9eb8452f2ecd79aad919896`。负例已覆盖跨运行 session/boot/config 拼接、completed/axis/FFT 错误值、1 MHz H50 混入、ESP-IDF error、ready/completed/health 乱序、receiver `999999` 假计数、缺失 selftest、错误 UI frame/gen/A-B/peaks 与 pipeline `495/0/0` 大间隙，均被拒绝。
+- Display v6 `-O2` 全矩阵日志 `/tmp/cyclescope-p4-display-stack-fault-v6-serial.log`：D0、D3～D9、D1/D2、retry、最终 teardown 全 PASS，SHA256 `a98783bc10a4aef4356cc01d126f087951fb11a6732df6804a7b1d75517da8e0`。唯一 96 B 根因为 LVGL 9.4.0 未删的 92 B `lv_general_mutex`，不是 DMA2D/PPA/I²C/task 惰性初始化。
+- 历史电脑联调固件 peer 为 `.5`，生产 Kconfig 默认 `.2` 始终未改。2026-07-31 已 fresh 重建并烧录正式 `.2`，且完成 app 区全量读回；后续不得为方便联调烧回 `.5`。
+- 当前正式 10,000 帧命令：`python3 ESP32-P4/tools/cslp_fpga_emulator.py --bind-ip 192.168.10.5 --port 50000 --peer-ip 192.168.10.3 --peer-port 50001 --frames 10000 --chunk-gap-us 500 --hold-seconds 40 --handshake-timeout 15 --scenario normal`。应先硬复位并等 UART `receiver ready`，再启动该命令；正式 session `1700DCF3` 完成 10,000 帧/120,000 包，sender wall time 542 秒，UART ready→frame10000 为 501.325 秒，FFT 平均/最大 `16.888/24.733 ms`，receiver/pipeline 全链零错误，`digital_stability=PASS`。
+- 当前 10,000 帧正式 UART/sender 日志 SHA256 `70f789c4a57314b573fcf38db66f5d4d7afef7f0d7ce27c1e8ddb55c0c52368a` / `d2713ad2c2b6342a7f53314a310363adf4ba28fd9d8bc43124808215a945bdc8`；证据夹具 SHA256 `7ec50b210ac41a85cb81d1db564751c03561c89fe999fd458e6fea946f57fca6`，19 负例对抗夹具 SHA256 `5c0699d46d7932e469aa735d8e9bce907464911211b850bce9e4ce99890b2302`。
+- 最终 600 帧命令同上但使用 `--frames 600 --hold-seconds 8`；默认多音 H1/H3/H4=25/70/25 mVpk、F0=40.75 kHz、scale=100 uV/LSB、offset=500 uV、calibration=1。
+- 历史第一版最终联调镜像（已被替换）：size `0x10b800`，ELF `4d3531c0be0c47f955bf8a1c17523bc1a192cbe5a2ef3b8061394ff65d1f9a98`，BIN `0779314454389fa06d7f88bac16927aa24a33035c3063d661211417d6469c42a`。
+- 冷启动分段诊断镜像：size `0x10b960`，ELF `9d760402ee278b7127453938a2d8fa5ba3d103a4fabf261ce23d0a71e99e8b88`，BIN `dc0e1d7345c26c4d51d4ee53a49957d64e2be3e1f57d758cd62cbbfa28db2687`；已被启动并行最终镜像替换。
+- 冷启动实测：`app_main=1191 ms`、attach=`1235 ms`、IP101 Link Up=`3436 ms`、receiver ready=`3462 ms`、display=`3661 ms`、pipeline=`3969 ms`、UI=`3979 ms`；Ethernet 分段 `546/40119/303/2205367/2246335 us`（platform/drivers/attach/start/total）。
+- `.5` 预监听基线：session `0x216AC34D` ready=`3477 ms`、frame 1 completed=`3491 ms`、frame 11 measurement=`4027 ms`、首次 UI bridge=`4263 ms`；100 帧/1200 包发送完成，frame 100 completed=`8442 ms`。
+- 启动并行烟测：display/UI shell=`1383/1498 ms`、FFT/selftest/prepared=`1561/1742/1743 ms`、Link/receiver=`3437/3440 ms`、analysis/UI pipeline=`3458/3467 ms`；正常路径无 WDT/panic/复位。
+- 最终并行版同次 `.5` 预监听：session/frame1/measurement/UI bridge=`3501/3515/3533/3559 ms`，frame100=`8486 ms`；日志 `/tmp/cyclescope-p4-final-prelisten-coldboot.log`，SHA256 `c562cbed1f3442875b495d95af7dd35f80cc346df567ac2aca214087155fc847`。
+- 历史正常 `.5` v2（已被顶部 v3 替换）：size `0x10fbb0`，ELF `8e83b646f8c2cfe422a13f75436e4ab745e5fe215ef6eeb87c1ee556dbb69211`，BIN `ed8ec81f7ee18e3bfca46b73102ba270f84b68b7eb7668b920a182021c93783c`。
+- fresh normal `/tmp/cyclescope-p4-normal-host-v2` 的本地测试片段为空，compile commands/ELF 无夹具；session `DB915C88` 完成 600/600/600，FFT 平均/最大 `17.482/24.626 ms`，首帧 publish→UI bridge `55 ms`，`max_ui_gap=260 ms`。串口/模拟器日志 SHA256 `4363d77739331b688aeb38b1a0ee21b0eb12158dbc6606711ea299e5496dc5c6` / `2bd819ea5105914d7918e778907e9b5ce5e07457a204f9951862a96c321c64e3`。
+- Display-only v4：D0 warm/strict、D1/D2、同实例 retry 全部 PASS；ELF/BIN `db5493d7faa43231900147bd234121fafe94cb4ec42eed64f9ced7ff5aefa7d0` / `2d26d5184588cda605d8c23704eca85fa8431e729382211f74c755568969adcf`，串口日志 SHA256 `75fec912dac7ddbf988bf917aec32f3c4465e5638f538df3f350151216f56c0d`。夹具源已用 `-Werror=frame-larger-than=4096` 防止大局部对象回归。
+- socket runtime v4 上板镜像 size `0x7ae50`，ELF/BIN `cbb750bf6e48079effc9067d153614cf99dba8095fefcbd2984b18a2e8e68b61` / `97ae62564cd96c833844c9ebeb0093419825b6fc7426abc9c37f0375cd94eac9`。板端 RT1/RT2/RT3=1/1/1、RT4=33、sessions=34、fd=36/35、heap=`348579/33181568` EXACT；串口/模拟器 SHA256 `896944f10fb5db6883eddcef44e847b9a75c85653925f35221b0117467a5a38b` / `a5178d4a30ec96f0671755c524e4027eb552afff858a612cc106b757c41ce6b6`。审查后最终 100 帧门禁收紧为精确差值，当前私有重构建 `0x7af30`，ELF/BIN `5f3206e7bd4f7f4ca6d8478f3d8ed37b00195d28877aac1e3b9441c2a6c905a6` / `a782b97e6573163115b41561c9a0fd7d6bf5ecb48034b203eeb6560e417a992e`，未再次烧录；产品代码不变。
+- DISABLE 夹具：`tool-of-rei/test/cyclescope_disable_push_test.py`。session `F92354FF` 同 session config `92F680AC→92F680AD`，首 ACK 丢失后重试字节级一致；frame 1～9 与 11～18 共 17 帧进入全链，旧 config frame 10 在 ACK 后静默门禁；retry `+1`、reconnect/reject `+0`。
+- 启动故障夹具由 ignored `tool-of-rei/test/startup_fault_test.cmake` 本地注入；普通 `-O2` 的 pipeline P1～P10 与 Core1 receiver R1～R14 全部 `owned=EMPTY / heap=PASS / free=EXACT`。R7 是约 500 ms 后回收的异步 4 B 项，R13 的 DHCP/lost-IP/cross-core callback 竞态已修复；R14 同步静态 IP 失败后可经 R12 屏障在同一对象恢复。
+- 当前严格矩阵日志 `/tmp/cyclescope-p4-startup-fault-r14-v1.log`，SHA256 `87a51b431ce7e2b63af3ddd35e379ca597501fcac93b3e769d1ff07a6a63244e`。
+- 启动/DISABLE 串口日志 `/tmp/cyclescope-p4-startup-fault-disable-push.log`，SHA256 `866540fbac8961d66147c106067bddac65bfdd6ae641b35de0b52c069278b60d`；DISABLE 模拟器与单帧计数闭环日志 SHA256 `2b9c13b2c06f629d1f1b4b96d26cba0e89588d350d259e3b6e7075270fd18449` / `e7fea35241d79e69aa8ed8229e1e7bbfe6812e338acd5e3111ec55fd5fddc435`。
+- 当前正常镜像 600 帧复测 session `C6D56E5C`：`completed=acquired=analyzed=published=600`，错误链为零；串口/模拟器日志 SHA256 `99cb548bf761b1252c3769b951615cb25bf7f1f7536d32b4541063f2d24d2add` / `47ee305cae7d807a4ccdd53b7a7d6be042b78779460d7545d9b80abbafb9f07b`。
+- 握手前 WAVE 门禁夹具：`tool-of-rei/test/cyclescope_pre_ready_wave_guard_test.py`。v2 延迟 ENABLE_ACK `61.259 ms`，精确 96/96 个握手前 WAVE 包到板，session-ready 时 `packets=99` 且 frame/reject 全零；ACK 后 frame9 才接收/分析/发布/UI 各 1。串口/模拟器日志 `/tmp/cyclescope-p4-pre-ready-wave-guard-v2.log` 与 `...-v2-emulator.log`。
+- 30 分钟原始日志：`/tmp/cyclescope-p4-ansi-30m-final.log`；session `0x36029302` 完成 36,000 帧/432,000 包。正式日志按周期最后打印 receiver `40148`、pipeline `40200`；随后独立 session `0x360294BB` 只补 1 帧，`/tmp/cyclescope-p4-final-counter-probe.log` 直接打印 `completed=40235 incomplete=20`，据此闭环正式终值 `40234/20`。
 
 ## 失败尝试
-- 无。合并后构建、烧录和 1200 帧运行一次通过。
+- freshness 最终在线首轮发送端在 15 秒内没有收到控制请求，判为未形成 session，未拿它凑证据；后续有界捕获完整得到 `7BACBD99` 的 ONLINE/OFFLINE STALE。尝试给 CP210x 捕获脚本增加 `--no-reset` 仍触发复位，代码已撤回；恢复边沿最终用有界 `stty + dd` 被动采集，未留下后台 picocom。
+- v5 四边界旧 `/tmp/cyclescope-p4-v5-boundary-final-4x100-serial.log` 只完整捕获前三例、累计 completed=300，禁止作为 4×100 PASS；`final2` 已完整捕获四例但在第四例 frame 100 后立即结束，没有最终 STALE 尾部。随后 `final3` 因 UART 80 秒窗口先结束、sender 才被调度启动而没有任何配对 session，也只能作失败诊断。正式候选改为单进程编排的 `final4`，从硬复位、receiver ready、四 sender 到最终 STALE 全部自动对齐。
+- v5 高阶 6×100 第一轮将串口窗口设为 110 秒，但人工逐条启动发送器造成会话间空档，第六例仅捕获 frame 1 就结束；日志 `/tmp/cyclescope-p4-v5-high-harmonic-6x100-serial.log` 不完整，禁止作为 PASS。正式重跑改为扩大窗口并让六条命令连续串行，session `04E91356`～`04E9135B` 的 frame 1/100 全部捕获。
+- 10,000 帧 v1 在板卡已运行时先启动 emulator，硬复位前建立的是旧 session，故 250 帧时主动终止并判失败；sender 日志 SHA256 `79cb5edf3f23d8cdde47bbed3b454a7b62ff73fc59d1c93b28a218474146b1ac`，不得作为 PASS 证据。
+- 10,000 帧 v2 使用 `250 µs` 分片间隔，首个完成帧为 frame 2 且 receiver `incomplete=1`，故 1,600 帧时主动终止并判失败；UART/sender SHA256 `6a7e6a6545e0bc3a167f18810e0737f9a26269f5f2ab80a2d0db29a28faa30d9` / `e393a040663fcaec8d15c87582797f7580ea71eb081bce158d98b4aac688a39f`，不得与正式 v3 混用。
+- 当前 v3 统一四边界+滤后残余的五个电脑 session 均发送 100 帧，但 65 秒串口补证因 `--no-reset` 不能保证 CP210x 打开时不复位而再次被自动审核拒绝；按用户停止条件未重试。五份电脑日志只证明握手/发送，不提升为板端 PASS。
+- trace v1 在 `-O2 + RISC-V frame pointer + 8 层回溯` 下链接超出 IRAM 9,156 B；记录数组由 512 收到 256 后超限不变，证明主因是全局 frame pointer 代码膨胀。诊断 defaults 单独改为 `-Os` 后构建成功，high-water 158/256，未丢 trace；正常构建始终恢复 `-O2`。
+- 正常 v3 第一次 55 秒捕获因自动审核让模拟器晚约 40 秒启动，只抓到 frame 200，因此不作为最终 600 帧证据；第二轮将捕获扩大到 120 秒后，session `306ADB08` 精确闭环 600 帧。审核前的握手 timeout 和发送端退出后的 peer-silent 均在正式 session 窗口外。
+- Display v2 含同步 `lv_refr_now(display)`，在背光后 WDT，明确不算 PASS；调用已删除。后续 v3 在完全没有该符号时仍同样 WDT，证明 v2 日志不能单独归因刷新路径。
+- Display v3 的真实根因为夹具局部 `InstrumentApp`：对象 `31,776 B`、函数栈帧约 `32,096 B`，main task 栈仅 `10,240 B`，触发 Core0 hardware stack guard，panic 阶段再以 `HP_SYS_HP_WDT_RESET` 二次复位。改为静态复用的 v4 在其余顺序不变时全矩阵 PASS；禁止通过增大 main 栈、关闭栈保护或放宽 WDT 掩盖。
+- 正常 600 帧 v2 首轮先启动模拟器、后打开串口；串口夹具硬复位使模拟器已服务的旧 session 失效，P4 新 boot 只重连，故该轮不作为数据回归。v3 改为先启动 60 秒串口捕获、再启动 `.5` 模拟器，随后正式 session 精确 600 帧 PASS。
+- 首轮真实时域仍沿用数百个 `lv_draw_line`，持续 250 ms 更新导致 IDLE0 WDT；改为 PSRAM RGB565 canvas 后消失。
+- 故障套件最初跨帧无节流，造成模拟器自身 UDP 微突发和额外丢包；按冻结的 50 ms 帧周期节流后，两轮计数精确命中。
+- 增强日志镜像早先两次烧录请求因自动审核超时而停止；后续同类请求获批，最终 `0x10b800` 镜像已烧录并完成 600 帧回归。
+- UI gap 双口径补丁因两次自动审核拒绝而停止；当前跨 session 清零行为已提升到已知问题。
+- 首次直接运行 `idf.py monitor` 缺少 `IDF_PYTHON_ENV_PATH`/`ESP_IDF_VERSION` 而退出；补齐 IDF 6.0.2 环境变量后成功抓取 POWERON 全日志，串口和固件本身无异常。
+- `enp2s0` 是 1 Gb/s 默认网关且 P4 经交换机接入；不能为固定 100M/full 实验强制修改该共享口，需专用直连网卡或可配置交换机。
+- 首版 G 题矩阵 runner 因包含在线子进程、串口日志解析和 JSON 写入且超过 500 行被自动审核拒绝；未重复请求，改为只读校验后落地 258 行纯离线矩阵/命令生成器。
+- 弱基波首轮诊断误用 `cslp::calculate_crc32` 计算裸样本；该协议函数固定清零偏移 28～31，因此板端 `0x593F6437` 与完整样本 `0x4ECFD324` 不同。主机复算清零后同为 `0x593F6437`，排除 LAN 样本变化；临时诊断随后已删除。
+- “删除临时诊断 + 新增弱基波启动门禁”的合并补丁被自动审核拒绝，理由是一次改变启动成功条件且改动面过大；按停止条件改为只安全删除诊断，启动门禁留作单独小改，不通过旁路强行写入。
+- 30 分钟发送端结束后保留 monitor 观察会产生大量新 session handshake timeout；这些日志从正式 session 的 `peer silent` 之后开始，只表示 `.5` 数据源已退出，不能误算为正式流量错误。
+- 握手前门禁首轮夹具以 250 µs chunk gap 发送 96 个 WAVE 包，板端只收到 94 个；业务计数虽为零，但不足以证明 8 个完整帧都被门禁，因此未作为最终 PASS。v2 改为 500 µs chunk gap + 1 ms 帧间隔后精确收到 96/96。
+- 中断遗留的 `picocom` PID 3703794 首次终止请求因自动审核要求再次确认身份而被拒；用户随后明确同意，`fuser` 确认其占用 `/dev/ttyUSB0` 后 SIGTERM 成功，串口已释放。没有使用旁路。
+- 本轮交互式 `picocom` 因会改串口控制线且已有更安全夹具而被自动审核拒绝；未重试，改用 `tool-of-rei/test/capture_p4_serial.py` 完成有界硬复位与日志采集。
+- 尝试给串口夹具增加 `--no-reset`，即使在 open 前预设 RTS/DTR，CP210x/内核打开 tty 的瞬间仍会让 P4 复位；烟测直接出现新 boot 日志，因此功能已撤回，后续捕获明确按“打开即可能复位”编排。
+- socket runtime 首轮烧录后板已自启动，模拟器与后续串口硬复位没有对齐，因此虽运行到重复恢复阶段也不取证。随后用 `--after no-reset` 留在下载态。
+- 对齐 v2 中自动审核等待超过模拟器原 20 秒首握手窗口，模拟器先退出；v3 临时重启后核心 RT1～RT4、32/32 repeat 和 heap EXACT 均通过，但此前已有 9 次无 peer 握手，严格 reconnect/fd 总数门禁失败，禁止作为最终 PASS。夹具首握手等待改为 90 秒后，v4 从预监听同次硬复位精确通过。
+- Display v7 首次 fresh 编译由 `run_control_contract()` 的局部 `DynamicMeasurementFrame` 形成 `15,768 B` 栈帧，触发 `-Werror=frame-larger-than=4096`；改为启动阶段串行复用的静态夹具对象后编译通过。首轮上板又因夹具直接调用 `apply_live_measurement(frame)`、没有复现生产先写 `live_frame_` 的所有权路径而得到 `controls=0`；产品事件链尚未执行。修正夹具后两轮 `controls=PASS`、最大回调 `18.793 ms`，首轮失败日志 SHA256 `72c44cb2…` 不得当作产品失败。
+- normal v4 的首个弱 H1/H50 600 帧尝试在硬复位前就启动 emulator，旧 boot 已建立 session 并发送 200 帧；为避免跨 boot 混证主动 Ctrl-C，正式证据改为硬复位后新 session `0A8E2417` 的独立 600 帧。被中断 sender 输出不作 PASS 证据。
+- 四边界 55 秒主 UART 捕获已覆盖前三例 frame 1/100 和第四例 frame 1，但在第四例 frame 100 前结束；没有伪称完整。随后单独硬复位并重跑第四例，补抓 session `48CA72FC` 的 frame 1/100，补抓日志 SHA256 `62f1e22d…`。
 
 ## 待提升到项目快照/已知问题的内容
-- 无；FFT 架构、性能数据和 CSLP 尚未接入的风险均已提升。
+- 无；R7/R13、私有构建边界、正常 600 帧及 Display/LVGL/异步 IP 后续范围均已提升。

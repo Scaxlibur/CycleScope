@@ -12,6 +12,9 @@
 #include "esp_memory_utils.h"
 #include "esp_timer.h"
 #include "sdkconfig.h"
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+#include "cyclescope_pipeline_startup_fault_test.hpp"
+#endif
 
 #if CONFIG_DSP_MAX_FFT_SIZE < 8192
 #error "CycleScope requires CONFIG_DSP_MAX_FFT_SIZE_8192=y (or larger)"
@@ -34,8 +37,44 @@ constexpr float kHarmonicToleranceBins = 1.5F;
 constexpr float kBandEdgeToleranceBins = 0.5F;
 constexpr size_t kReconstructionPoints = 4096;
 
-void *allocate_cached_buffer(size_t bytes)
+enum class FftBufferRole {
+    Work,
+    Table,
+    Window,
+    PositiveSpectrum,
+};
+
+bool inject_buffer_failure(FftBufferRole role)
 {
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    startup_fault_test::PipelineFailPoint point =
+        startup_fault_test::PipelineFailPoint::None;
+    switch (role) {
+    case FftBufferRole::Work:
+        point = startup_fault_test::PipelineFailPoint::FftWorkBuffer;
+        break;
+    case FftBufferRole::Table:
+        point = startup_fault_test::PipelineFailPoint::FftTableBuffer;
+        break;
+    case FftBufferRole::Window:
+        point = startup_fault_test::PipelineFailPoint::HannWindowBuffer;
+        break;
+    case FftBufferRole::PositiveSpectrum:
+        point = startup_fault_test::PipelineFailPoint::PositiveSpectrumBuffer;
+        break;
+    }
+    return startup_fault_test::consume_pipeline_failpoint(point);
+#else
+    (void)role;
+    return false;
+#endif
+}
+
+void *allocate_cached_buffer(size_t bytes, FftBufferRole role)
+{
+    if (inject_buffer_failure(role)) {
+        return nullptr;
+    }
     void *buffer = heap_caps_aligned_alloc(kAlignmentBytes, bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (buffer == nullptr) {
         buffer = heap_caps_aligned_alloc(kAlignmentBytes, bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
@@ -57,6 +96,11 @@ float clamp_unit_offset(float value)
 
 FftProcessor8192::~FftProcessor8192()
 {
+    deinitialize();
+}
+
+void FftProcessor8192::deinitialize()
+{
     if (fft_table_initialized_) {
         dsps_fft2r_deinit_fc32();
         fft_table_initialized_ = false;
@@ -75,7 +119,16 @@ esp_err_t FftProcessor8192::initialize()
         return error;
     }
 
-    error = dsps_fft2r_init_fc32(fft_table_, static_cast<int>(kSampleCount));
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST
+    if (startup_fault_test::consume_pipeline_failpoint(
+            startup_fault_test::PipelineFailPoint::FftTableInitialization)) {
+        error = ESP_ERR_NO_MEM;
+    } else
+#endif
+    {
+        error = dsps_fft2r_init_fc32(
+            fft_table_, static_cast<int>(kSampleCount));
+    }
     if (error != ESP_OK) {
         ESP_LOGE(kTag, "esp-dsp FFT table initialization failed: %s", esp_err_to_name(error));
         release_buffers();
@@ -113,10 +166,15 @@ esp_err_t FftProcessor8192::allocate_buffers()
 {
     // Keep all persistent FFT storage in cached PSRAM. The 1024x600 LVGL
     // renderer needs the scarce internal RAM more than this sequential buffer.
-    fft_data_ = static_cast<float *>(allocate_cached_buffer(2 * kSampleCount * sizeof(float)));
-    fft_table_ = static_cast<float *>(allocate_cached_buffer(kSampleCount * sizeof(float)));
-    window_ = static_cast<float *>(allocate_cached_buffer(kSampleCount * sizeof(float)));
-    positive_spectrum_ = static_cast<float *>(allocate_cached_buffer(kPositiveBinCount * sizeof(float)));
+    fft_data_ = static_cast<float *>(allocate_cached_buffer(
+        2 * kSampleCount * sizeof(float), FftBufferRole::Work));
+    fft_table_ = static_cast<float *>(allocate_cached_buffer(
+        kSampleCount * sizeof(float), FftBufferRole::Table));
+    window_ = static_cast<float *>(allocate_cached_buffer(
+        kSampleCount * sizeof(float), FftBufferRole::Window));
+    positive_spectrum_ = static_cast<float *>(allocate_cached_buffer(
+        kPositiveBinCount * sizeof(float),
+        FftBufferRole::PositiveSpectrum));
     if (fft_data_ == nullptr || fft_table_ == nullptr || window_ == nullptr || positive_spectrum_ == nullptr) {
         ESP_LOGE(kTag, "Unable to allocate persistent 8192-point FFT buffers");
         release_buffers();
@@ -144,6 +202,13 @@ bool FftProcessor8192::initialized() const
            && positive_spectrum_ != nullptr;
 }
 
+bool FftProcessor8192::resources_released() const
+{
+    return !fft_table_initialized_ && fft_data_ == nullptr
+           && fft_table_ == nullptr && window_ == nullptr
+           && positive_spectrum_ == nullptr && window_sum_ == 0.0F;
+}
+
 const float *FftProcessor8192::positive_spectrum() const
 {
     return positive_spectrum_;
@@ -155,7 +220,7 @@ size_t FftProcessor8192::positive_spectrum_size() const
 }
 
 esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count, float sample_rate_hz,
-                                    int32_t scale_uV_per_lsb, int32_t offset_uV, FftAnalysisResult *result)
+                                    uint32_t scale_uV_per_lsb, int32_t offset_uV, FftAnalysisResult *result)
 {
     if (!initialized()) {
         return ESP_ERR_INVALID_STATE;
@@ -189,7 +254,10 @@ esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count,
         fft_data_[2 * index + 1] = 0.0F;
     }
 
-    esp_err_t error = dsps_fft2r_fc32(fft_data_, static_cast<int>(kSampleCount));
+    // Force the reference kernel until the ESP32-P4 ARP4 path is proven
+    // equivalent for weak, phase-sensitive low-frequency inputs.
+    esp_err_t error =
+        dsps_fft2r_fc32_ansi(fft_data_, static_cast<int>(kSampleCount));
     if (error != ESP_OK) {
         return error;
     }
@@ -230,6 +298,8 @@ esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count,
     std::array<Projection, kMaximumSpectralLines> components{};
     float reconstructed_rms_square = 0.0F;
     float fundamental_hz = 0.0F;
+    float fundamental_phase_radians =
+        std::numeric_limits<float>::quiet_NaN();
     if (fundamental_weight_sum > 0.0F) {
         fundamental_hz = weighted_fundamental_sum / fundamental_weight_sum;
         for (size_t line = 0; line < selected_count; ++line) {
@@ -244,18 +314,32 @@ esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count,
             reconstructed_rms_square += components[line].amplitude_volts_peak
                                         * components[line].amplitude_volts_peak * 0.5F;
         }
+        if (selected_count > 0U && harmonic_orders[0] == 1U) {
+            fundamental_phase_radians = components[0].phase_radians;
+        }
     }
 
     result->spectral_line_count = static_cast<uint32_t>(selected_count);
     result->fundamental_hz = fundamental_hz;
+    result->fundamental_phase_radians = fundamental_phase_radians;
     result->dc_offset_volts = dc_offset_volts;
     result->sample_rate_hz = sample_rate_hz;
     result->bin_width_hz = bin_width_hz;
     const float band_edge_tolerance_hz = kBandEdgeToleranceBins * bin_width_hz;
-    bool components_in_measurement_band = selected_count >= 2;
+    bool components_in_measurement_band = selected_count >= 2U
+                                          && harmonic_orders[0] == 1U
+                                          && std::isfinite(fundamental_hz)
+                                          && fundamental_hz > 0.0F
+                                          && std::isfinite(
+                                              fundamental_phase_radians);
     for (size_t line = 0; line < selected_count; ++line) {
         const float frequency_hz = result->spectral_lines[line].frequency_hz;
+        const float amplitude_volts_peak =
+            result->spectral_lines[line].amplitude_volts_peak;
         components_in_measurement_band = components_in_measurement_band
+                                         && std::isfinite(frequency_hz)
+                                         && std::isfinite(amplitude_volts_peak)
+                                         && amplitude_volts_peak > 0.0F
                                          && frequency_hz >= kMinimumMeasurementHz - band_edge_tolerance_hz
                                          && frequency_hz <= kMaximumMeasurementHz + band_edge_tolerance_hz;
     }

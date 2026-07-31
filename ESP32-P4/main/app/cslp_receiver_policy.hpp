@@ -24,6 +24,18 @@ inline bool session_is_current(uint32_t active_session_id, uint32_t frame_sessio
     return active_session_id != 0 && active_session_id == frame_session_id;
 }
 
+inline bool stream_identity_is_current(uint32_t active_session_id,
+                                       uint32_t active_config_id,
+                                       uint32_t active_stream_epoch,
+                                       uint32_t frame_session_id,
+                                       uint32_t frame_config_id,
+                                       uint32_t frame_stream_epoch)
+{
+    return session_is_current(active_session_id, frame_session_id)
+           && active_config_id != 0 && active_config_id == frame_config_id
+           && active_stream_epoch == frame_stream_epoch;
+}
+
 inline bool rejection_targets_observed(uint32_t candidate, bool have_observed,
                                        uint32_t observed_frame_id)
 {
@@ -50,6 +62,11 @@ inline bool self_test()
            && !session_is_current(0, 1)
            && session_is_current(1, 1)
            && !session_is_current(2, 1)
+           && stream_identity_is_current(1, 10, 20, 1, 10, 20)
+           && !stream_identity_is_current(0, 10, 20, 1, 10, 20)
+           && !stream_identity_is_current(1, 0, 20, 1, 10, 20)
+           && !stream_identity_is_current(1, 11, 20, 1, 10, 20)
+           && !stream_identity_is_current(1, 10, 21, 1, 10, 20)
            && rejection_targets_observed(100, true, 100)
            && !rejection_targets_observed(99, true, 100)
            && !rejection_targets_observed(101, true, 100)

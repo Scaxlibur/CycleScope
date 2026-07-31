@@ -17,6 +17,16 @@ menu "CycleScope CSLP Configuration"
             session validity, and releases the frame. Keep this disabled in
             production and never enable it alongside another CSLP consumer.
 
+    config CYCLESCOPE_CSLP_DISABLE_PUSH_TEST
+        bool "Run one DISABLE/CONFIG/ENABLE lifecycle test"
+        default n
+        help
+            Test-only receiver-task trigger. After eight completed frames in
+            the first ready session, perform DISABLE_PUSH, repeat CONFIG_SET,
+            and ENABLE_PUSH without changing the session. Keep this disabled
+            in production; it exists only for the controlled host fixture in
+            tool-of-rei/test.
+
     if CYCLESCOPE_CSLP_DIAGNOSTIC_CONSUMER
 
         config CYCLESCOPE_CSLP_DIAGNOSTIC_HOLD_MS

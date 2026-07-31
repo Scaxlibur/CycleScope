@@ -4,7 +4,9 @@ idf_component_register(
         "lvgl_adapter_init.c"
         "app/instrument_app.cpp"
         "app/waveform_view.cpp"
+        "app/waveform_projection.cpp"
         "app/spectrum_model.cpp"
+        "app/spectrum_projection.cpp"
         "app/fft_processor.cpp"
         "app/spectrum_view.cpp"
         "app/live_data_pipeline.cpp"
@@ -26,6 +28,16 @@ idf_component_register(
         esp_timer
         lwip
 )
+
+set(CYCLESCOPE_LOCAL_TEST_CMAKE "" CACHE FILEPATH
+    "Optional local-only CycleScope test build fragment")
+if(NOT "${CYCLESCOPE_LOCAL_TEST_CMAKE}" STREQUAL "")
+    if(NOT EXISTS "${CYCLESCOPE_LOCAL_TEST_CMAKE}")
+        message(FATAL_ERROR
+            "Missing local test fragment: ${CYCLESCOPE_LOCAL_TEST_CMAKE}")
+    endif()
+    include("${CYCLESCOPE_LOCAL_TEST_CMAKE}")
+endif()
 
 idf_component_get_property(LVGL_LIB lvgl__lvgl COMPONENT_LIB)
 target_compile_options(

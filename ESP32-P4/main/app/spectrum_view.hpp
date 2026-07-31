@@ -12,7 +12,17 @@ namespace cyclescope {
 
 class SpectrumView {
 public:
-    void create(lv_obj_t *parent, int32_t x, int32_t y, int32_t width, int32_t height, const SpectrumModel *model);
+    SpectrumView() = default;
+    SpectrumView(const SpectrumView &) = delete;
+    SpectrumView &operator=(const SpectrumView &) = delete;
+
+    bool create(lv_obj_t *parent, int32_t x, int32_t y,
+                int32_t width, int32_t height,
+                const SpectrumModel *model);
+    void destroy();
+    bool created() const;
+    bool resources_released() const;
+    bool visible() const;
     void set_visible(bool visible);
     void set_frame(const SpectrumDisplayFrame &frame);
 

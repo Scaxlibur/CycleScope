@@ -4,9 +4,17 @@
 #include <stdio.h>
 
 #include <algorithm>
+#include <cstddef>
+#include <limits>
 
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+
+#include "spectrum_projection.hpp"
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST \
+    || CONFIG_CYCLESCOPE_DISPLAY_STARTUP_FAULT_TEST
+#include "cyclescope_display_startup_fault_test.hpp"
+#endif
 
 namespace cyclescope {
 namespace {
@@ -18,7 +26,6 @@ constexpr uint32_t kGridColor = 0x23445B;
 constexpr uint32_t kAxisColor = 0x44758B;
 constexpr uint32_t kFundamentalColor = 0x20D6B5;
 constexpr uint32_t kHarmonicColor = 0x75E6FF;
-constexpr uint32_t kNoiseFloorColor = 0x2B7891;
 constexpr uint32_t kAxisTextColor = 0x89A6B9;
 constexpr int32_t kAxisLabelHeight = 18;
 constexpr int32_t kAxisLabelWidth = 68;
@@ -54,56 +61,187 @@ uint16_t rgb565(uint32_t color)
     return lv_color_to_u16(lv_color_hex(color));
 }
 
+bool calculate_canvas_bytes(int32_t width, int32_t height,
+                            size_t *canvas_bytes)
+{
+    if (canvas_bytes == nullptr || width <= 0 || height <= 0) {
+        return false;
+    }
+    const size_t width_size = static_cast<size_t>(width);
+    const size_t height_size = static_cast<size_t>(height);
+    if (height_size > std::numeric_limits<size_t>::max() / width_size) {
+        return false;
+    }
+    const size_t pixel_count = width_size * height_size;
+    if (pixel_count
+        > std::numeric_limits<size_t>::max() / sizeof(uint16_t)) {
+        return false;
+    }
+    *canvas_bytes = pixel_count * sizeof(uint16_t);
+    return true;
+}
+
 }  // namespace
 
-void SpectrumView::create(lv_obj_t *parent, int32_t x, int32_t y, int32_t width, int32_t height,
+bool SpectrumView::create(lv_obj_t *parent, int32_t x, int32_t y,
+                          int32_t width, int32_t height,
                           const SpectrumModel *model)
 {
-    if (model != nullptr) {
-        initialize_from_model(*model);
+    if (!resources_released()) {
+        ESP_LOGE(kTag, "Refusing to create spectrum canvas over owned resources");
+        return false;
     }
 
-    object_ = lv_obj_create(parent);
-    lv_obj_remove_style_all(object_);
-    lv_obj_set_pos(object_, x, y);
-    lv_obj_set_size(object_, width, height);
-    lv_obj_clear_flag(object_, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(object_, LV_OBJ_FLAG_CLICKABLE);
+    if (height <= kAxisLabelHeight) {
+        ESP_LOGE(kTag, "Invalid spectrum view height: %ld",
+                 static_cast<long>(height));
+        return false;
+    }
+    const int32_t canvas_height = height - kAxisLabelHeight;
+    size_t canvas_bytes = 0;
+    if (parent == nullptr || !lv_obj_is_valid(parent)
+        || !calculate_canvas_bytes(width, canvas_height, &canvas_bytes)) {
+        ESP_LOGE(kTag, "Invalid spectrum canvas parent or dimensions: %ldx%ld",
+                 static_cast<long>(width), static_cast<long>(height));
+        return false;
+    }
 
-    canvas_width_ = width;
-    canvas_height_ = height - kAxisLabelHeight;
-    const size_t canvas_bytes = static_cast<size_t>(canvas_width_) * static_cast<size_t>(canvas_height_)
-                                * sizeof(uint16_t);
-    canvas_pixels_ = static_cast<uint16_t *>(
-        heap_caps_malloc(canvas_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
-    if (canvas_pixels_ == nullptr) {
+    bool inject_allocation_failure = false;
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST \
+    || CONFIG_CYCLESCOPE_DISPLAY_STARTUP_FAULT_TEST
+    inject_allocation_failure =
+        startup_fault_test::consume_display_failpoint(
+            startup_fault_test::DisplayFailPoint::SpectrumCanvasBuffer);
+#endif
+    uint16_t *pixels = inject_allocation_failure
+                           ? nullptr
+                           : static_cast<uint16_t *>(heap_caps_malloc(
+                                 canvas_bytes,
+                                 MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+    if (pixels == nullptr) {
         ESP_LOGE(kTag, "Unable to allocate %u-byte spectrum canvas in PSRAM", static_cast<unsigned>(canvas_bytes));
-        lv_obj_add_flag(object_, LV_OBJ_FLAG_HIDDEN);
-        return;
+        return false;
     }
 
-    canvas_ = lv_canvas_create(object_);
-    lv_canvas_set_buffer(canvas_, canvas_pixels_, canvas_width_, canvas_height_, LV_COLOR_FORMAT_RGB565);
-    lv_obj_set_pos(canvas_, 0, 0);
-    lv_obj_remove_flag(canvas_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_t *object = lv_obj_create(parent);
+    if (object == nullptr) {
+        heap_caps_free(pixels);
+        ESP_LOGE(kTag, "Unable to create spectrum view object");
+        return false;
+    }
+    lv_obj_remove_style_all(object);
+    lv_obj_set_pos(object, x, y);
+    lv_obj_set_size(object, width, height);
+    lv_obj_clear_flag(object, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(object, LV_OBJ_FLAG_CLICKABLE);
 
-    for (lv_obj_t *&label : axis_labels_) {
-        label = lv_label_create(object_);
+    lv_obj_t *canvas = lv_canvas_create(object);
+    if (canvas == nullptr) {
+        lv_obj_delete(object);
+        heap_caps_free(pixels);
+        ESP_LOGE(kTag, "Unable to create spectrum LVGL canvas");
+        return false;
+    }
+    lv_canvas_set_buffer(canvas, pixels, width, canvas_height,
+                         LV_COLOR_FORMAT_RGB565);
+    lv_obj_set_pos(canvas, 0, 0);
+    lv_obj_remove_flag(canvas, LV_OBJ_FLAG_CLICKABLE);
+
+    std::array<lv_obj_t *, 8> labels{};
+    for (lv_obj_t *&label : labels) {
+        label = lv_label_create(object);
+        if (label == nullptr) {
+            lv_obj_delete(object);
+            heap_caps_free(pixels);
+            ESP_LOGE(kTag, "Unable to create spectrum axis label");
+            return false;
+        }
         lv_obj_set_size(label, kAxisLabelWidth, kAxisLabelHeight);
-        lv_obj_set_y(label, canvas_height_);
+        lv_obj_set_y(label, canvas_height);
         lv_obj_set_style_text_font(label, &lv_font_montserrat_12, 0);
         lv_obj_set_style_text_color(label, lv_color_hex(kAxisTextColor), 0);
         lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
     }
 
-    if (visible_) {
-        render_frame();
+    lv_obj_add_flag(object, LV_OBJ_FLAG_HIDDEN);
+    object_ = object;
+    canvas_ = canvas;
+    canvas_pixels_ = pixels;
+    canvas_width_ = width;
+    canvas_height_ = canvas_height;
+    axis_labels_ = labels;
+    if (model != nullptr) {
+        initialize_from_model(*model);
     }
-    lv_obj_add_flag(object_, LV_OBJ_FLAG_HIDDEN);
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST \
+    || CONFIG_CYCLESCOPE_DISPLAY_STARTUP_FAULT_TEST
+    startup_fault_test::note_display_lifecycle_event(
+        startup_fault_test::DisplayLifecycleEvent::SpectrumCreated);
+#endif
     ESP_LOGI(kTag, "RGB565 spectrum canvas ready: %ldx%ld, %u bytes in PSRAM",
              static_cast<long>(canvas_width_), static_cast<long>(canvas_height_),
              static_cast<unsigned>(canvas_bytes));
+    return true;
+}
+
+void SpectrumView::destroy()
+{
+    const bool had_resources = !resources_released();
+    if (object_ != nullptr) {
+        // The canvas does not own its external pixel buffer. Keep PSRAM alive
+        // until synchronous LVGL object deletion has completed.
+        lv_obj_delete(object_);
+    } else if (canvas_ != nullptr) {
+        lv_obj_delete(canvas_);
+    }
+    object_ = nullptr;
+    canvas_ = nullptr;
+    axis_labels_.fill(nullptr);
+
+    if (canvas_pixels_ != nullptr) {
+        heap_caps_free(canvas_pixels_);
+    }
+    canvas_pixels_ = nullptr;
+    canvas_width_ = 0;
+    canvas_height_ = 0;
+    visible_ = false;
+    frame_ = {};
+    if (had_resources) {
+#if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST \
+    || CONFIG_CYCLESCOPE_DISPLAY_STARTUP_FAULT_TEST
+        startup_fault_test::note_display_lifecycle_event(
+            startup_fault_test::DisplayLifecycleEvent::SpectrumDestroyed);
+#endif
+        ESP_LOGI(kTag, "RGB565 spectrum canvas released");
+    }
+}
+
+bool SpectrumView::created() const
+{
+    return object_ != nullptr && canvas_ != nullptr
+           && canvas_pixels_ != nullptr && canvas_width_ > 0
+           && canvas_height_ > 0
+           && std::all_of(axis_labels_.begin(), axis_labels_.end(),
+                          [](const lv_obj_t *label) {
+                              return label != nullptr;
+                          });
+}
+
+bool SpectrumView::resources_released() const
+{
+    return object_ == nullptr && canvas_ == nullptr
+           && canvas_pixels_ == nullptr && canvas_width_ == 0
+           && canvas_height_ == 0 && !visible_
+           && std::all_of(axis_labels_.begin(), axis_labels_.end(),
+                          [](const lv_obj_t *label) {
+                              return label == nullptr;
+                          });
+}
+
+bool SpectrumView::visible() const
+{
+    return visible_;
 }
 
 void SpectrumView::set_frame(const SpectrumDisplayFrame &frame)
@@ -128,9 +266,10 @@ void SpectrumView::initialize_from_model(const SpectrumModel &model)
     frame_.column_count = static_cast<uint16_t>(kSpectrumDisplayColumns);
     frame_.peak_count = 0;
     frame_.frequency_min_hz = 0.0F;
-    frame_.frequency_max_hz = model.sample_rate_hz() / 2.0F;
+    frame_.frequency_max_hz = kSpectrumDisplayMaximumHz;
     frame_.bin_width_hz = model.bin_width_hz();
-    frame_.amplitude_max_volts = 0.5F;
+    frame_.amplitude_max_volts =
+        kSpectrumDisplayMinimumAmplitudeVolts;
 }
 
 void SpectrumView::render_frame()
@@ -161,43 +300,31 @@ void SpectrumView::render_frame()
         draw_vertical_line(x, 0, canvas_height_ - 1, grid);
     }
 
-    const uint16_t spectrum_color = rgb565(kNoiseFloorColor);
-    for (int32_t x = 0; x < canvas_width_; ++x) {
-        const size_t column = static_cast<size_t>(x) * frame_.column_count / static_cast<size_t>(canvas_width_);
-        const SpectrumColumn &value = frame_.columns[column];
-        float peak_normalized = value.peak_volts / frame_.amplitude_max_volts;
-        float rms_normalized = value.rms_volts / frame_.amplitude_max_volts;
-        peak_normalized = std::max(0.0F, std::min(peak_normalized, 1.0F));
-        rms_normalized = std::max(0.0F, std::min(rms_normalized, peak_normalized));
-        const int32_t peak_y =
-            canvas_height_ - 1 - static_cast<int32_t>(peak_normalized * static_cast<float>(canvas_height_ - 1));
-        const int32_t rms_y =
-            canvas_height_ - 1 - static_cast<int32_t>(rms_normalized * static_cast<float>(canvas_height_ - 1));
-        draw_vertical_line(x, rms_y, peak_y, spectrum_color);
-    }
-
-    for (size_t index = 0; index < frame_.peak_count; ++index) {
-        const SpectralPeak &peak = frame_.peaks[index];
-        if (peak.frequency_hz < frame_.frequency_min_hz || peak.frequency_hz > frame_.frequency_max_hz) {
-            continue;
-        }
-        float normalized = peak.amplitude_volts_peak / frame_.amplitude_max_volts;
-        normalized = std::max(0.0F, std::min(normalized, 1.0F));
-        const int32_t x = static_cast<int32_t>(
-            (peak.frequency_hz - frame_.frequency_min_hz) * static_cast<float>(canvas_width_ - 1)
-            / frequency_span_hz);
-        const int32_t y =
-            canvas_height_ - 1 - static_cast<int32_t>(normalized * static_cast<float>(canvas_height_ - 1));
-        draw_vertical_line(x, canvas_height_ - 1, y,
-                           rgb565(index == 0 ? kFundamentalColor : kHarmonicColor), index == 0 ? 4 : 2);
-    }
-
     const uint16_t axis = rgb565(kAxisColor);
     for (int32_t x = 0; x < canvas_width_; ++x) {
         set_pixel(x, canvas_height_ - 1, axis);
         if (canvas_height_ > 1) {
             set_pixel(x, canvas_height_ - 2, axis);
         }
+    }
+
+    // G-problem inputs contain one fundamental and one or two harmonics. Draw
+    // only those validated semantic lines: rendering all Hann-window bins
+    // would turn leakage skirts into apparent extra components. Lines are
+    // drawn after the axis so an exactly 5 mVpk component keeps its base.
+    for (size_t index = 0; index < frame_.peak_count; ++index) {
+        const SpectralPeak &peak = frame_.peaks[index];
+        SpectrumCanvasPoint point{};
+        if (!map_spectral_peak_to_canvas(
+                frame_, peak, static_cast<size_t>(canvas_width_),
+                static_cast<size_t>(canvas_height_), &point)) {
+            continue;
+        }
+        draw_vertical_line(
+            point.x, canvas_height_ - 1, point.y,
+            rgb565(index == 0 ? kFundamentalColor : kHarmonicColor),
+            index == 0 ? kSpectrumFundamentalLineWidthPixels
+                       : kSpectrumHarmonicLineWidthPixels);
     }
 
     update_axis_labels();
@@ -239,13 +366,18 @@ void SpectrumView::update_axis_labels()
 
 void SpectrumView::draw_vertical_line(int32_t x, int32_t y1, int32_t y2, uint16_t color, int32_t line_width)
 {
+    if (line_width <= 0) {
+        return;
+    }
     if (y1 > y2) {
         const int32_t temporary = y1;
         y1 = y2;
         y2 = temporary;
     }
-    const int32_t half_width = line_width / 2;
-    for (int32_t draw_x = x - half_width; draw_x <= x + half_width; ++draw_x) {
+    const int32_t left_width = (line_width - 1) / 2;
+    const int32_t right_width = line_width - 1 - left_width;
+    for (int32_t draw_x = x - left_width;
+         draw_x <= x + right_width; ++draw_x) {
         for (int32_t y = y1; y <= y2; ++y) {
             set_pixel(draw_x, y, color);
         }

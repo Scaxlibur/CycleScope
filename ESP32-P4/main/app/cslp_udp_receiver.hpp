@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "sdkconfig.h"
+
 #include "esp_err.h"
 #include "esp_eth.h"
 #include "esp_eth_netif_glue.h"
@@ -20,6 +22,14 @@
 #include "cslp_receiver_policy.hpp"
 
 namespace cyclescope {
+
+class CslpUdpReceiver;
+namespace startup_fault_test {
+bool run_receiver_startup_fault_matrix(CslpUdpReceiver &receiver);
+}
+namespace runtime_fault_test {
+bool run_receiver_runtime_fault_matrix(CslpUdpReceiver &receiver);
+}
 
 class CslpUdpReceiver {
 public:
@@ -52,6 +62,7 @@ public:
         FrameMetadata metadata{};
         uint8_t slot_index = 0xFF;
         uint32_t lease_generation = 0;
+        uint32_t stream_epoch = 0;
 
         FrameCursor cursor() const
         {
@@ -80,17 +91,32 @@ public:
         uint32_t frames_acquired;
         uint32_t control_retries;
         uint32_t reconnects;
+        uint32_t socket_open_failures;
+        uint32_t recv_fatal_errors;
+        uint32_t socket_close_failures;
+        uint32_t sessions_established;
     };
 
     esp_err_t start();
     bool acquire_latest(const FrameCursor &after, FrameView *view);
     // Check immediately before publishing results derived from an acquired frame.
     bool frame_is_current(const FrameView &view) const;
+    bool stream_is_current(uint32_t session_id, uint32_t config_id,
+                           uint32_t stream_epoch) const;
+#if CONFIG_CYCLESCOPE_CSLP_DISABLE_PUSH_TEST
+    void synchronize_disable_push_test(const FrameView &view);
+#endif
     void release(FrameView *view);
     Stats stats() const;
     bool session_ready() const;
+    bool started() const;
 
 private:
+    friend bool startup_fault_test::run_receiver_startup_fault_matrix(
+        CslpUdpReceiver &receiver);
+    friend bool runtime_fault_test::run_receiver_runtime_fault_matrix(
+        CslpUdpReceiver &receiver);
+
     enum class SlotState : uint8_t {
         Free,
         Assembling,
@@ -142,6 +168,10 @@ private:
         std::atomic<uint32_t> frames_acquired{0};
         std::atomic<uint32_t> control_retries{0};
         std::atomic<uint32_t> reconnects{0};
+        std::atomic<uint32_t> socket_open_failures{0};
+        std::atomic<uint32_t> recv_fatal_errors{0};
+        std::atomic<uint32_t> socket_close_failures{0};
+        std::atomic<uint32_t> sessions_established{0};
     };
 
     static void receiver_task(void *context);
@@ -156,8 +186,10 @@ private:
     void close_socket();
     bool establish_session();
     bool run_hello();
-    bool run_config();
+    bool run_config(uint32_t *negotiated_config_id);
     bool run_enable_push();
+    bool run_disable_push();
+    bool run_disable_push_reconfigure_test();
     bool transact(size_t request_length, cslp::MessageType expected_response,
                   uint32_t request_sequence, cslp::CommonHeader *response);
     ReceiveResult receive_valid_datagram(cslp::CommonHeader *common, size_t *length);
@@ -176,6 +208,9 @@ private:
     void invalidate_assembly(bool count_incomplete);
     void expire_assembly(uint64_t now_us);
     void reset_pending_frames();
+    void invalidate_active_stream();
+    bool commit_active_stream(uint32_t session_id, uint32_t config_id,
+                              uint32_t expected_stream_epoch);
     void reject_frame(uint32_t frame_id);
     void record_parse_error(cslp::ParseError error);
     void log_health();
@@ -185,6 +220,7 @@ private:
     static uint64_t now_us();
 
     static constexpr EventBits_t kIpReadyBit = BIT0;
+    static constexpr EventBits_t kEthernetStoppedBit = BIT1;
     static constexpr uint16_t kLocalPort = 50001;
     static constexpr uint16_t kFpgaPort = 50000;
     static constexpr uint16_t kAllChunksMask = (1U << kChunkCount) - 1U;
@@ -209,6 +245,9 @@ private:
 
     std::atomic<StartState> start_state_{StartState::Stopped};
     std::atomic<uint32_t> active_session_id_{0};
+    std::atomic<uint32_t> active_config_id_{0};
+    std::atomic<uint32_t> active_stream_epoch_{1};
+    std::atomic<bool> network_callbacks_enabled_{false};
     bool ethernet_start_attempted_ = false;
     int assembling_index_ = -1;
     int latest_index_ = -1;
@@ -219,10 +258,14 @@ private:
     uint32_t rejected_frame_id_ = 0;
     uint32_t session_id_ = 0;
     uint32_t control_sequence_ = 0;
-    uint32_t active_config_id_ = 0;
     uint32_t device_boot_id_ = 0;
     uint64_t last_stream_message_us_ = 0;
     uint64_t last_health_log_us_ = 0;
+#if CONFIG_CYCLESCOPE_CSLP_DISABLE_PUSH_TEST
+    std::atomic<bool> disable_test_in_progress_{false};
+    std::atomic<bool> disable_test_reconfigured_{false};
+    std::atomic<uint32_t> disable_test_previous_config_id_{0};
+#endif
 };
 
 CslpUdpReceiver &cslp_udp_receiver();
