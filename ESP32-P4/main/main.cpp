@@ -28,6 +28,9 @@
 #if CONFIG_CYCLESCOPE_RUNTIME_FAULT_TEST
 #include "cyclescope_receiver_runtime_fault_test.hpp"
 #endif
+#if defined(CYCLESCOPE_LVGL_SCREENSHOT_DEBUG)
+#include "lvgl_screenshot_debug.hpp"
+#endif
 
 namespace {
 
@@ -176,6 +179,20 @@ extern "C" void app_main(void)
         if (diagnostic_error != ESP_OK) {
             ESP_LOGE(kTag, "CSLP frame diagnostic did not start: %s",
                      esp_err_to_name(diagnostic_error));
+        }
+    }
+#endif
+
+#if defined(CYCLESCOPE_LVGL_SCREENSHOT_DEBUG)
+    // This server only exists in a local debug build selected through the
+    // ignored CYCLESCOPE_LOCAL_TEST_CMAKE fragment.  It snapshots LVGL's
+    // composed screen, not the panel's physical scanout completion.
+    if (receiver_error == ESP_OK) {
+        static cyclescope::LvglScreenshotDebug screenshot_debug(display);
+        const esp_err_t screenshot_error = screenshot_debug.start();
+        if (screenshot_error != ESP_OK) {
+            ESP_LOGE(kTag, "LVGL screenshot debug server did not start: %s",
+                     esp_err_to_name(screenshot_error));
         }
     }
 #endif
