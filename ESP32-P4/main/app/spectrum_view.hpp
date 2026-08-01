@@ -31,10 +31,12 @@ public:
     uint8_t available_peak_count() const;
     float visible_frequency_minimum_hz() const;
     float visible_frequency_maximum_hz() const;
+    float visible_amplitude_max_volts() const;
+    float volts_per_division() const;
 
 private:
     void initialize_from_model(const SpectrumModel &model);
-    void update_frequency_window();
+    void update_viewport();
     void render_frame();
     void update_axis_labels();
     void draw_vertical_line(int32_t x, int32_t y1, int32_t y2, uint16_t color, int32_t line_width = 1);
@@ -52,6 +54,8 @@ private:
         .minimum_hz = 0.0F,
         .maximum_hz = kSpectrumDisplayMaximumHz,
     };
+    float visible_amplitude_max_volts_ =
+        kSpectrumDisplayMinimumAmplitudeVolts;
     uint8_t requested_peak_count_ =
         static_cast<uint8_t>(kMaximumSpectralLines);
     uint8_t visible_peak_count_ = 0;

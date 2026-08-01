@@ -1,11 +1,13 @@
 #include "instrument_app.hpp"
 
 #include <algorithm>
+#include <array>
 #include <inttypes.h>
 #include <stdio.h>
 
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "measurement_format.hpp"
 #if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST \
     || CONFIG_CYCLESCOPE_DISPLAY_STARTUP_FAULT_TEST
 #include "cyclescope_display_startup_fault_test.hpp"
@@ -21,7 +23,7 @@ constexpr int32_t kFooterHeight = 38;
 constexpr int32_t kMetricsWidth = 278;
 constexpr int32_t kCardRadius = 12;
 constexpr int32_t kMetricCardWidth = 116;
-constexpr int32_t kMetricHorizontalPadding = 14;
+constexpr int32_t kMetricHorizontalPadding = 13;
 constexpr uint32_t kLiveUiPeriodMs = 250;
 constexpr uint32_t kStartupLiveUiPeriodMs = 20;
 constexpr uint32_t kStartupLiveUiWindowMs = 1000;
@@ -46,7 +48,8 @@ lv_obj_t *create_text(lv_obj_t *parent, const char *text, const lv_font_t *font,
     return label;
 }
 
-lv_obj_t *style_metric(lv_obj_t *card, const char *title, const char *value, int32_t x, int32_t y)
+lv_obj_t *style_metric(lv_obj_t *card, const char *title, const char *value,
+                       const lv_font_t *value_font, int32_t x, int32_t y)
 {
     lv_obj_set_pos(card, x, y);
 
@@ -54,7 +57,7 @@ lv_obj_t *style_metric(lv_obj_t *card, const char *title, const char *value, int
     lv_obj_align(title_label, LV_ALIGN_TOP_LEFT,
                  kMetricHorizontalPadding, 12);
 
-    lv_obj_t *value_label = create_text(card, value, &lv_font_montserrat_22, kText);
+    lv_obj_t *value_label = create_text(card, value, value_font, kText);
     lv_obj_set_width(
         value_label,
         kMetricCardWidth - 2 * kMetricHorizontalPadding);
@@ -74,63 +77,99 @@ bool text_fits(const char *text, const lv_font_t *font, int32_t width)
 
 bool metric_text_contract_passes(int32_t spectrum_legend_width)
 {
-    constexpr const char *kWorstMetricValues[] = {
-        "0.250", "250.00", "4.0625",
+    struct MetricValueContract {
+        const char *text;
+        const lv_font_t *font;
     };
+    const std::array<MetricValueContract, 4> worst_metric_values = {{
+        {"500.00mV", &lv_font_montserrat_16},
+        {"500.00mV", &lv_font_montserrat_16},
+        {"500,000Hz", &lv_font_montserrat_16},
+        {"4.0625", &lv_font_montserrat_22},
+    }};
     const int32_t metric_content_width =
         kMetricCardWidth - 2 * kMetricHorizontalPadding;
-    for (const char *value : kWorstMetricValues) {
-        if (!text_fits(value, &lv_font_montserrat_22,
-                       metric_content_width)) {
+    for (const MetricValueContract &value : worst_metric_values) {
+        if (!text_fits(value.text, value.font, metric_content_width)) {
             return false;
         }
     }
     return text_fits(
-        "500.00k 250mVpk  •  500.00k 250mVpk  •  500.00k 250mVpk  •  +5",
+        "125.00mV/div  •  500,000Hz 250.00mV  •  "
+        "500,000Hz 250.00mV  •  "
+        "500,000Hz 250.00mV  •  +5",
         &lv_font_montserrat_12, spectrum_legend_width);
+}
+
+struct FormattedPeak {
+    std::array<char, 20> frequency{};
+    std::array<char, 20> amplitude{};
+};
+
+FormattedPeak format_peak(const SpectralPeak &peak)
+{
+    FormattedPeak result{};
+    measurement_format::hertz(
+        result.frequency.data(), result.frequency.size(), peak.frequency_hz);
+    measurement_format::millivolts(
+        result.amplitude.data(), result.amplitude.size(),
+        peak.amplitude_volts_peak);
+    return result;
 }
 
 void format_peak_summary(char *buffer, size_t buffer_size,
                          const SpectrumDisplayFrame &spectrum,
-                         size_t visible_peak_count)
+                         size_t visible_peak_count,
+                         float volts_per_division)
 {
+    if (buffer == nullptr || buffer_size == 0U) {
+        return;
+    }
     const size_t peak_count = std::min(
         visible_peak_count,
         std::min(static_cast<size_t>(spectrum.peak_count),
                  spectrum.peaks.size()));
+    if (peak_count == 0U) {
+        snprintf(buffer, buffer_size, "NO SPECTRAL PEAKS");
+        return;
+    }
+
+    std::array<FormattedPeak, 3> peaks{};
+    for (size_t index = 0U; index < std::min<size_t>(peak_count, peaks.size());
+         ++index) {
+        peaks[index] = format_peak(spectrum.peaks[index]);
+    }
+    std::array<char, 20> division{};
+    measurement_format::millivolts(
+        division.data(), division.size(), volts_per_division);
+    std::array<char, 160> peak_details{};
     if (peak_count >= 3U) {
         const unsigned extra_peaks =
             peak_count > 3U ? static_cast<unsigned>(peak_count - 3U) : 0U;
         if (extra_peaks > 0U) {
-            snprintf(buffer, buffer_size, "%.2fk %.0fmVpk  •  %.2fk %.0fmVpk  •  %.2fk %.0fmVpk  •  +%u",
-                     static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
-                     static_cast<double>(spectrum.peaks[0].amplitude_volts_peak * 1000.0F),
-                     static_cast<double>(spectrum.peaks[1].frequency_hz / 1000.0F),
-                     static_cast<double>(spectrum.peaks[1].amplitude_volts_peak * 1000.0F),
-                     static_cast<double>(spectrum.peaks[2].frequency_hz / 1000.0F),
-                     static_cast<double>(spectrum.peaks[2].amplitude_volts_peak * 1000.0F), extra_peaks);
+            snprintf(peak_details.data(), peak_details.size(),
+                     "%s %s  •  %s %s  •  %s %s  •  +%u",
+                     peaks[0].frequency.data(), peaks[0].amplitude.data(),
+                     peaks[1].frequency.data(), peaks[1].amplitude.data(),
+                     peaks[2].frequency.data(), peaks[2].amplitude.data(),
+                     extra_peaks);
         } else {
-            snprintf(buffer, buffer_size, "%.2fk %.0fmVpk  •  %.2fk %.0fmVpk  •  %.2fk %.0fmVpk",
-                     static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
-                     static_cast<double>(spectrum.peaks[0].amplitude_volts_peak * 1000.0F),
-                     static_cast<double>(spectrum.peaks[1].frequency_hz / 1000.0F),
-                     static_cast<double>(spectrum.peaks[1].amplitude_volts_peak * 1000.0F),
-                     static_cast<double>(spectrum.peaks[2].frequency_hz / 1000.0F),
-                     static_cast<double>(spectrum.peaks[2].amplitude_volts_peak * 1000.0F));
+            snprintf(peak_details.data(), peak_details.size(),
+                     "%s %s  •  %s %s  •  %s %s",
+                     peaks[0].frequency.data(), peaks[0].amplitude.data(),
+                     peaks[1].frequency.data(), peaks[1].amplitude.data(),
+                     peaks[2].frequency.data(), peaks[2].amplitude.data());
         }
     } else if (peak_count == 2U) {
-        snprintf(buffer, buffer_size, "%.2fk %.0fmVpk  •  %.2fk %.0fmVpk",
-                 static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
-                 static_cast<double>(spectrum.peaks[0].amplitude_volts_peak * 1000.0F),
-                 static_cast<double>(spectrum.peaks[1].frequency_hz / 1000.0F),
-                 static_cast<double>(spectrum.peaks[1].amplitude_volts_peak * 1000.0F));
-    } else if (peak_count == 1U) {
-        snprintf(buffer, buffer_size, "%.2fk %.0fmVpk",
-                 static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
-                 static_cast<double>(spectrum.peaks[0].amplitude_volts_peak * 1000.0F));
+        snprintf(peak_details.data(), peak_details.size(), "%s %s  •  %s %s",
+                 peaks[0].frequency.data(), peaks[0].amplitude.data(),
+                 peaks[1].frequency.data(), peaks[1].amplitude.data());
     } else {
-        snprintf(buffer, buffer_size, "NO SPECTRAL PEAKS");
+        snprintf(peak_details.data(), peak_details.size(), "%s %s",
+                 peaks[0].frequency.data(), peaks[0].amplitude.data());
     }
+    snprintf(buffer, buffer_size, "%s/div  •  %s", division.data(),
+             peak_details.data());
 }
 
 }  // namespace
@@ -382,18 +421,21 @@ bool InstrumentApp::build_layout()
     constexpr int32_t metric_height = 94;
     lv_obj_t *vpp = create_card(
         metrics, 14, 58, kMetricCardWidth, metric_height);
-    vpp_value_ = style_metric(vpp, "Vpp / V", "--", 14, 58);
+    vpp_value_ = style_metric(
+        vpp, "Vpp", "--", &lv_font_montserrat_16, 14, 58);
     lv_obj_t *rms = create_card(
         metrics, 148, 58, kMetricCardWidth, metric_height);
-    rms_value_ = style_metric(rms, "TRUE RMS / V", "--", 148, 58);
+    rms_value_ = style_metric(
+        rms, "TRUE RMS", "--", &lv_font_montserrat_16, 148, 58);
     lv_obj_t *fundamental = create_card(
         metrics, 14, 166, kMetricCardWidth, metric_height);
     fundamental_value_ = style_metric(
-        fundamental, "F0 / kHz", "--", 14, 166);
+        fundamental, "F0", "--", &lv_font_montserrat_16, 14, 166);
     lv_obj_t *sample_rate = create_card(
         metrics, 148, 166, kMetricCardWidth, metric_height);
     sample_rate_value_ = style_metric(
-        sample_rate, "Fs / MS/s", "--", 148, 166);
+        sample_rate, "Fs / MS/s", "--", &lv_font_montserrat_22,
+        148, 166);
 
     lv_obj_t *summary = create_card(metrics, 14, 278, kMetricsWidth - 28, 118);
     lv_obj_t *summary_title = create_text(summary, "ACTIVE VIEW", &lv_font_montserrat_12, kMutedText);
@@ -618,18 +660,21 @@ void InstrumentApp::adjust_spectrum_peak_count(int8_t delta)
     }
 
     update_spectrum_line_controls();
-    char summary[96];
+    char summary[192];
     format_peak_summary(
         summary, sizeof(summary), live_frame_.spectrum,
-        spectrum_view_.visible_peak_count());
+        spectrum_view_.visible_peak_count(),
+        spectrum_view_.volts_per_division());
     lv_label_set_text(spectrum_legend_, summary);
     ESP_LOGI("cyclescope_ui",
-             "Spectrum display lines=%u/%u axis=%.2f..%.2fkHz",
+             "Spectrum display lines=%u/%u axis=%.2f..%.2fkHz %.2fmV/div",
              spectrum_view_.visible_peak_count(), available,
              static_cast<double>(
                  spectrum_view_.visible_frequency_minimum_hz() / 1000.0F),
              static_cast<double>(
-                 spectrum_view_.visible_frequency_maximum_hz() / 1000.0F));
+                 spectrum_view_.visible_frequency_maximum_hz() / 1000.0F),
+             static_cast<double>(
+                 spectrum_view_.volts_per_division() * 1000.0F));
 }
 
 void InstrumentApp::update_spectrum_line_controls()
@@ -675,45 +720,49 @@ void InstrumentApp::update_timebase_label()
 
 void InstrumentApp::update_time_metrics()
 {
-    char value[24];
-    snprintf(value, sizeof(value), "%.3f", static_cast<double>(waveform_.peak_to_peak_volts()));
-    lv_label_set_text(vpp_value_, value);
-    snprintf(value, sizeof(value), "%.3f", static_cast<double>(waveform_.rms_volts()));
-    lv_label_set_text(rms_value_, value);
-    snprintf(value, sizeof(value), "%.2f", static_cast<double>(waveform_.fundamental_hz() / 1000.0F));
-    lv_label_set_text(fundamental_value_, value);
-    snprintf(value, sizeof(value), "%.4f", static_cast<double>(waveform_.sample_rate_hz() / 1000000.0F));
-    lv_label_set_text(sample_rate_value_, value);
+    if (live_frame_.generation != 0U) {
+        update_measurement_values(
+            live_frame_.voltage_peak_to_peak, live_frame_.true_rms_volts,
+            live_frame_.fundamental_hz, live_frame_.sample_rate_hz);
+        return;
+    }
+    update_measurement_values(
+        waveform_.peak_to_peak_volts(), waveform_.rms_volts(),
+        waveform_.fundamental_hz(), waveform_.sample_rate_hz());
 }
 
 void InstrumentApp::update_spectrum_metrics()
 {
-    char value[24];
     if (live_frame_.generation != 0) {
-        snprintf(value, sizeof(value), "%.3f",
-                 static_cast<double>(live_frame_.voltage_peak_to_peak));
-        lv_label_set_text(vpp_value_, value);
-        snprintf(value, sizeof(value), "%.3f",
-                 static_cast<double>(live_frame_.true_rms_volts));
-        lv_label_set_text(rms_value_, value);
-        snprintf(value, sizeof(value), "%.2f",
-                 static_cast<double>(live_frame_.fundamental_hz / 1000.0F));
-        lv_label_set_text(fundamental_value_, value);
-        snprintf(value, sizeof(value), "%.4f",
-                 static_cast<double>(live_frame_.sample_rate_hz / 1000000.0F));
-        lv_label_set_text(sample_rate_value_, value);
+        update_measurement_values(
+            live_frame_.voltage_peak_to_peak, live_frame_.true_rms_volts,
+            live_frame_.fundamental_hz, live_frame_.sample_rate_hz);
         return;
     }
-    snprintf(value, sizeof(value), "%.3f",
-             static_cast<double>(spectrum_model_.voltage_peak_to_peak()));
-    lv_label_set_text(vpp_value_, value);
-    snprintf(value, sizeof(value), "%.3f", static_cast<double>(spectrum_model_.true_rms_volts()));
-    lv_label_set_text(rms_value_, value);
-    snprintf(value, sizeof(value), "%.2f", static_cast<double>(spectrum_model_.fundamental_hz() / 1000.0F));
-    lv_label_set_text(fundamental_value_, value);
-    snprintf(value, sizeof(value), "%.4f", static_cast<double>(spectrum_model_.sample_rate_hz() / 1000000.0F));
-    lv_label_set_text(sample_rate_value_, value);
+    update_measurement_values(
+        spectrum_model_.voltage_peak_to_peak(),
+        spectrum_model_.true_rms_volts(), spectrum_model_.fundamental_hz(),
+        spectrum_model_.sample_rate_hz());
+}
 
+void InstrumentApp::update_measurement_values(float voltage_peak_to_peak,
+                                              float true_rms_volts,
+                                              float fundamental_hz,
+                                              float sample_rate_hz)
+{
+    // The live values are copied directly from FftAnalysisResult. Unit
+    // conversion happens only at this final UI boundary.
+    char value[24];
+    measurement_format::millivolts(
+        value, sizeof(value), voltage_peak_to_peak);
+    lv_label_set_text(vpp_value_, value);
+    measurement_format::millivolts(value, sizeof(value), true_rms_volts);
+    lv_label_set_text(rms_value_, value);
+    measurement_format::hertz(value, sizeof(value), fundamental_hz);
+    lv_label_set_text(fundamental_value_, value);
+    snprintf(value, sizeof(value), "%.4f",
+             static_cast<double>(sample_rate_hz / 1000000.0F));
+    lv_label_set_text(sample_rate_value_, value);
 }
 
 void InstrumentApp::on_live_data_timer(lv_timer_t *timer)
@@ -840,7 +889,7 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
                  "Spectrum UI bridge on Core %d: session=%08" PRIX32
                  " frame=%" PRIu32 " gen=%" PRIu32
                  " A/B=%u columns=%u peaks=%u Fs=%.4fMHz axis=%.5fMHz"
-                 " Amax=%.1fmVpk",
+                 " Amax=%.1fmVpk view=%.2fmV/div",
                  xPortGetCoreID(), frame.session_id, frame.frame_id,
                  frame.spectrum.generation,
                  frame.spectrum.source_buffer_index,
@@ -849,19 +898,16 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
                  static_cast<double>(frame.sample_rate_hz / 1000000.0F),
                  static_cast<double>(frame.spectrum.frequency_max_hz / 1000000.0F),
                  static_cast<double>(
-                     frame.spectrum.amplitude_max_volts * 1000.0F));
+                     frame.spectrum.amplitude_max_volts * 1000.0F),
+                 static_cast<double>(
+                     spectrum_view_.volts_per_division() * 1000.0F));
     }
 
-    char value[96];
-    snprintf(value, sizeof(value), "%.3f", static_cast<double>(frame.voltage_peak_to_peak));
-    lv_label_set_text(vpp_value_, value);
-    snprintf(value, sizeof(value), "%.3f", static_cast<double>(frame.true_rms_volts));
-    lv_label_set_text(rms_value_, value);
-    snprintf(value, sizeof(value), "%.2f", static_cast<double>(frame.fundamental_hz / 1000.0F));
-    lv_label_set_text(fundamental_value_, value);
-    snprintf(value, sizeof(value), "%.4f", static_cast<double>(frame.sample_rate_hz / 1000000.0F));
-    lv_label_set_text(sample_rate_value_, value);
+    update_measurement_values(
+        frame.voltage_peak_to_peak, frame.true_rms_volts,
+        frame.fundamental_hz, frame.sample_rate_hz);
 
+    char value[192];
     const bool calibrated =
         (frame.source_flags & cslp::kFlagCalibrated) != 0;
     const bool test_pattern =
@@ -893,7 +939,8 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
     }
     format_peak_summary(
         value, sizeof(value), frame.spectrum,
-        spectrum_view_.visible_peak_count());
+        spectrum_view_.visible_peak_count(),
+        spectrum_view_.volts_per_division());
     lv_label_set_text(spectrum_legend_, value);
 
     if (now_ms - last_health_log_ms_ >= 30000U) {

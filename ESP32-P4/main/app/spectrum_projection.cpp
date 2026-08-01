@@ -172,6 +172,44 @@ bool choose_spectrum_amplitude_max(
     return true;
 }
 
+bool choose_spectrum_viewport_amplitude_max(
+    const SpectrumDisplayFrame &frame,
+    size_t visible_peak_count,
+    float *amplitude_max_volts)
+{
+    if (amplitude_max_volts == nullptr) {
+        return false;
+    }
+    *amplitude_max_volts = 0.0F;
+    if (visible_peak_count == 0U
+        || frame.peak_count > frame.peaks.size()
+        || visible_peak_count > static_cast<size_t>(frame.peak_count)) {
+        return false;
+    }
+
+    float maximum_visible_amplitude_volts = 0.0F;
+    for (size_t index = 0U; index < visible_peak_count; ++index) {
+        const float amplitude_volts =
+            frame.peaks[index].amplitude_volts_peak;
+        if (!std::isfinite(amplitude_volts)
+            || !(amplitude_volts > 0.0F)) {
+            return false;
+        }
+        maximum_visible_amplitude_volts =
+            std::max(maximum_visible_amplitude_volts, amplitude_volts);
+    }
+
+    const float viewport_amplitude_max_volts =
+        maximum_visible_amplitude_volts
+        / kSpectrumViewportPeakHeightFraction;
+    if (!std::isfinite(viewport_amplitude_max_volts)
+        || !(viewport_amplitude_max_volts > 0.0F)) {
+        return false;
+    }
+    *amplitude_max_volts = viewport_amplitude_max_volts;
+    return true;
+}
+
 bool aggregate_spectrum_column(const SpectrumDisplayFrame &frame,
                                size_t output_column,
                                size_t output_column_count,
@@ -283,6 +321,7 @@ bool choose_spectrum_frequency_window(const SpectrumDisplayFrame &frame,
 
 bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
                                  const SpectrumFrequencyWindow &window,
+                                 float amplitude_max_volts,
                                  const SpectralPeak &peak,
                                  size_t canvas_width,
                                  size_t canvas_height,
@@ -296,12 +335,12 @@ bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
         || !std::isfinite(window.minimum_hz)
         || !std::isfinite(window.maximum_hz)
         || !std::isfinite(frame.bin_width_hz)
-        || !std::isfinite(frame.amplitude_max_volts)
+        || !std::isfinite(amplitude_max_volts)
         || !std::isfinite(peak.frequency_hz)
         || !std::isfinite(peak.amplitude_volts_peak)
         || window.maximum_hz <= window.minimum_hz
         || !(frame.bin_width_hz > 0.0F)
-        || !(frame.amplitude_max_volts > 0.0F)
+        || !(amplitude_max_volts > 0.0F)
         || peak.frequency_hz
                < window.minimum_hz - frame.bin_width_hz * 0.5F
         || peak.frequency_hz
@@ -319,7 +358,7 @@ bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
            - static_cast<double>(window.minimum_hz));
     const double normalized_amplitude = std::clamp(
         static_cast<double>(peak.amplitude_volts_peak)
-            / static_cast<double>(frame.amplitude_max_volts),
+            / static_cast<double>(amplitude_max_volts),
         0.0, 1.0);
     result->x = static_cast<int32_t>(
         normalized_frequency * static_cast<double>(canvas_width - 1U));
@@ -328,6 +367,18 @@ bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
                     normalized_amplitude
                     * static_cast<double>(canvas_height - 1U));
     return true;
+}
+
+bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
+                                 const SpectrumFrequencyWindow &window,
+                                 const SpectralPeak &peak,
+                                 size_t canvas_width,
+                                 size_t canvas_height,
+                                 SpectrumCanvasPoint *result)
+{
+    return map_spectral_peak_to_canvas(
+        frame, window, frame.amplitude_max_volts, peak, canvas_width,
+        canvas_height, result);
 }
 
 bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,

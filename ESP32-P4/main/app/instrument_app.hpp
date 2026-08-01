@@ -45,6 +45,10 @@ private:
     void select_periods(uint8_t periods);
     void adjust_spectrum_peak_count(int8_t delta);
     void update_spectrum_line_controls();
+    void update_measurement_values(float voltage_peak_to_peak,
+                                   float true_rms_volts,
+                                   float fundamental_hz,
+                                   float sample_rate_hz);
     void update_time_metrics();
     void update_spectrum_metrics();
     void update_timebase_label();

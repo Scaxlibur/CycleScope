@@ -20,7 +20,9 @@ namespace cyclescope {
 namespace {
 
 constexpr char kTag[] = "cyclescope_spectrum";
-constexpr uint32_t kGridDivisionsY = 5;
+constexpr uint32_t kGridDivisionsY =
+    kSpectrumViewportVerticalDivisions;
+static_assert(kGridDivisionsY > 0U);
 constexpr uint32_t kCanvasBackground = 0x102A3D;
 constexpr uint32_t kGridColor = 0x23445B;
 constexpr uint32_t kAxisColor = 0x44758B;
@@ -211,6 +213,8 @@ void SpectrumView::destroy()
         .minimum_hz = 0.0F,
         .maximum_hz = kSpectrumDisplayMaximumHz,
     };
+    visible_amplitude_max_volts_ =
+        kSpectrumDisplayMinimumAmplitudeVolts;
     requested_peak_count_ = static_cast<uint8_t>(kMaximumSpectralLines);
     visible_peak_count_ = 0U;
     if (had_resources) {
@@ -260,7 +264,7 @@ void SpectrumView::set_frame(const SpectrumDisplayFrame &frame)
         frame_.peak_count =
             static_cast<uint8_t>(kMaximumDisplayedSpectralLines);
     }
-    update_frequency_window();
+    update_viewport();
     if (visible_) {
         render_frame();
     }
@@ -272,7 +276,7 @@ bool SpectrumView::set_visible_peak_count(uint8_t count)
         return false;
     }
     requested_peak_count_ = count;
-    update_frequency_window();
+    update_viewport();
     if (visible_) {
         render_frame();
     }
@@ -300,6 +304,21 @@ float SpectrumView::visible_frequency_maximum_hz() const
     return frequency_window_.maximum_hz;
 }
 
+float SpectrumView::visible_amplitude_max_volts() const
+{
+    return visible_amplitude_max_volts_;
+}
+
+float SpectrumView::volts_per_division() const
+{
+    if (!isfinite(visible_amplitude_max_volts_)
+        || !(visible_amplitude_max_volts_ > 0.0F)) {
+        return 0.0F;
+    }
+    return visible_amplitude_max_volts_
+           / static_cast<float>(kGridDivisionsY);
+}
+
 void SpectrumView::initialize_from_model(const SpectrumModel &model)
 {
     frame_ = {};
@@ -312,19 +331,31 @@ void SpectrumView::initialize_from_model(const SpectrumModel &model)
     frame_.bin_width_hz = model.bin_width_hz();
     frame_.amplitude_max_volts =
         kSpectrumDisplayMinimumAmplitudeVolts;
-    update_frequency_window();
+    update_viewport();
 }
 
-void SpectrumView::update_frequency_window()
+void SpectrumView::update_viewport()
 {
     const uint8_t available = available_peak_count();
     visible_peak_count_ = std::min(requested_peak_count_, available);
+    SpectrumFrequencyWindow candidate_frequency_window{};
+    float candidate_amplitude_max_volts = 0.0F;
     if (visible_peak_count_ > 0U
         && choose_spectrum_frequency_window(
-            frame_, visible_peak_count_, &frequency_window_)) {
+            frame_, visible_peak_count_, &candidate_frequency_window)
+        && choose_spectrum_viewport_amplitude_max(
+            frame_, visible_peak_count_,
+            &candidate_amplitude_max_volts)) {
+        frequency_window_ = candidate_frequency_window;
+        visible_amplitude_max_volts_ = candidate_amplitude_max_volts;
         return;
     }
     visible_peak_count_ = 0U;
+    visible_amplitude_max_volts_ =
+        isfinite(frame_.amplitude_max_volts)
+                && frame_.amplitude_max_volts > 0.0F
+            ? frame_.amplitude_max_volts
+            : kSpectrumDisplayMinimumAmplitudeVolts;
     frequency_window_ = {
         .minimum_hz = isfinite(frame_.frequency_min_hz)
                               ? frame_.frequency_min_hz
@@ -340,7 +371,9 @@ void SpectrumView::update_frequency_window()
 void SpectrumView::render_frame()
 {
     if (canvas_ == nullptr || canvas_pixels_ == nullptr || frame_.column_count < 2U
-        || frame_.frequency_max_hz <= frame_.frequency_min_hz || frame_.amplitude_max_volts <= 0.0F) {
+        || frame_.frequency_max_hz <= frame_.frequency_min_hz
+        || !isfinite(visible_amplitude_max_volts_)
+        || !(visible_amplitude_max_volts_ > 0.0F)) {
         return;
     }
 
@@ -377,15 +410,14 @@ void SpectrumView::render_frame()
         }
     }
 
-    // G-problem inputs contain one fundamental and one or two harmonics. Draw
-    // only those validated semantic lines: rendering all Hann-window bins
-    // would turn leakage skirts into apparent extra components. Lines are
-    // drawn after the axis so an exactly 5 mVpk component keeps its base.
+    // Draw only validated semantic lines: rendering all Hann-window bins would
+    // turn leakage skirts into apparent extra components. Lines are drawn
+    // after the axis so an exactly 5 mVpk component keeps its base.
     for (size_t index = 0; index < visible_peak_count_; ++index) {
         const SpectralPeak &peak = frame_.peaks[index];
         SpectrumCanvasPoint point{};
         if (!map_spectral_peak_to_canvas(
-                frame_, frequency_window_, peak,
+                frame_, frequency_window_, visible_amplitude_max_volts_, peak,
                 static_cast<size_t>(canvas_width_),
                 static_cast<size_t>(canvas_height_), &point)) {
             continue;

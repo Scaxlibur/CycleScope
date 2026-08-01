@@ -65,7 +65,9 @@ CONFIG_LV_FONT_MONTSERRAT_22=y
 CONFIG_LV_USE_FONT_COMPRESSED=y
 CONFIG_LV_TXT_BREAK_CHARS=" ,.;:-_"
 CONFIG_LV_USE_SYSMON=y
-CONFIG_LV_USE_PERF_MONITOR=y
+# Keep LVGL system-monitor support available for diagnostics, but never place
+# its FPS/CPU performance label over the production instrument UI.
+CONFIG_LV_USE_PERF_MONITOR=n
 CONFIG_LV_USE_IMGFONT=y
 CONFIG_LV_USE_DEMO_BENCHMARK=y
 CONFIG_LV_USE_DEMO_RENDER=y

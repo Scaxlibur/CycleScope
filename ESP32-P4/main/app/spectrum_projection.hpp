@@ -14,6 +14,8 @@ inline constexpr float kSpectrumDisplayAmplitudeUpshiftTrigger = 1.15F;
 inline constexpr float kSpectrumDisplayAmplitudeDownshiftHeadroom = 1.25F;
 inline constexpr float kSpectrumViewportPaddingFraction = 0.10F;
 inline constexpr float kSpectrumViewportMinimumSpanHz = 20000.0F;
+inline constexpr float kSpectrumViewportPeakHeightFraction = 0.80F;
+inline constexpr uint32_t kSpectrumViewportVerticalDivisions = 5U;
 inline constexpr int32_t kSpectrumFundamentalLineWidthPixels = 5;
 inline constexpr int32_t kSpectrumHarmonicLineWidthPixels = 3;
 
@@ -44,6 +46,15 @@ bool choose_spectrum_amplitude_max(const SpectrumDisplayFrame &frame,
                                    float previous_amplitude_max_volts,
                                    float *amplitude_max_volts);
 
+// Derive the UI-only vertical viewport from the currently selected leading
+// semantic lines. The strongest visible line occupies exactly 80% of the
+// continuous amplitude range; analysis-side quantized scale/hysteresis state
+// in SpectrumDisplayFrame remains unchanged.
+bool choose_spectrum_viewport_amplitude_max(
+    const SpectrumDisplayFrame &frame,
+    size_t visible_peak_count,
+    float *amplitude_max_volts);
+
 // Max-pool every source column assigned to one canvas column. Both peak and
 // RMS envelopes are preserved when 640 source columns are drawn on 638 pixels.
 bool aggregate_spectrum_column(const SpectrumDisplayFrame &frame,
@@ -71,6 +82,16 @@ bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
 // metadata carried by SpectrumDisplayFrame.
 bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
                                  const SpectrumFrequencyWindow &window,
+                                 const SpectralPeak &peak,
+                                 size_t canvas_width,
+                                 size_t canvas_height,
+                                 SpectrumCanvasPoint *result);
+
+// Map against both a UI-selected frequency viewport and an explicit UI-only
+// amplitude maximum without copying or mutating the full display frame.
+bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
+                                 const SpectrumFrequencyWindow &window,
+                                 float amplitude_max_volts,
                                  const SpectralPeak &peak,
                                  size_t canvas_width,
                                  size_t canvas_height,
