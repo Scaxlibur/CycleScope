@@ -12,8 +12,15 @@ inline constexpr float kSpectrumDisplayMinimumAmplitudeVolts = 0.020F;
 inline constexpr float kSpectrumDisplayAmplitudeHeadroom = 1.20F;
 inline constexpr float kSpectrumDisplayAmplitudeUpshiftTrigger = 1.15F;
 inline constexpr float kSpectrumDisplayAmplitudeDownshiftHeadroom = 1.25F;
+inline constexpr float kSpectrumViewportPaddingFraction = 0.10F;
+inline constexpr float kSpectrumViewportMinimumSpanHz = 20000.0F;
 inline constexpr int32_t kSpectrumFundamentalLineWidthPixels = 5;
 inline constexpr int32_t kSpectrumHarmonicLineWidthPixels = 3;
+
+struct SpectrumFrequencyWindow {
+    float minimum_hz;
+    float maximum_hz;
+};
 
 struct SpectrumCanvasPoint {
     int32_t x;
@@ -44,10 +51,26 @@ bool aggregate_spectrum_column(const SpectrumDisplayFrame &frame,
                                size_t output_column_count,
                                SpectrumColumn *result);
 
+// Fit the selected leading semantic lines into a frequency viewport with
+// symmetric headroom. A single line receives a minimum useful span. The
+// viewport is shifted, then clamped, to remain inside the projected band.
+bool choose_spectrum_frequency_window(const SpectrumDisplayFrame &frame,
+                                      size_t visible_peak_count,
+                                      SpectrumFrequencyWindow *window);
+
 // Pure frequency/amplitude-to-pixel mapping shared by the renderer and host
 // acceptance fixture. A semantic peak within half one FFT bin of an axis edge
 // is clamped to that edge; farther out-of-band peaks are rejected.
 bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
+                                 const SpectralPeak &peak,
+                                 size_t canvas_width,
+                                 size_t canvas_height,
+                                 SpectrumCanvasPoint *result);
+
+// Map against a UI-selected viewport without changing the full-band column
+// metadata carried by SpectrumDisplayFrame.
+bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
+                                 const SpectrumFrequencyWindow &window,
                                  const SpectralPeak &peak,
                                  size_t canvas_width,
                                  size_t canvas_height,

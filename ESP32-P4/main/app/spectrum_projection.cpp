@@ -204,7 +204,85 @@ bool aggregate_spectrum_column(const SpectrumDisplayFrame &frame,
     return true;
 }
 
+bool choose_spectrum_frequency_window(const SpectrumDisplayFrame &frame,
+                                      size_t visible_peak_count,
+                                      SpectrumFrequencyWindow *window)
+{
+    if (window == nullptr) {
+        return false;
+    }
+    *window = {};
+    if (visible_peak_count == 0U
+        || visible_peak_count > static_cast<size_t>(frame.peak_count)
+        || frame.peak_count > frame.peaks.size()
+        || !std::isfinite(frame.frequency_min_hz)
+        || !std::isfinite(frame.frequency_max_hz)
+        || frame.frequency_max_hz <= frame.frequency_min_hz) {
+        return false;
+    }
+
+    float selected_minimum_hz = frame.frequency_max_hz;
+    float selected_maximum_hz = frame.frequency_min_hz;
+    for (size_t index = 0; index < visible_peak_count; ++index) {
+        const float frequency_hz = frame.peaks[index].frequency_hz;
+        if (!std::isfinite(frequency_hz)
+            || !std::isfinite(frame.bin_width_hz)
+            || !(frame.bin_width_hz > 0.0F)
+            || frequency_hz
+                   < frame.frequency_min_hz - frame.bin_width_hz * 0.5F
+            || frequency_hz
+                   > frame.frequency_max_hz + frame.bin_width_hz * 0.5F) {
+            return false;
+        }
+        const float visible_frequency_hz = std::clamp(
+            frequency_hz, frame.frequency_min_hz,
+            frame.frequency_max_hz);
+        selected_minimum_hz =
+            std::min(selected_minimum_hz, visible_frequency_hz);
+        selected_maximum_hz =
+            std::max(selected_maximum_hz, visible_frequency_hz);
+    }
+
+    const float full_span_hz =
+        frame.frequency_max_hz - frame.frequency_min_hz;
+    const float selected_span_hz =
+        selected_maximum_hz - selected_minimum_hz;
+    const float padded_span_hz =
+        selected_span_hz * (1.0F + 2.0F * kSpectrumViewportPaddingFraction);
+    const float viewport_span_hz = std::min(
+        full_span_hz,
+        std::max(kSpectrumViewportMinimumSpanHz, padded_span_hz));
+    const float center_hz =
+        (selected_minimum_hz + selected_maximum_hz) * 0.5F;
+    float minimum_hz = center_hz - viewport_span_hz * 0.5F;
+    float maximum_hz = minimum_hz + viewport_span_hz;
+
+    if (minimum_hz < frame.frequency_min_hz) {
+        maximum_hz += frame.frequency_min_hz - minimum_hz;
+        minimum_hz = frame.frequency_min_hz;
+    }
+    if (maximum_hz > frame.frequency_max_hz) {
+        minimum_hz -= maximum_hz - frame.frequency_max_hz;
+        maximum_hz = frame.frequency_max_hz;
+    }
+    minimum_hz = std::max(minimum_hz, frame.frequency_min_hz);
+    maximum_hz = std::min(maximum_hz, frame.frequency_max_hz);
+    if (!std::isfinite(minimum_hz) || !std::isfinite(maximum_hz)
+        || maximum_hz <= minimum_hz
+        || selected_minimum_hz < minimum_hz
+        || selected_maximum_hz > maximum_hz) {
+        return false;
+    }
+
+    *window = {
+        .minimum_hz = minimum_hz,
+        .maximum_hz = maximum_hz,
+    };
+    return true;
+}
+
 bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
+                                 const SpectrumFrequencyWindow &window,
                                  const SpectralPeak &peak,
                                  size_t canvas_width,
                                  size_t canvas_height,
@@ -215,30 +293,30 @@ bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
                > static_cast<size_t>(std::numeric_limits<int32_t>::max())
         || canvas_height
                > static_cast<size_t>(std::numeric_limits<int32_t>::max())
-        || !std::isfinite(frame.frequency_min_hz)
-        || !std::isfinite(frame.frequency_max_hz)
+        || !std::isfinite(window.minimum_hz)
+        || !std::isfinite(window.maximum_hz)
         || !std::isfinite(frame.bin_width_hz)
         || !std::isfinite(frame.amplitude_max_volts)
         || !std::isfinite(peak.frequency_hz)
         || !std::isfinite(peak.amplitude_volts_peak)
-        || frame.frequency_max_hz <= frame.frequency_min_hz
+        || window.maximum_hz <= window.minimum_hz
         || !(frame.bin_width_hz > 0.0F)
         || !(frame.amplitude_max_volts > 0.0F)
         || peak.frequency_hz
-               < frame.frequency_min_hz - frame.bin_width_hz * 0.5F
+               < window.minimum_hz - frame.bin_width_hz * 0.5F
         || peak.frequency_hz
-               > frame.frequency_max_hz + frame.bin_width_hz * 0.5F) {
+               > window.maximum_hz + frame.bin_width_hz * 0.5F) {
         return false;
     }
 
     const double visible_frequency_hz = std::clamp(
         static_cast<double>(peak.frequency_hz),
-        static_cast<double>(frame.frequency_min_hz),
-        static_cast<double>(frame.frequency_max_hz));
+        static_cast<double>(window.minimum_hz),
+        static_cast<double>(window.maximum_hz));
     const double normalized_frequency =
-        (visible_frequency_hz - static_cast<double>(frame.frequency_min_hz))
-        / (static_cast<double>(frame.frequency_max_hz)
-           - static_cast<double>(frame.frequency_min_hz));
+        (visible_frequency_hz - static_cast<double>(window.minimum_hz))
+        / (static_cast<double>(window.maximum_hz)
+           - static_cast<double>(window.minimum_hz));
     const double normalized_amplitude = std::clamp(
         static_cast<double>(peak.amplitude_volts_peak)
             / static_cast<double>(frame.amplitude_max_volts),
@@ -250,6 +328,20 @@ bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
                     normalized_amplitude
                     * static_cast<double>(canvas_height - 1U));
     return true;
+}
+
+bool map_spectral_peak_to_canvas(const SpectrumDisplayFrame &frame,
+                                 const SpectralPeak &peak,
+                                 size_t canvas_width,
+                                 size_t canvas_height,
+                                 SpectrumCanvasPoint *result)
+{
+    const SpectrumFrequencyWindow window{
+        .minimum_hz = frame.frequency_min_hz,
+        .maximum_hz = frame.frequency_max_hz,
+    };
+    return map_spectral_peak_to_canvas(
+        frame, window, peak, canvas_width, canvas_height, result);
 }
 
 }  // namespace cyclescope

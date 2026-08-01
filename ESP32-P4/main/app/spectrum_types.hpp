@@ -6,6 +6,7 @@
 namespace cyclescope {
 
 inline constexpr size_t kMaximumSpectralLines = 3;
+inline constexpr size_t kMaximumDisplayedSpectralLines = 8;
 
 struct SpectralLine {
     float frequency_hz = 0.0F;

@@ -278,8 +278,15 @@ esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count,
     const size_t candidate_count = collect_peak_candidates(bin_width_hz, &candidates);
     std::array<size_t, kMaximumSpectralLines> selected_indices{};
     std::array<uint16_t, kMaximumSpectralLines> harmonic_orders{};
+    std::array<size_t, kMaximumDisplayedSpectralLines> displayed_indices{};
+    std::array<uint16_t, kMaximumDisplayedSpectralLines>
+        displayed_harmonic_orders{};
+    size_t displayed_count = 0U;
     const size_t selected_count =
-        select_harmonic_family(candidates, candidate_count, bin_width_hz, &selected_indices, &harmonic_orders);
+        select_harmonic_family(
+            candidates, candidate_count, bin_width_hz, &selected_indices,
+            &harmonic_orders, &displayed_indices,
+            &displayed_harmonic_orders, &displayed_count);
 
     std::array<float, kMaximumSpectralLines> refined_frequencies{};
     float weighted_fundamental_sum = 0.0F;
@@ -317,9 +324,40 @@ esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count,
         if (selected_count > 0U && harmonic_orders[0] == 1U) {
             fundamental_phase_radians = components[0].phase_radians;
         }
+
+        for (size_t line = 0; line < displayed_count; ++line) {
+            const uint16_t harmonic_order = displayed_harmonic_orders[line];
+            const float component_frequency =
+                fundamental_hz * static_cast<float>(harmonic_order);
+            float component_amplitude = 0.0F;
+            bool copied_formal_line = false;
+            for (size_t formal_line = 0; formal_line < selected_count;
+                 ++formal_line) {
+                if (harmonic_orders[formal_line] == harmonic_order) {
+                    component_amplitude =
+                        result->spectral_lines[formal_line]
+                            .amplitude_volts_peak;
+                    copied_formal_line = true;
+                    break;
+                }
+            }
+            if (!copied_formal_line) {
+                component_amplitude = project_at_frequency(
+                    samples, volts_per_lsb, offset_volts, dc_offset_volts,
+                    sample_rate_hz, component_frequency)
+                                          .amplitude_volts_peak;
+            }
+            result->displayed_spectral_lines[line] = {
+                .frequency_hz = component_frequency,
+                .amplitude_volts_peak = component_amplitude,
+                .harmonic_order = harmonic_order,
+            };
+        }
     }
 
     result->spectral_line_count = static_cast<uint32_t>(selected_count);
+    result->displayed_spectral_line_count =
+        static_cast<uint32_t>(displayed_count);
     result->fundamental_hz = fundamental_hz;
     result->fundamental_phase_radians = fundamental_phase_radians;
     result->dc_offset_volts = dc_offset_volts;
@@ -421,8 +459,15 @@ size_t FftProcessor8192::select_harmonic_family(
     const std::array<PeakCandidate, kMaximumCandidates> &candidates, size_t candidate_count,
     float bin_width_hz,
     std::array<size_t, kMaximumSpectralLines> *selected_indices,
-    std::array<uint16_t, kMaximumSpectralLines> *harmonic_orders) const
+    std::array<uint16_t, kMaximumSpectralLines> *harmonic_orders,
+    std::array<size_t, kMaximumDisplayedSpectralLines> *displayed_indices,
+    std::array<uint16_t, kMaximumDisplayedSpectralLines> *displayed_harmonic_orders,
+    size_t *displayed_count) const
 {
+    if (displayed_count == nullptr) {
+        return 0;
+    }
+    *displayed_count = 0U;
     if (candidate_count == 0) {
         return 0;
     }
@@ -484,38 +529,54 @@ size_t FftProcessor8192::select_harmonic_family(
         }
     }
 
-    (*selected_indices)[0] = best_base;
-    (*harmonic_orders)[0] = 1;
-    size_t selected_count = 1;
-    for (uint16_t harmonic = 2; harmonic <= kMaximumHarmonicOrder; ++harmonic) {
-        const int match = best_matches[harmonic];
-        if (match < 0) {
-            continue;
-        }
-        if (selected_count < kMaximumSpectralLines) {
-            (*selected_indices)[selected_count] = static_cast<size_t>(match);
-            (*harmonic_orders)[selected_count] = harmonic;
-            ++selected_count;
-            continue;
-        }
-        size_t weakest = 1;
-        for (size_t line = 2; line < selected_count; ++line) {
-            if (candidates[(*selected_indices)[line]].amplitude_volts_peak
-                < candidates[(*selected_indices)[weakest]].amplitude_volts_peak) {
-                weakest = line;
+    const auto fill_strongest = [&](size_t capacity, size_t *indices,
+                                    uint16_t *orders) {
+        indices[0] = best_base;
+        orders[0] = 1U;
+        size_t count = 1U;
+        for (uint16_t harmonic = 2U;
+             harmonic <= kMaximumHarmonicOrder; ++harmonic) {
+            const int match = best_matches[harmonic];
+            if (match < 0) {
+                continue;
+            }
+            if (count < capacity) {
+                indices[count] = static_cast<size_t>(match);
+                orders[count] = harmonic;
+                ++count;
+                continue;
+            }
+            size_t weakest = 1U;
+            for (size_t line = 2U; line < count; ++line) {
+                if (candidates[indices[line]].amplitude_volts_peak
+                    < candidates[indices[weakest]].amplitude_volts_peak) {
+                    weakest = line;
+                }
+            }
+            if (candidates[static_cast<size_t>(match)]
+                    .amplitude_volts_peak
+                > candidates[indices[weakest]].amplitude_volts_peak) {
+                indices[weakest] = static_cast<size_t>(match);
+                orders[weakest] = harmonic;
             }
         }
-        if (candidates[static_cast<size_t>(match)].amplitude_volts_peak
-            > candidates[(*selected_indices)[weakest]].amplitude_volts_peak) {
-            (*selected_indices)[weakest] = static_cast<size_t>(match);
-            (*harmonic_orders)[weakest] = harmonic;
+        for (size_t left = 1U; left < count; ++left) {
+            for (size_t right = left + 1U; right < count; ++right) {
+                if (orders[right] < orders[left]) {
+                    std::swap(orders[left], orders[right]);
+                    std::swap(indices[left], indices[right]);
+                }
+            }
         }
-    }
+        return count;
+    };
 
-    if (selected_count == kMaximumSpectralLines && (*harmonic_orders)[1] > (*harmonic_orders)[2]) {
-        std::swap((*harmonic_orders)[1], (*harmonic_orders)[2]);
-        std::swap((*selected_indices)[1], (*selected_indices)[2]);
-    }
+    const size_t selected_count = fill_strongest(
+        selected_indices->size(), selected_indices->data(),
+        harmonic_orders->data());
+    *displayed_count = fill_strongest(
+        displayed_indices->size(), displayed_indices->data(),
+        displayed_harmonic_orders->data());
     return selected_count;
 }
 

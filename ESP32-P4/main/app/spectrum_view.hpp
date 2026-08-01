@@ -7,6 +7,7 @@
 
 #include "spectrum_frame.hpp"
 #include "spectrum_model.hpp"
+#include "spectrum_projection.hpp"
 
 namespace cyclescope {
 
@@ -25,9 +26,15 @@ public:
     bool visible() const;
     void set_visible(bool visible);
     void set_frame(const SpectrumDisplayFrame &frame);
+    bool set_visible_peak_count(uint8_t count);
+    uint8_t visible_peak_count() const;
+    uint8_t available_peak_count() const;
+    float visible_frequency_minimum_hz() const;
+    float visible_frequency_maximum_hz() const;
 
 private:
     void initialize_from_model(const SpectrumModel &model);
+    void update_frequency_window();
     void render_frame();
     void update_axis_labels();
     void draw_vertical_line(int32_t x, int32_t y1, int32_t y2, uint16_t color, int32_t line_width = 1);
@@ -41,6 +48,13 @@ private:
     bool visible_ = false;
     std::array<lv_obj_t *, 8> axis_labels_{};
     SpectrumDisplayFrame frame_{};
+    SpectrumFrequencyWindow frequency_window_{
+        .minimum_hz = 0.0F,
+        .maximum_hz = kSpectrumDisplayMaximumHz,
+    };
+    uint8_t requested_peak_count_ =
+        static_cast<uint8_t>(kMaximumSpectralLines);
+    uint8_t visible_peak_count_ = 0;
 };
 
 }  // namespace cyclescope

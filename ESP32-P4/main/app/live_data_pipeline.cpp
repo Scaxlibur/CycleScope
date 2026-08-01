@@ -720,14 +720,15 @@ LiveDataPipeline::AnalysisOutcome LiveDataPipeline::analyze(
     spectrum.fft_size =
         static_cast<uint16_t>(FftProcessor8192::kSampleCount);
     spectrum.peak_count = static_cast<uint8_t>(
-        std::min<uint32_t>(fft_result.spectral_line_count,
-                           kMaximumSpectralPeaks));
+        std::min<uint32_t>(fft_result.displayed_spectral_line_count,
+                           std::min<size_t>(kMaximumDisplayedSpectralLines,
+                                            kMaximumSpectralPeaks)));
     spectrum.source_buffer_index = 0xFF;
 
     for (size_t peak_index = 0; peak_index < spectrum.peak_count;
          ++peak_index) {
         const SpectralLine &source =
-            fft_result.spectral_lines[peak_index];
+            fft_result.displayed_spectral_lines[peak_index];
         const long rounded_bin =
             std::lround(source.frequency_hz / fft_result.bin_width_hz);
         const size_t bin = std::min<size_t>(
@@ -784,6 +785,7 @@ bool LiveDataPipeline::validate_self_test(
 {
     if (!result.valid
         || result.spectral_line_count != kMaximumSpectralLines
+        || result.displayed_spectral_line_count != kMaximumSpectralLines
         || std::fabs(result.fundamental_hz - kTestFundamentalHz) > 1000.0F
         || !phase_matches(result.fundamental_phase_radians,
                           kTestPhasesRadians[0])
@@ -798,8 +800,15 @@ bool LiveDataPipeline::validate_self_test(
     for (size_t line = 0; line < kMaximumSpectralLines; ++line) {
         if (result.spectral_lines[line].harmonic_order
                 != kTestHarmonics[line]
+            || result.displayed_spectral_lines[line].harmonic_order
+                   != kTestHarmonics[line]
             || std::fabs(
                    result.spectral_lines[line].amplitude_volts_peak
+                   - kTestAmplitudesVolts[line])
+                   > 0.005F
+            || std::fabs(
+                   result.displayed_spectral_lines[line]
+                           .amplitude_volts_peak
                    - kTestAmplitudesVolts[line])
                    > 0.005F) {
             return false;
@@ -818,6 +827,8 @@ bool LiveDataPipeline::validate_exact_weak_self_test(
 {
     if (!result.valid
         || result.spectral_line_count != kExactWeakHarmonics.size()
+        || result.displayed_spectral_line_count
+               != kExactWeakHarmonics.size()
         || std::fabs(
                result.fundamental_hz
                - static_cast<float>(kExactWeakFundamentalHz))
@@ -839,8 +850,15 @@ bool LiveDataPipeline::validate_exact_weak_self_test(
     for (size_t line = 0; line < kExactWeakHarmonics.size(); ++line) {
         if (result.spectral_lines[line].harmonic_order
                 != kExactWeakHarmonics[line]
+            || result.displayed_spectral_lines[line].harmonic_order
+                   != kExactWeakHarmonics[line]
             || std::fabs(
                    result.spectral_lines[line].amplitude_volts_peak
+                   - static_cast<float>(kExactWeakAmplitudesVolts[line]))
+                   > 0.001F
+            || std::fabs(
+                   result.displayed_spectral_lines[line]
+                           .amplitude_volts_peak
                    - static_cast<float>(kExactWeakAmplitudesVolts[line]))
                    > 0.001F) {
             return false;

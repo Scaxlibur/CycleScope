@@ -207,6 +207,12 @@ void SpectrumView::destroy()
     canvas_height_ = 0;
     visible_ = false;
     frame_ = {};
+    frequency_window_ = {
+        .minimum_hz = 0.0F,
+        .maximum_hz = kSpectrumDisplayMaximumHz,
+    };
+    requested_peak_count_ = static_cast<uint8_t>(kMaximumSpectralLines);
+    visible_peak_count_ = 0U;
     if (had_resources) {
 #if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST \
     || CONFIG_CYCLESCOPE_DISPLAY_STARTUP_FAULT_TEST
@@ -250,12 +256,48 @@ void SpectrumView::set_frame(const SpectrumDisplayFrame &frame)
     if (frame_.column_count > kSpectrumDisplayColumns) {
         frame_.column_count = static_cast<uint16_t>(kSpectrumDisplayColumns);
     }
-    if (frame_.peak_count > kMaximumSpectralPeaks) {
-        frame_.peak_count = static_cast<uint8_t>(kMaximumSpectralPeaks);
+    if (frame_.peak_count > kMaximumDisplayedSpectralLines) {
+        frame_.peak_count =
+            static_cast<uint8_t>(kMaximumDisplayedSpectralLines);
     }
+    update_frequency_window();
     if (visible_) {
         render_frame();
     }
+}
+
+bool SpectrumView::set_visible_peak_count(uint8_t count)
+{
+    if (count == 0U || count > kMaximumDisplayedSpectralLines) {
+        return false;
+    }
+    requested_peak_count_ = count;
+    update_frequency_window();
+    if (visible_) {
+        render_frame();
+    }
+    return true;
+}
+
+uint8_t SpectrumView::visible_peak_count() const
+{
+    return visible_peak_count_;
+}
+
+uint8_t SpectrumView::available_peak_count() const
+{
+    return static_cast<uint8_t>(
+        std::min<size_t>(frame_.peak_count, kMaximumDisplayedSpectralLines));
+}
+
+float SpectrumView::visible_frequency_minimum_hz() const
+{
+    return frequency_window_.minimum_hz;
+}
+
+float SpectrumView::visible_frequency_maximum_hz() const
+{
+    return frequency_window_.maximum_hz;
 }
 
 void SpectrumView::initialize_from_model(const SpectrumModel &model)
@@ -270,6 +312,29 @@ void SpectrumView::initialize_from_model(const SpectrumModel &model)
     frame_.bin_width_hz = model.bin_width_hz();
     frame_.amplitude_max_volts =
         kSpectrumDisplayMinimumAmplitudeVolts;
+    update_frequency_window();
+}
+
+void SpectrumView::update_frequency_window()
+{
+    const uint8_t available = available_peak_count();
+    visible_peak_count_ = std::min(requested_peak_count_, available);
+    if (visible_peak_count_ > 0U
+        && choose_spectrum_frequency_window(
+            frame_, visible_peak_count_, &frequency_window_)) {
+        return;
+    }
+    visible_peak_count_ = 0U;
+    frequency_window_ = {
+        .minimum_hz = isfinite(frame_.frequency_min_hz)
+                              ? frame_.frequency_min_hz
+                              : 0.0F,
+        .maximum_hz =
+            isfinite(frame_.frequency_max_hz)
+                    && frame_.frequency_max_hz > frame_.frequency_min_hz
+                ? frame_.frequency_max_hz
+                : kSpectrumDisplayMaximumHz,
+    };
 }
 
 void SpectrumView::render_frame()
@@ -290,13 +355,17 @@ void SpectrumView::render_frame()
         }
     }
 
-    const float frequency_span_hz = frame_.frequency_max_hz - frame_.frequency_min_hz;
+    const float frequency_span_hz =
+        frequency_window_.maximum_hz - frequency_window_.minimum_hz;
     const float tick_step_hz = nice_tick_step(frequency_span_hz);
-    const float first_tick_hz = ceilf(frame_.frequency_min_hz / tick_step_hz) * tick_step_hz;
-    for (float tick_hz = first_tick_hz; tick_hz <= frame_.frequency_max_hz + tick_step_hz * 0.001F;
+    const float first_tick_hz =
+        ceilf(frequency_window_.minimum_hz / tick_step_hz) * tick_step_hz;
+    for (float tick_hz = first_tick_hz;
+         tick_hz <= frequency_window_.maximum_hz + tick_step_hz * 0.001F;
          tick_hz += tick_step_hz) {
         const int32_t x = static_cast<int32_t>(
-            (tick_hz - frame_.frequency_min_hz) * static_cast<float>(canvas_width_ - 1) / frequency_span_hz);
+            (tick_hz - frequency_window_.minimum_hz)
+            * static_cast<float>(canvas_width_ - 1) / frequency_span_hz);
         draw_vertical_line(x, 0, canvas_height_ - 1, grid);
     }
 
@@ -312,11 +381,12 @@ void SpectrumView::render_frame()
     // only those validated semantic lines: rendering all Hann-window bins
     // would turn leakage skirts into apparent extra components. Lines are
     // drawn after the axis so an exactly 5 mVpk component keeps its base.
-    for (size_t index = 0; index < frame_.peak_count; ++index) {
+    for (size_t index = 0; index < visible_peak_count_; ++index) {
         const SpectralPeak &peak = frame_.peaks[index];
         SpectrumCanvasPoint point{};
         if (!map_spectral_peak_to_canvas(
-                frame_, peak, static_cast<size_t>(canvas_width_),
+                frame_, frequency_window_, peak,
+                static_cast<size_t>(canvas_width_),
                 static_cast<size_t>(canvas_height_), &point)) {
             continue;
         }
@@ -337,19 +407,23 @@ void SpectrumView::update_axis_labels()
         lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
     }
 
-    const float frequency_span_hz = frame_.frequency_max_hz - frame_.frequency_min_hz;
+    const float frequency_span_hz =
+        frequency_window_.maximum_hz - frequency_window_.minimum_hz;
     const float tick_step_hz = nice_tick_step(frequency_span_hz);
-    const float first_tick_hz = ceilf(frame_.frequency_min_hz / tick_step_hz) * tick_step_hz;
+    const float first_tick_hz =
+        ceilf(frequency_window_.minimum_hz / tick_step_hz) * tick_step_hz;
     size_t label_index = 0;
     for (float tick_hz = first_tick_hz;
-         tick_hz <= frame_.frequency_max_hz + tick_step_hz * 0.001F && label_index < axis_labels_.size();
+         tick_hz <= frequency_window_.maximum_hz + tick_step_hz * 0.001F
+         && label_index < axis_labels_.size();
          tick_hz += tick_step_hz, ++label_index) {
         lv_obj_t *label = axis_labels_[label_index];
         char text[16];
         format_frequency(text, sizeof(text), tick_hz);
         lv_label_set_text(label, text);
         int32_t x = static_cast<int32_t>(
-                        (tick_hz - frame_.frequency_min_hz) * static_cast<float>(canvas_width_ - 1)
+                        (tick_hz - frequency_window_.minimum_hz)
+                        * static_cast<float>(canvas_width_ - 1)
                         / frequency_span_hz)
                     - kAxisLabelWidth / 2;
         if (x < 0) {

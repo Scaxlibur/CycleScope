@@ -1,5 +1,6 @@
 #include "instrument_app.hpp"
 
+#include <algorithm>
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -85,14 +86,21 @@ bool metric_text_contract_passes(int32_t spectrum_legend_width)
         }
     }
     return text_fits(
-        "500.00k 250mVpk  •  500.00k 250mVpk  •  500.00k 250mVpk",
+        "500.00k 250mVpk  •  500.00k 250mVpk  •  500.00k 250mVpk  •  +5",
         &lv_font_montserrat_12, spectrum_legend_width);
 }
 
-void format_peak_summary(char *buffer, size_t buffer_size, const SpectrumDisplayFrame &spectrum)
+void format_peak_summary(char *buffer, size_t buffer_size,
+                         const SpectrumDisplayFrame &spectrum,
+                         size_t visible_peak_count)
 {
-    if (spectrum.peak_count >= 3U) {
-        const unsigned extra_peaks = spectrum.peak_count > 3U ? spectrum.peak_count - 3U : 0U;
+    const size_t peak_count = std::min(
+        visible_peak_count,
+        std::min(static_cast<size_t>(spectrum.peak_count),
+                 spectrum.peaks.size()));
+    if (peak_count >= 3U) {
+        const unsigned extra_peaks =
+            peak_count > 3U ? static_cast<unsigned>(peak_count - 3U) : 0U;
         if (extra_peaks > 0U) {
             snprintf(buffer, buffer_size, "%.2fk %.0fmVpk  •  %.2fk %.0fmVpk  •  %.2fk %.0fmVpk  •  +%u",
                      static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
@@ -110,13 +118,13 @@ void format_peak_summary(char *buffer, size_t buffer_size, const SpectrumDisplay
                      static_cast<double>(spectrum.peaks[2].frequency_hz / 1000.0F),
                      static_cast<double>(spectrum.peaks[2].amplitude_volts_peak * 1000.0F));
         }
-    } else if (spectrum.peak_count == 2U) {
+    } else if (peak_count == 2U) {
         snprintf(buffer, buffer_size, "%.2fk %.0fmVpk  •  %.2fk %.0fmVpk",
                  static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
                  static_cast<double>(spectrum.peaks[0].amplitude_volts_peak * 1000.0F),
                  static_cast<double>(spectrum.peaks[1].frequency_hz / 1000.0F),
                  static_cast<double>(spectrum.peaks[1].amplitude_volts_peak * 1000.0F));
-    } else if (spectrum.peak_count == 1U) {
+    } else if (peak_count == 1U) {
         snprintf(buffer, buffer_size, "%.2fk %.0fmVpk",
                  static_cast<double>(spectrum.peaks[0].frequency_hz / 1000.0F),
                  static_cast<double>(spectrum.peaks[0].amplitude_volts_peak * 1000.0F));
@@ -315,6 +323,23 @@ bool InstrumentApp::build_layout()
     lv_obj_add_event_cb(one_period_button_, on_one_period_clicked, LV_EVENT_CLICKED, this);
     lv_obj_add_event_cb(three_period_button_, on_three_periods_clicked, LV_EVENT_CLICKED, this);
 
+    spectrum_less_button_ =
+        create_period_button(plot_card, "-", plot_width - 224);
+    spectrum_more_button_ =
+        create_period_button(plot_card, "+", plot_width - 68);
+    spectrum_line_count_label_ = create_text(
+        plot_card, "LINES --/8", &lv_font_montserrat_12, kAccent);
+    lv_obj_set_pos(spectrum_line_count_label_, plot_width - 164, 20);
+    lv_obj_set_width(spectrum_line_count_label_, 92);
+    lv_obj_set_style_text_align(
+        spectrum_line_count_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_add_event_cb(
+        spectrum_less_button_, on_spectrum_less_clicked,
+        LV_EVENT_CLICKED, this);
+    lv_obj_add_event_cb(
+        spectrum_more_button_, on_spectrum_more_clicked,
+        LV_EVENT_CLICKED, this);
+
     lv_obj_t *divider = lv_obj_create(plot_card);
     lv_obj_set_size(divider, plot_width - 36, 1);
     lv_obj_align(divider, LV_ALIGN_TOP_MID, 0, 48);
@@ -434,7 +459,11 @@ bool InstrumentApp::ui_start_resources_released() const
 {
     return ui_root_ == nullptr && time_button_ == nullptr
            && spectrum_button_ == nullptr && one_period_button_ == nullptr
-           && three_period_button_ == nullptr && mode_label_ == nullptr
+           && three_period_button_ == nullptr
+           && spectrum_less_button_ == nullptr
+           && spectrum_more_button_ == nullptr
+           && spectrum_line_count_label_ == nullptr
+           && mode_label_ == nullptr
            && plot_title_ == nullptr && plot_hint_ == nullptr
            && plot_subhint_ == nullptr && active_view_value_ == nullptr
            && vpp_value_ == nullptr && rms_value_ == nullptr
@@ -455,6 +484,9 @@ void InstrumentApp::clear_ui_object_pointers()
     spectrum_button_ = nullptr;
     one_period_button_ = nullptr;
     three_period_button_ = nullptr;
+    spectrum_less_button_ = nullptr;
+    spectrum_more_button_ = nullptr;
+    spectrum_line_count_label_ = nullptr;
     mode_label_ = nullptr;
     plot_title_ = nullptr;
     plot_hint_ = nullptr;
@@ -519,6 +551,10 @@ void InstrumentApp::select_view(View view)
     if (is_time) {
         lv_obj_remove_flag(one_period_button_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(three_period_button_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(spectrum_less_button_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(spectrum_more_button_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(
+            spectrum_line_count_label_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(plot_hint_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(plot_subhint_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
@@ -529,6 +565,10 @@ void InstrumentApp::select_view(View view)
     } else {
         lv_obj_add_flag(one_period_button_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(three_period_button_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(spectrum_less_button_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(spectrum_more_button_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(
+            spectrum_line_count_label_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(plot_hint_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(plot_subhint_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(timebase_label_, LV_OBJ_FLAG_HIDDEN);
@@ -536,6 +576,7 @@ void InstrumentApp::select_view(View view)
         if (live_frame_.generation != 0) {
             update_spectrum_metrics();
         }
+        update_spectrum_line_controls();
     }
     lv_label_set_text(active_view_value_, is_time ? "TIME" : "FFT");
 }
@@ -553,6 +594,67 @@ void InstrumentApp::select_periods(uint8_t periods)
                  "CSLP waveform set to %u period(s); envelope peak preservation: %s",
                  periods,
                  waveform_.peak_preservation_verified() ? "PASS" : "FAIL");
+    }
+}
+
+void InstrumentApp::adjust_spectrum_peak_count(int8_t delta)
+{
+    const uint8_t available = spectrum_view_.available_peak_count();
+    const uint8_t visible = spectrum_view_.visible_peak_count();
+    if (available == 0U || visible == 0U || delta == 0) {
+        return;
+    }
+
+    uint8_t target = visible;
+    if (delta < 0 && visible > 1U) {
+        target = static_cast<uint8_t>(visible - 1U);
+    } else if (delta > 0 && visible < available
+               && visible < kMaximumDisplayedSpectralLines) {
+        target = static_cast<uint8_t>(visible + 1U);
+    }
+    if (target == visible
+        || !spectrum_view_.set_visible_peak_count(target)) {
+        return;
+    }
+
+    update_spectrum_line_controls();
+    char summary[96];
+    format_peak_summary(
+        summary, sizeof(summary), live_frame_.spectrum,
+        spectrum_view_.visible_peak_count());
+    lv_label_set_text(spectrum_legend_, summary);
+    ESP_LOGI("cyclescope_ui",
+             "Spectrum display lines=%u/%u axis=%.2f..%.2fkHz",
+             spectrum_view_.visible_peak_count(), available,
+             static_cast<double>(
+                 spectrum_view_.visible_frequency_minimum_hz() / 1000.0F),
+             static_cast<double>(
+                 spectrum_view_.visible_frequency_maximum_hz() / 1000.0F));
+}
+
+void InstrumentApp::update_spectrum_line_controls()
+{
+    const uint8_t available = spectrum_view_.available_peak_count();
+    const uint8_t visible = spectrum_view_.visible_peak_count();
+    char label[24];
+    if (available == 0U || visible == 0U) {
+        snprintf(label, sizeof(label), "LINES --/%u",
+                 static_cast<unsigned>(kMaximumDisplayedSpectralLines));
+    } else {
+        snprintf(label, sizeof(label), "LINES %u/%u", visible, available);
+    }
+    lv_label_set_text(spectrum_line_count_label_, label);
+
+    if (visible <= 1U) {
+        lv_obj_add_state(spectrum_less_button_, LV_STATE_DISABLED);
+    } else {
+        lv_obj_remove_state(spectrum_less_button_, LV_STATE_DISABLED);
+    }
+    if (available == 0U || visible >= available
+        || visible >= kMaximumDisplayedSpectralLines) {
+        lv_obj_add_state(spectrum_more_button_, LV_STATE_DISABLED);
+    } else {
+        lv_obj_remove_state(spectrum_more_button_, LV_STATE_DISABLED);
     }
 }
 
@@ -727,6 +829,7 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
         || frame.frame_id != last_render_frame_id_) {
         waveform_.set_frame(frame.waveform);
         spectrum_view_.set_frame(frame.spectrum);
+        update_spectrum_line_controls();
         last_render_session_id_ = frame.session_id;
         last_render_frame_id_ = frame.frame_id;
         update_timebase_label();
@@ -788,7 +891,9 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
                  " frame=%" PRIu32,
                  frame.session_id, frame.frame_id);
     }
-    format_peak_summary(value, sizeof(value), frame.spectrum);
+    format_peak_summary(
+        value, sizeof(value), frame.spectrum,
+        spectrum_view_.visible_peak_count());
     lv_label_set_text(spectrum_legend_, value);
 
     if (now_ms - last_health_log_ms_ >= 30000U) {
@@ -834,6 +939,18 @@ void InstrumentApp::on_three_periods_clicked(lv_event_t *event)
 {
     auto *app = static_cast<InstrumentApp *>(lv_event_get_user_data(event));
     app->select_periods(3);
+}
+
+void InstrumentApp::on_spectrum_less_clicked(lv_event_t *event)
+{
+    auto *app = static_cast<InstrumentApp *>(lv_event_get_user_data(event));
+    app->adjust_spectrum_peak_count(-1);
+}
+
+void InstrumentApp::on_spectrum_more_clicked(lv_event_t *event)
+{
+    auto *app = static_cast<InstrumentApp *>(lv_event_get_user_data(event));
+    app->adjust_spectrum_peak_count(1);
 }
 
 lv_obj_t *InstrumentApp::create_period_button(lv_obj_t *parent, const char *text, int32_t x)

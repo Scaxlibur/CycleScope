@@ -33,6 +33,8 @@ private:
     static void on_spectrum_view_clicked(lv_event_t *event);
     static void on_one_period_clicked(lv_event_t *event);
     static void on_three_periods_clicked(lv_event_t *event);
+    static void on_spectrum_less_clicked(lv_event_t *event);
+    static void on_spectrum_more_clicked(lv_event_t *event);
     static void on_live_data_timer(lv_timer_t *timer);
 
     bool build_layout();
@@ -41,6 +43,8 @@ private:
     void clear_ui_object_pointers();
     void select_view(View view);
     void select_periods(uint8_t periods);
+    void adjust_spectrum_peak_count(int8_t delta);
+    void update_spectrum_line_controls();
     void update_time_metrics();
     void update_spectrum_metrics();
     void update_timebase_label();
@@ -62,6 +66,9 @@ private:
     lv_obj_t *spectrum_button_ = nullptr;
     lv_obj_t *one_period_button_ = nullptr;
     lv_obj_t *three_period_button_ = nullptr;
+    lv_obj_t *spectrum_less_button_ = nullptr;
+    lv_obj_t *spectrum_more_button_ = nullptr;
+    lv_obj_t *spectrum_line_count_label_ = nullptr;
     lv_obj_t *mode_label_ = nullptr;
     lv_obj_t *plot_title_ = nullptr;
     lv_obj_t *plot_hint_ = nullptr;

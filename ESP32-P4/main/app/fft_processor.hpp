@@ -11,7 +11,12 @@
 namespace cyclescope {
 
 struct FftAnalysisResult {
+    // The formal G-problem measurement remains one fundamental plus at most
+    // two harmonics. Extra harmonic-family lines are display-only and never
+    // alter the formal Vpp/RMS/F0 result.
     std::array<SpectralLine, kMaximumSpectralLines> spectral_lines{};
+    std::array<SpectralLine, kMaximumDisplayedSpectralLines>
+        displayed_spectral_lines{};
     float voltage_peak_to_peak = 0.0F;
     float true_rms_volts = 0.0F;
     float fundamental_hz = 0.0F;
@@ -21,6 +26,7 @@ struct FftAnalysisResult {
     float bin_width_hz = 0.0F;
     uint32_t analysis_time_us = 0;
     uint32_t spectral_line_count = 0;
+    uint32_t displayed_spectral_line_count = 0;
     bool valid = false;
 };
 
@@ -74,7 +80,10 @@ private:
         const std::array<PeakCandidate, kMaximumCandidates> &candidates, size_t candidate_count,
         float bin_width_hz,
         std::array<size_t, kMaximumSpectralLines> *selected_indices,
-        std::array<uint16_t, kMaximumSpectralLines> *harmonic_orders) const;
+        std::array<uint16_t, kMaximumSpectralLines> *harmonic_orders,
+        std::array<size_t, kMaximumDisplayedSpectralLines> *displayed_indices,
+        std::array<uint16_t, kMaximumDisplayedSpectralLines> *displayed_harmonic_orders,
+        size_t *displayed_count) const;
     Projection project_at_frequency(const int16_t *samples, float volts_per_lsb, float offset_volts,
                                     float dc_offset_volts, float sample_rate_hz, float frequency_hz) const;
     float refine_frequency(const int16_t *samples, float volts_per_lsb, float offset_volts,
