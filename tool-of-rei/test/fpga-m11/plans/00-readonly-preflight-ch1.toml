@@ -1,0 +1,16 @@
+[experiment]
+name = "CycleScope M11 read-only preflight CH1"
+label = "cyclescope_m11_readonly_preflight_ch1"
+
+[safety]
+scope_guard_channel = 1
+require_scope_coupling_not = ["DC", "AC"]
+allow_50ohm = false
+
+[[steps]]
+kind = "source.status"
+channel = 1
+
+[[steps]]
+kind = "power.status"
+channel = 1

@@ -1,7 +1,8 @@
 # Codex 本地配置
 /.codex/
+/.build-home/
 
-# 项目驾驶舱：四件套、收口索引与可复现夹具源码纳入版本控制；原始证据、截图和运行产物保持忽略
+# 项目驾驶舱：四件套、收口索引与可复现夹具源码纳入版本控制；原始证据、截图和运行产物保持忽略。
 /tool-of-rei/*
 !/tool-of-rei/任务清单.md
 !/tool-of-rei/项目快照.md
@@ -9,6 +10,10 @@
 !/tool-of-rei/已知问题.md
 !/tool-of-rei/README.md
 !/tool-of-rei/最终系统标定里程碑.md
+
+# FPGA 四件套和证据索引以命名空间方式归档，避免覆盖 main 的历史流水。
+!/tool-of-rei/fpga-history/
+!/tool-of-rei/fpga-history/**
 
 # 合并时保留可复现夹具和轻量索引；原始证据、截图和运行缓存继续只作本地归档。
 !/tool-of-rei/test/
@@ -27,6 +32,10 @@
 # 本地编辑器配置
 /.vscode/
 
+# Python 本地缓存
+__pycache__/
+*.py[cod]
+
 # ESP-IDF 生成文件
 /ESP32-P4/build/
 /ESP32-P4/managed_components/
@@ -35,8 +44,44 @@
 /ESP32-P4/.idf-component-cache/
 /ESP32-P4/.xdg-cache/
 
-# FPGA的真实发送数据包，用于重放给ESP32-P4测试
+# FPGA 的真实发送数据包，用于重放给 ESP32-P4 测试。
 /source_data_for_test/
 !/source_data_for_test/
 /source_data_for_test/*
 !/source_data_for_test/README.md
+
+# Xilinx Vivado：当前工程只以 rtl/、constraints/、scripts/ 和 sim/ 为事实源。
+# 旧 prj1/project_1 工程不再忽略，误拷回来时必须让 git status 显示出来。
+/Zynq_7010_PL/.Xil/
+/Zynq_7010_PL/build/
+/Zynq_7010_PL/**/managed_prj/
+/Zynq_7010_PL/**/xsim.dir/
+/Zynq_7010_PL/*.jou
+/Zynq_7010_PL/*.log
+/Zynq_7010_PL/*.str
+/Zynq_7010_PL/*.wdb
+/Zynq_7010_PL/*.pb
+/Zynq_7010_PL/dfx_runtime.txt
+
+# 从 worktree 根目录启动 Vivado/WaveBench 时产生的本地日志与测量包。
+# 正式证据复制到已忽略的 tool-of-rei 后保留，不能混入版本控制。
+/data/
+/vivado*.jou
+/vivado*.log
+
+# Xilinx Vitis：当前 PS 事实源只有 cyclescope_cslp/；忽略可重建的 IDE、
+# BSP、platform、日志和编译数据库，旧 platform/应用目录不再专门隐藏。
+/Zynq_7010_PS/.rigel_lopper/
+/Zynq_7010_PS/_ide/
+/Zynq_7010_PS/**/_ide/
+/Zynq_7010_PS/**/.cache/
+/Zynq_7010_PS/**/.compile_commands/
+/Zynq_7010_PS/**/compile_commands.json
+/Zynq_7010_PS/**/build/
+/Zynq_7010_PS/**/export/
+/Zynq_7010_PS/**/logs/
+/Zynq_7010_PS/.Xil/
+/Zynq_7010_PS/.metadata/
+
+# 参考工程、下载产物和厂商包由外部归档保存。
+/references/

@@ -22,6 +22,10 @@
 3. [最终系统标定里程碑.md](最终系统标定里程碑.md)：标定过程的详细说明；其最终事实受 `final-calibration-...` 清单约束。
 4. [../docs/验收证据索引.md](../docs/验收证据索引.md)：给合并、答辩和外部审查使用的详细索引。
 
+## FPGA 合并归档
+
+FPGA 的四件套原文、证据分类、LAN 回放说明和历史计划保留在 [fpga-history/README.md](fpga-history/README.md)，不会覆盖 main 的历史流水。M11 runner/单测源码已归入 [test/fpga-m11/主仓迁移说明.md](test/fpga-m11/主仓迁移说明.md)。约 1.4 GB 的 FPGA 原始证据和回放数据已复制到本工作树的忽略归档区；其正式入口是 [../docs/FPGA验收证据索引.md](../docs/FPGA验收证据索引.md)。
+
 ## 不要做的事
 
 - 不重命名已含 `SHA256SUMS` 的证据根，不编辑其中的历史 JSON/日志来“统一文字”。

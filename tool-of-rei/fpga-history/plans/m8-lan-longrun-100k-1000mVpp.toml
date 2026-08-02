@@ -1,0 +1,102 @@
+[experiment]
+name = "cyclescope_m8_lan_longrun_100k_1000mVpp"
+label = "cyclescope_m8_lan_longrun_100k_1000mVpp"
+
+[safety]
+scope_guard_channel = 1
+require_scope_coupling_not = ["DC", "AC"]
+allow_50ohm = false
+
+[restore]
+source_state = true
+source_channel = 1
+
+[[steps]]
+kind = "source.status"
+channel = 1
+
+[[steps]]
+kind = "source.output"
+channel = 1
+state = "off"
+
+[[steps]]
+kind = "source.set_func"
+channel = 1
+function = "SIN"
+
+[[steps]]
+kind = "source.set_vpp"
+channel = 1
+value_vpp = 1.0
+
+[[steps]]
+kind = "source.set_freq"
+channel = 1
+frequency_hz = 100000
+
+[[steps]]
+kind = "source.output"
+channel = 1
+state = "on"
+
+[[steps]]
+kind = "sleep"
+duration_s = 1.0
+
+[[steps]]
+kind = "scope.capture"
+channel = 1
+label = "cyclescope_m8_pre_100k_1000mVpp"
+points = "def"
+window_frequency_hz = 100000
+target_cycles = 20
+expect_frequency_hz = 100000
+frequency_tolerance = 0.02
+target_vpp = 1.0
+save_csv = true
+save_npy = true
+screenshot = false
+quality_gate = true
+auto_recover = false
+autoscale_before_capture = false
+
+[steps.expect]
+frequency_estimate_hz = { min = 99000, max = 101000 }
+frequency_error_ratio = { max = 0.01 }
+voltage_vpp_v = { min = 0.85, max = 1.15 }
+
+[[steps]]
+kind = "sleep"
+duration_s = 550.0
+
+[[steps]]
+kind = "scope.capture"
+channel = 1
+label = "cyclescope_m8_post_100k_1000mVpp"
+points = "def"
+window_frequency_hz = 100000
+target_cycles = 20
+expect_frequency_hz = 100000
+frequency_tolerance = 0.02
+target_vpp = 1.0
+save_csv = true
+save_npy = true
+screenshot = false
+quality_gate = true
+auto_recover = false
+autoscale_before_capture = false
+
+[steps.expect]
+frequency_estimate_hz = { min = 99000, max = 101000 }
+frequency_error_ratio = { max = 0.01 }
+voltage_vpp_v = { min = 0.85, max = 1.15 }
+
+[[steps]]
+kind = "source.output"
+channel = 1
+state = "off"
+
+[[steps]]
+kind = "source.status"
+channel = 1
