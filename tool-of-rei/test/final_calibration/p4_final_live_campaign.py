@@ -35,8 +35,7 @@ import p4_final_acceptance as acceptance
 
 
 PROJECT_ROOT = THIS_DIR.parents[2]
-WORKSPACE_ROOT = PROJECT_ROOT.parent
-WAVEBENCH_ROOT = WORKSPACE_ROOT / "tools" / "wavebench"
+WAVEBENCH_ROOT = PROJECT_ROOT / "tools" / "wavebench"
 WAVEBENCH = WAVEBENCH_ROOT / ".venv" / "bin" / "wavebench"
 PYTHON = WAVEBENCH_ROOT / ".venv" / "bin" / "python"
 GENERATOR = TEST_DIR / "m12_generate_arb.py"

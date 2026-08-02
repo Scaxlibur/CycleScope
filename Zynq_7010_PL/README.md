@@ -9,7 +9,7 @@
 - `docs/`：PL/PS LAN 接口契约与历史诊断记录；
 - `build/`：全部生成物，已被 Git 忽略。
 
-统一工具版本为 Vivado 2025.1，目标器件为 `xc7z010clg400-1`。所有命令从 `CycleScope-FPGA` 根目录执行：
+统一工具版本为 Vivado 2025.1，目标器件为 `xc7z010clg400-1`。所有命令从仓库根目录的 `main` 分支执行：
 
 正式方案为 LAN-only：唯一对外数据链路是
 `AXI-Stream → AXI DMA → PS → CSLP/UDP`。仓库中已有的 SPI RTL、镜像 BRAM、

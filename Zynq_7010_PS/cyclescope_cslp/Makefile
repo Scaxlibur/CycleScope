@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 HOST_CC ?= cc
-WAVEBENCH_PYTHON ?= ../../../tools/wavebench/.venv/bin/python
+WAVEBENCH_PYTHON ?= ../../tools/wavebench/.venv/bin/python
 HOST_CFLAGS := -std=c11 -O2 -g -Wall -Wextra -Werror -pedantic
 HOST_BUILD := build/host
 HOST_TEST := $(HOST_BUILD)/test_cslp

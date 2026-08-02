@@ -21,8 +21,7 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-WORKSPACE_ROOT = PROJECT_ROOT.parent
-WAVEBENCH_ROOT = WORKSPACE_ROOT / "tools" / "wavebench"
+WAVEBENCH_ROOT = PROJECT_ROOT / "tools" / "wavebench"
 WAVEBENCH = WAVEBENCH_ROOT / ".venv" / "bin" / "wavebench"
 PYTHON = WAVEBENCH_ROOT / ".venv" / "bin" / "python"
 GENERATOR = PROJECT_ROOT / "tool-of-rei" / "test" / "m12_generate_arb.py"

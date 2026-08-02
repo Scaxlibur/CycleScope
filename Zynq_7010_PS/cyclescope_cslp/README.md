@@ -172,7 +172,7 @@ python3 tools/cslp_lan_stress.py \
   --capture-dir reports/sine-bin256/capture \
   --report reports/sine-bin256/lan.json
 
-../../../tools/wavebench/.venv/bin/python tools/cslp_test_pattern_analyze.py \
+../../tools/wavebench/.venv/bin/python tools/cslp_test_pattern_analyze.py \
   --mode sine --amplitude 1600 --coherent-bin 256 \
   --capture reports/sine-bin256/capture \
   --lan-report reports/sine-bin256/lan.json \
@@ -240,7 +240,7 @@ OTR，仍要求两处计数一致。内部注入则使用 `--expected-test-fault
 离线频谱/标定工具使用 WaveBench 虚拟环境中的 NumPy：
 
 ```bash
-../../../tools/wavebench/.venv/bin/python tools/cslp_adc_analyze.py tone \
+../../tools/wavebench/.venv/bin/python tools/cslp_adc_analyze.py tone \
   --capture reports/adc-point \
   --lan-report reports/adc-point-lan.json \
   --scope-npy reports/wavebench-raw/ch1.npy \

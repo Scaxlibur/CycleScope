@@ -116,8 +116,8 @@ proc validate_worktree {fpga_root} {
     if {[file normalize $git_root] ne [file normalize $fpga_root]} {
         error "unexpected Git worktree root: $git_root"
     }
-    if {$branch ne "codex/FPGA"} {
-        error "refusing ILA capture on branch $branch; expected codex/FPGA"
+    if {$branch ne "main"} {
+        error "refusing ILA capture on branch $branch; expected main"
     }
 }
 

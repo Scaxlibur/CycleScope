@@ -16,12 +16,14 @@
 2. 采样率、帧长、滤波指标和验收参数以 G 题 Profile 为准。
 3. 本文只规定联调操作顺序和 ESP32-P4 端判定方法，不重新定义协议。
 
-## 2. 当前交接状态（2026-08-02）
+## 2. 当前交接状态（2026-07-31）
 
-- 固定 Profile 1 的真实 `.2 → .3` 联调、接收重组、FFT、P4 频响补偿、测量、UI bridge 与数据新鲜度均已完成；最终20例审计证据见 [验收证据索引](../../docs/验收证据索引.md)。
-- P4 当前生产对端是 `192.168.10.2:50000`；文中 `.5`、`94dab8f-dirty` 和模拟器内容是历史独立测试背景，不能用于当前发布身份。
-- 完整20例审计 BIN 为 `d819641d…d8207007`。F0 两位小数构建 BIN 为 `e30d16c4…a4bac0e`，仅完成启动/100帧烟测，合并当前源码后若要作为最终发布镜像必须补统一审计。
-- CP2102N 设备号可能变化；始终优先 `/dev/serial/by-id/`，不要把 `ttyUSB0` 写成设备身份。
+- ESP32-P4 端接收、重组、三缓冲、FFT、测量、时域/频域投影、LVGL bridge、生命周期回滚和数据新鲜度状态机均已完成电脑合成数据验证。
+- 修复前 normal v5 镜像完成过 10,000 帧、题目边界矩阵、高阶谐波矩阵和滤后残余测试；最终 freshness 镜像另完成构建、烧录、Flash 读回及 `ONLINE STALE → OFFLINE STALE → 新有效帧恢复 LIVE`。
+- 当前板上固件仍是电脑模拟器联调版本，只接受 `192.168.10.5:50000`；开始真实 FPGA 联调前必须重新构建并烧录接受 `192.168.10.2:50000` 的无夹具镜像。
+- 当前网络基础检查中，ESP32-P4 `192.168.10.3` 与 FPGA `192.168.10.2` 均可从调试电脑正常 ping 通。
+- CP2102N 串口设备号曾从 `/dev/ttyUSB0` 变化为 `/dev/ttyUSB1`。后续必须优先使用 `/dev/serial/by-id/` 稳定路径，不得把 `ttyUSB0` 写死为设备身份。
+- 历史联调阶段的 P4 软件改动曾位于 `CycleScope-main/main@94dab8f-dirty`；`94dab8f` 只是当时的合并基线，不能单独重建当时尚未提交的联调源码。当前构建只认仓库根目录的 `main`，正式取证仍必须同时冻结源码差异、ELF/BIN 哈希和 FPGA 产物身份。
 
 ## 3. 固定拓扑与角色
 
@@ -69,10 +71,9 @@
 
 ### 5.1 工作树与源码身份
 
-ESP32-P4 端只在 `CycleScope-main` 的 `main` 分支构建，不从 FPGA 或旧 ESP32-P4 worktree 借用未冻结源码。
+ESP32-P4 端只在仓库根目录的 `main` 分支构建，不从历史 FPGA 或旧 ESP32-P4 worktree 借用未冻结源码。
 
 ```bash
-cd CycleScope-main
 git symbolic-ref --short HEAD
 git rev-parse HEAD
 git status --short --branch
@@ -141,7 +142,7 @@ P4_UART=/dev/serial/by-id/usb-Silicon_Labs_CP2102N_USB_to_UART_Bridge_Controller
 推荐使用新的构建目录，避免复用 `.5` 产物：
 
 ```bash
-cd CycleScope-main/ESP32-P4
+cd ESP32-P4
 source /home/feisibo/.espressif/v6.0.2/esp-idf/export.sh
 idf.py menuconfig
 idf.py -B /tmp/cyclescope-p4-fpga-build build

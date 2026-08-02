@@ -1,6 +1,10 @@
 # Codex 本地配置
 /.codex/
 /.build-home/
+/.pytest_cache/
+
+# 工作区根保留的外部工具（例如 WaveBench）不属于本仓版本控制。
+/tools/
 
 # 项目驾驶舱：四件套、收口索引与可复现夹具源码纳入版本控制；原始证据、截图和运行产物保持忽略。
 /tool-of-rei/*

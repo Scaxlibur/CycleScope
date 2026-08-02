@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 ROOT := $(abspath ..)
 ENV := source "$(CURDIR)/scripts/xilinx_env.sh"
-WAVEBENCH_PYTHON ?= $(ROOT)/../tools/wavebench/.venv/bin/python
+WAVEBENCH_PYTHON ?= $(ROOT)/tools/wavebench/.venv/bin/python
 RAW_IOB_ILA_PHASE ?= 300
 RAW_IOB_ILA_BUILD := build/diagnostic/raw-iob-ila-p$(RAW_IOB_ILA_PHASE)
 RAW_IOB_ILA_STEM := cyclescope_system_raw_iob_ila_p$(RAW_IOB_ILA_PHASE)

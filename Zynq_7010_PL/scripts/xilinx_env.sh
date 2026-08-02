@@ -14,8 +14,8 @@ _git_root="$(git -C "${CYCLESCOPE_FPGA_ROOT}" rev-parse --show-toplevel 2>/dev/n
     _cyclescope_fail "unexpected worktree root: ${_git_root}"
 
 _branch="$(git -C "${CYCLESCOPE_FPGA_ROOT}" branch --show-current)"
-[[ "${_branch}" == "codex/FPGA" ]] || \
-    _cyclescope_fail "refusing to run on branch ${_branch}; expected codex/FPGA"
+[[ "${_branch}" == "main" ]] || \
+    _cyclescope_fail "refusing to run on branch ${_branch}; expected main"
 
 export XILINX_RELEASE_ROOT="/tools/Xilinx/2025.1"
 export XILINX_VIVADO="${XILINX_RELEASE_ROOT}/Vivado"

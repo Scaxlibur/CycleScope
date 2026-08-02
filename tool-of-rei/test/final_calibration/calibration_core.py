@@ -24,8 +24,7 @@ import numpy as np
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-WORKSPACE_ROOT = PROJECT_ROOT.parent
-WAVEBENCH_ROOT = WORKSPACE_ROOT / "tools" / "wavebench"
+WAVEBENCH_ROOT = PROJECT_ROOT / "tools" / "wavebench"
 WAVEBENCH_SRC = WAVEBENCH_ROOT / "src"
 if str(WAVEBENCH_SRC) not in sys.path:
     sys.path.insert(0, str(WAVEBENCH_SRC))
