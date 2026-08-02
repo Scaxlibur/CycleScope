@@ -13,6 +13,6 @@
 
 在仓库根目录运行：
 
-    sha256sum -c public/evidence/F0显示版构建烧录证明/SHA256SUMS
+    sha256sum -c docs/evidence/F0显示版构建烧录证明/SHA256SUMS
 
-其他 JSON/CSV 摘要的原始身份由 public/测试与证据索引.md 和 docs/验收证据索引.md 中列出的原始根 SHA256SUMS 约束。恢复外部归档后，应在各原始根目录验证其自己的清单。
+其他 JSON/CSV 摘要的原始身份由 docs/测试与证据索引.md 和 docs/验收证据索引.md 中列出的原始根 SHA256SUMS 约束。恢复外部归档后，应在各原始根目录验证其自己的清单。

@@ -1,3 +1,3 @@
 # 已哈希的测量/运行证据必须按字节保存，禁止 Git 进行行尾转换或文本差异归一化。
-public/evidence/F0显示版构建烧录证明/startup.log -text -diff
-public/evidence/最终标定摘要/*.csv -text -diff
+docs/evidence/F0显示版构建烧录证明/startup.log -text -diff
+docs/evidence/最终标定摘要/*.csv -text -diff

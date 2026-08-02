@@ -15,8 +15,8 @@ CycleScope 是面向周期信号测量与谐波分析的软硬件协同项目：
 
 | 需要了解什么 | 入口 |
 |---|---|
-| 合并前交接、公开文档和用途 | [public/README.md](public/README.md) |
-| 测量数据、运行数据和证据适用边界 | [public/测试与证据索引.md](public/测试与证据索引.md) |
+| 项目交接、文档阅读顺序和用途 | [docs/项目交接资料索引.md](docs/项目交接资料索引.md) |
+| 测量数据、运行数据和证据适用边界 | [docs/测试与证据索引.md](docs/测试与证据索引.md) |
 | 面向合并/答辩的详细证据根索引 | [docs/验收证据索引.md](docs/验收证据索引.md) |
 | 原始赛题、答疑、厂商资料和历史设计稿 | [docs/README.md](docs/README.md) |
 | FPGA 冻结基线与验收证据 | [docs/FPGA验收证据索引.md](docs/FPGA验收证据索引.md) |
@@ -27,4 +27,4 @@ CycleScope 是面向周期信号测量与谐波分析的软硬件协同项目：
 
 可提交内容包括源码、测试夹具、说明文档、轻量 JSON/CSV 摘要和 SHA256 清单。原始波形、pcap、S16 帧、ELF/BIN 以及批量截图仍作为本机/外部证据归档保存，不直接进入普通 Git。
 
-如需复核原始档案，请先阅读 public/测试与证据索引.md 和 tool-of-rei/evidence/README.md；任何带 SHA256SUMS 的证据根都应原路径、原文件名保留，不要为了“整洁”重命名或编辑。
+如需复核原始档案，请先阅读 [docs/测试与证据索引.md](docs/测试与证据索引.md) 和 [tool-of-rei/evidence/README.md](tool-of-rei/evidence/README.md)；任何带 SHA256SUMS 的证据根都应原路径、原文件名保留，不要为了“整洁”重命名或编辑。

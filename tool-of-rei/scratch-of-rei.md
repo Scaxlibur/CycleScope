@@ -1,6 +1,6 @@
 # scratch-of-rei
 
-> 本文件是历史开发流水，现已冻结。保留既有记录、失败尝试和原始路径；后续只在顶部补充导航，不删除或压缩旧内容。正式结论见 public/测试与证据索引.md，原始归档分类见 evidence/README.md。
+> 本文件是历史开发流水，现已冻结。保留既有记录、失败尝试和原始路径；后续只在顶部补充导航，不删除或压缩旧内容。正式结论见 [../docs/测试与证据索引.md](../docs/测试与证据索引.md)，原始归档分类见 [evidence/README.md](evidence/README.md)。
 
 ## 临时想法
 - 当前板上为正式 `.2` freshness normal：size `0x1132f0`，ELF/BIN `c3d6e6853e3d2c3b721e2bcd0dfeb64c88a71bbd30d33f0b5e19cafb069fd448` / `23ae1c37fab06e99e058b70ab0cd62fb1287dbb7bcec721b78bfa0218dec8119`；Flash app 区读回 `/tmp/cyclescope-p4-fpga-formal-app-readback.bin` 与 BIN 逐字节一致。UART `/tmp/cyclescope-p4-fpga-formal-smoke-uart.log` SHA256 `780da7bcbdafa440d2d88e4512d9ba858b367a82105002d4e48bbc6449713901`；45 秒内 42 次 HELLO timeout、0 session ready、0 measurement，阻塞在 FPGA `.2` 未返回 HELLO_ACK。

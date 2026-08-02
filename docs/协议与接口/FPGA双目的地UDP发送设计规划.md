@@ -2,7 +2,7 @@
 
 ## 1. 文档状态与目标
 
-- 状态：PS双发、电脑被动镜像工具及`.3/.4`独立板测已完成；真实P4联合验收待执行
+- 状态：PS 双发、电脑被动镜像工具、`.3/.4` 独立板测及真实 P4 联合验收均已完成；正式范围和归档根见 [测试与证据索引](../测试与证据索引.md)。
 - FPGA实现提交：`038e981 feat(fpga): add dual-destination UDP diagnostics`
 - 适用范围：CycleScope Zynq-7010 PS 端 CSLP v0.1 发送链路
 - 主链路：Zynq FPGA/PS 向 ESP32-P4 发送控制响应、状态和波形
