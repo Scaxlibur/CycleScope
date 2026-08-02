@@ -1,0 +1,67 @@
+{
+  "active_case_catalog_path": "case-catalog-v2.json",
+  "active_case_catalog_sha256": "8bb9bf1a56e9fb40f24174e17a90cc054988ce6cdf7006088334dd4d9ff2c214",
+  "active_case_count": 44,
+  "active_m4_case_count": 9,
+  "compression_policy": {
+    "excluded_from_acceptance": true,
+    "excluded_from_fit": true,
+    "excluded_from_validation": true,
+    "retained_points_must_still_pass_gain_dependence_percent": 1.0,
+    "rule": "compressed points are outside the supported envelope"
+  },
+  "created_at": "2026-08-01T17:06:22.698354+08:00",
+  "excluded_historical_cases": [
+    {
+      "case_id": "m4-cross-10000Hz-450mVpp",
+      "disposition": "HISTORICAL_ONLY_EXCLUDED_FROM_FIT_VALIDATION_ACCEPTANCE",
+      "evidence_path": "points/m4-cross-10000Hz-450mVpp",
+      "evidence_status": "MEASURED_COMPRESSION",
+      "observed_end_to_end_deviation_percent": -3.122394240552706
+    },
+    {
+      "case_id": "m4-cross-200000Hz-450mVpp",
+      "disposition": "HISTORICAL_ONLY_EXCLUDED_FROM_FIT_VALIDATION_ACCEPTANCE",
+      "evidence_path": null,
+      "evidence_status": "NOT_RUN_AFTER_HARD_STOP"
+    },
+    {
+      "case_id": "m4-cross-500000Hz-450mVpp",
+      "disposition": "HISTORICAL_ONLY_EXCLUDED_FROM_FIT_VALIDATION_ACCEPTANCE",
+      "evidence_path": null,
+      "evidence_status": "NOT_RUN_AFTER_HARD_STOP"
+    }
+  ],
+  "fit_created": false,
+  "formal_source_vpp_range": {
+    "maximum": 0.25,
+    "minimum_nonzero_calibration_point": 0.01,
+    "unit": "Vpp at DG4202 CH1 50-ohm setting"
+  },
+  "format": "CycleScope final calibration scope amendment v2",
+  "fpga_changes": false,
+  "holdout_paths_read": false,
+  "original_evidence_snapshot": {
+    "campaign": {
+      "path": "campaign.json",
+      "sha256": "ee2e735f3580145db3be9d1fe6a2c4808f39d9d2a6e380abdb7979edc662a5c8"
+    },
+    "case_catalog_v1": {
+      "path": "case-catalog.json",
+      "sha256": "f48f7f6b996c7dc1bb877720a50b190ed2c9cf4efe3ef87d187c3ad6cdb49f89"
+    },
+    "mandatory_m4_stop": {
+      "path": "campaign-stop.json",
+      "sha256": "a0780b83e4a37feab85dc2f14d3fb333730ef098518f97a9093d16e7cc2a5311"
+    },
+    "root_sha256s_manifest": {
+      "path": "SHA256SUMS",
+      "sha256": "c1698923e685e36f57220802b0adf7041d1959f7d82274ea2d1272842e57710e"
+    }
+  },
+  "original_root_manifest_verified_files": 730,
+  "original_stop_factual_evidence_preserved": true,
+  "original_stop_scope_gate_superseded_by_user": true,
+  "status": "ACTIVE_SCOPE_REVISED",
+  "user_decision": "Ignore all compressed points because the analog margin does not support them and the real system will not operate at that peak-to-peak voltage."
+}

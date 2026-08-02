@@ -1,0 +1,930 @@
+{
+  "cases": {
+    "J-H10-1M": {
+      "directory": "tool-of-rei/evidence/m12-live-ub-plus-interference-20260801_112220/J-H10-1M",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.10499999999592546,
+        "line_amplitude_mV": 0.5814999999999984,
+        "line_frequency_hz": 0.5300000000279397,
+        "raw_model_vpp_delta_mV": 0.200876413503579,
+        "raw_residual_peak_mV": 0.48378443041363284,
+        "raw_residual_rms_mV": 0.2021160006610873,
+        "rms_mV": 0.5374894354067408,
+        "vpp_mV": 1.6938333871512725
+      }
+    },
+    "J-H10-1M-BASE": {
+      "directory": "tool-of-rei/evidence/m12-live-ub-plus-interference-20260801_112220/J-H10-1M-BASE",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.08999999999650754,
+        "line_amplitude_mV": 0.5245000000000033,
+        "line_frequency_hz": 0.4400000000023283,
+        "raw_model_vpp_delta_mV": 0.09214244803052907,
+        "raw_residual_peak_mV": 0.46716754785273984,
+        "raw_residual_rms_mV": 0.19290863340328218,
+        "rms_mV": 0.4984894354067322,
+        "vpp_mV": 1.5978333871512689
+      }
+    },
+    "J-H16-1M6": {
+      "directory": "tool-of-rei/evidence/m12-live-ub-plus-interference-20260801_112220/J-H16-1M6",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.09500000000116415,
+        "line_amplitude_mV": 0.5674999999999955,
+        "line_frequency_hz": 0.4699999999720603,
+        "raw_model_vpp_delta_mV": 0.22622738487478955,
+        "raw_residual_peak_mV": 0.5172616959302281,
+        "raw_residual_rms_mV": 0.19208721685414962,
+        "rms_mV": 0.5299894354067405,
+        "vpp_mV": 1.707333387151266
+      }
+    },
+    "J-H16-1M6-BASE": {
+      "directory": "tool-of-rei/evidence/m12-live-ub-plus-interference-20260801_112220/J-H16-1M6-BASE",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.08999999999650754,
+        "line_amplitude_mV": 0.5319999999999965,
+        "line_frequency_hz": 0.4400000000023283,
+        "raw_model_vpp_delta_mV": 0.1162210917885318,
+        "raw_residual_peak_mV": 0.48722257203599567,
+        "raw_residual_rms_mV": 0.1877325912591851,
+        "rms_mV": 0.5079894354067349,
+        "vpp_mV": 1.6163333871512862
+      }
+    },
+    "J-H16-2M": {
+      "directory": "tool-of-rei/evidence/m12-live-ub-plus-interference-20260801_112220/J-H16-2M",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.15499999999883585,
+        "line_amplitude_mV": 0.7600000000000051,
+        "line_frequency_hz": 0.625,
+        "raw_model_vpp_delta_mV": 0.2784994852367788,
+        "raw_residual_peak_mV": 0.5019491179413283,
+        "raw_residual_rms_mV": 0.19499819540354388,
+        "rms_mV": 0.6829894354067392,
+        "vpp_mV": 2.2333086629492414
+      }
+    },
+    "J-H16-2M-BASE": {
+      "directory": "tool-of-rei/evidence/m12-live-ub-plus-interference-20260801_112220/J-H16-2M-BASE",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.13999999999941792,
+        "line_amplitude_mV": 0.7220000000000013,
+        "line_frequency_hz": 0.5599999999976717,
+        "raw_model_vpp_delta_mV": 0.17546014274935828,
+        "raw_residual_peak_mV": 0.4569841492740711,
+        "raw_residual_rms_mV": 0.1750148713056508,
+        "rms_mV": 0.6604894354067383,
+        "vpp_mV": 2.1878086629492373
+      }
+    },
+    "M12-H1H3H5-66K7-TARGET": {
+      "directory": "tool-of-rei/evidence/m12-live-p4-mirror-20260801_104040",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.03999999999359716,
+        "line_amplitude_mV": 0.8730000000000047,
+        "line_frequency_hz": 0.1900000000023283,
+        "raw_model_vpp_delta_mV": 0.10094710226138659,
+        "raw_residual_peak_mV": 0.5106928313211786,
+        "raw_residual_rms_mV": 0.19744940352956336,
+        "rms_mV": 0.7717385824298901,
+        "vpp_mV": 2.312282462585898
+      }
+    },
+    "MASK-H02": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H02",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.014999999999417923,
+        "line_amplitude_mV": 0.30449999999999733,
+        "line_frequency_hz": 0.024999999994179234,
+        "raw_model_vpp_delta_mV": 0.18922042387965377,
+        "raw_residual_peak_mV": 0.5025103635998964,
+        "raw_residual_rms_mV": 0.1774062549239176,
+        "rms_mV": 0.22087973711325226,
+        "vpp_mV": 0.7132000099422342
+      }
+    },
+    "MASK-H03": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H03",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.029999999998835847,
+        "line_amplitude_mV": 0.31150000000000233,
+        "line_frequency_hz": 0.08499999999185093,
+        "raw_model_vpp_delta_mV": 0.06580650347110151,
+        "raw_residual_peak_mV": 0.5225092900887938,
+        "raw_residual_rms_mV": 0.17924036250008746,
+        "rms_mV": 0.22537973711325243,
+        "vpp_mV": 0.6877618138439416
+      }
+    },
+    "MASK-H04": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H04",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.0,
+        "line_amplitude_mV": 0.3000000000000007,
+        "line_frequency_hz": 0.020000000004074536,
+        "raw_model_vpp_delta_mV": 0.020871066145843997,
+        "raw_residual_peak_mV": 0.4972272821746333,
+        "raw_residual_rms_mV": 0.18586974028451322,
+        "rms_mV": 0.2173797371132533,
+        "vpp_mV": 0.7120674654485626
+      }
+    },
+    "MASK-H05": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H05",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.020000000000436557,
+        "line_amplitude_mV": 0.31099999999999994,
+        "line_frequency_hz": 0.10000000000582077,
+        "raw_model_vpp_delta_mV": 0.30716130398889163,
+        "raw_residual_peak_mV": 0.5084319093816047,
+        "raw_residual_rms_mV": 0.18209305039095958,
+        "rms_mV": 0.22637973711325365,
+        "vpp_mV": 0.7740000000000009
+      }
+    },
+    "MASK-H06": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H06",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.014999999999417923,
+        "line_amplitude_mV": 0.31349999999999767,
+        "line_frequency_hz": 0.07000000000698492,
+        "raw_model_vpp_delta_mV": 0.12349668095491495,
+        "raw_residual_peak_mV": 0.47544006693720114,
+        "raw_residual_rms_mV": 0.18139576612216446,
+        "rms_mV": 0.22587973711325304,
+        "vpp_mV": 0.7460687191639437
+      }
+    },
+    "MASK-H07": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H07",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.010000000002037268,
+        "line_amplitude_mV": 0.2950000000000017,
+        "line_frequency_hz": 0.09500000000116415,
+        "raw_model_vpp_delta_mV": 0.2339499026505507,
+        "raw_residual_peak_mV": 0.5050464624576367,
+        "raw_residual_rms_mV": 0.18163592831911926,
+        "rms_mV": 0.21337973711325198,
+        "vpp_mV": 0.6954385163596299
+      }
+    },
+    "MASK-H08": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H08",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.020000000000436557,
+        "line_amplitude_mV": 0.31299999999999883,
+        "line_frequency_hz": 0.11999999999534339,
+        "raw_model_vpp_delta_mV": 0.021913412659074538,
+        "raw_residual_peak_mV": 0.5009050990740505,
+        "raw_residual_rms_mV": 0.18298101536327033,
+        "rms_mV": 0.22537973711325243,
+        "vpp_mV": 0.7635932543654533
+      }
+    },
+    "MASK-H09": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H09",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.0,
+        "line_amplitude_mV": 0.3235000000000028,
+        "line_frequency_hz": 0.005000000004656613,
+        "raw_model_vpp_delta_mV": 0.10957500714886237,
+        "raw_residual_peak_mV": 0.5055560115418376,
+        "raw_residual_rms_mV": 0.18723845722920068,
+        "rms_mV": 0.23387973711325394,
+        "vpp_mV": 0.7895000000000039
+      }
+    },
+    "MASK-H10": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H10",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.02500000000145519,
+        "line_amplitude_mV": 0.31700000000000017,
+        "line_frequency_hz": 0.22999999998137355,
+        "raw_model_vpp_delta_mV": 0.017115872334429127,
+        "raw_residual_peak_mV": 0.4789652946799764,
+        "raw_residual_rms_mV": 0.18459186927990862,
+        "rms_mV": 0.22837973711325255,
+        "vpp_mV": 0.7601372063590048
+      }
+    },
+    "MASK-H11": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H11",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.01999999999679858,
+        "line_amplitude_mV": 0.33999999999999986,
+        "line_frequency_hz": 0.25,
+        "raw_model_vpp_delta_mV": 0.2667687907330816,
+        "raw_residual_peak_mV": 0.5197335609821909,
+        "raw_residual_rms_mV": 0.18087808997118554,
+        "rms_mV": 0.24687973711325206,
+        "vpp_mV": 0.8242319993481075
+      }
+    },
+    "MASK-H12": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H12",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.020000000000436557,
+        "line_amplitude_mV": 0.3359999999999985,
+        "line_frequency_hz": 0.25,
+        "raw_model_vpp_delta_mV": 0.05974183110241427,
+        "raw_residual_peak_mV": 0.49083796872308877,
+        "raw_residual_rms_mV": 0.18150838536874633,
+        "rms_mV": 0.2423797371132519,
+        "vpp_mV": 0.8285683246926112
+      }
+    },
+    "MASK-H13": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H13",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.029999999998835847,
+        "line_amplitude_mV": 0.35600000000000165,
+        "line_frequency_hz": 0.39000000001396984,
+        "raw_model_vpp_delta_mV": 0.009318950492016143,
+        "raw_residual_peak_mV": 0.5072946605966643,
+        "raw_residual_rms_mV": 0.18147180655719863,
+        "rms_mV": 0.2568797371132536,
+        "vpp_mV": 0.8614999999999995
+      }
+    },
+    "MASK-H14": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H14",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.02500000000145519,
+        "line_amplitude_mV": 0.3500000000000014,
+        "line_frequency_hz": 0.3150000000023283,
+        "raw_model_vpp_delta_mV": 0.09089359673060926,
+        "raw_residual_peak_mV": 0.4790608328139661,
+        "raw_residual_rms_mV": 0.17924618007661,
+        "rms_mV": 0.25187973711325284,
+        "vpp_mV": 0.8381789717902919
+      }
+    },
+    "MASK-H15": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H15",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.029999999998835847,
+        "line_amplitude_mV": 0.3550000000000004,
+        "line_frequency_hz": 0.5,
+        "raw_model_vpp_delta_mV": 0.13086377537990757,
+        "raw_residual_peak_mV": 0.4908120020062712,
+        "raw_residual_rms_mV": 0.17947402960746173,
+        "rms_mV": 0.25437973711325235,
+        "vpp_mV": 0.8375705399126403
+      }
+    },
+    "MASK-H16": {
+      "directory": "tool-of-rei/evidence/m12-live-mask-h2-h16-20260801_110003/MASK-H16",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.02500000000145519,
+        "line_amplitude_mV": 0.36699999999999733,
+        "line_frequency_hz": 0.35999999998603016,
+        "raw_model_vpp_delta_mV": 0.14549925531143515,
+        "raw_residual_peak_mV": 0.5048504920172985,
+        "raw_residual_rms_mV": 0.18513012148741834,
+        "rms_mV": 0.2638797371132533,
+        "vpp_mV": 0.8753472667219739
+      }
+    },
+    "ORDER-400K-H02": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-20260801_110558/ORDER-400K-H02",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.17999999999301508,
+        "line_amplitude_mV": 0.6045000000000016,
+        "line_frequency_hz": 0.35999999998603016,
+        "raw_model_vpp_delta_mV": 0.049394067321394175,
+        "raw_residual_peak_mV": 0.420978870080007,
+        "raw_residual_rms_mV": 0.17705376024330105,
+        "rms_mV": 0.4337563773199484,
+        "vpp_mV": 1.3587980520451808
+      }
+    },
+    "ORDER-400K-H03": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H03",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.11666700002388097,
+        "line_amplitude_mV": 0.45949999999999847,
+        "line_frequency_hz": 0.3450009999796748,
+        "raw_model_vpp_delta_mV": 0.2441444382848843,
+        "raw_residual_peak_mV": 0.419546438175749,
+        "raw_residual_rms_mV": 0.18047801838922348,
+        "rms_mV": 0.3297563773199492,
+        "vpp_mV": 0.9959298028258345
+      }
+    },
+    "ORDER-400K-H04": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H04",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.10000000000582077,
+        "line_amplitude_mV": 0.30799999999999983,
+        "line_frequency_hz": 0.40999999997438863,
+        "raw_model_vpp_delta_mV": 0.10727536170104202,
+        "raw_residual_peak_mV": 0.44235662760271166,
+        "raw_residual_rms_mV": 0.1755082676773163,
+        "rms_mV": 0.2197563773199498,
+        "vpp_mV": 0.7068373948899094
+      }
+    },
+    "ORDER-400K-H05": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H05",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.08999999999650754,
+        "line_amplitude_mV": 0.40500000000000114,
+        "line_frequency_hz": 0.4400000000023283,
+        "raw_model_vpp_delta_mV": 0.15184859119229088,
+        "raw_residual_peak_mV": 0.4511228685900094,
+        "raw_residual_rms_mV": 0.18226328788375754,
+        "rms_mV": 0.2897563773199501,
+        "vpp_mV": 0.9370000000000047
+      }
+    },
+    "ORDER-400K-H06": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H06",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.05833330001041759,
+        "line_amplitude_mV": 0.4239999999999995,
+        "line_frequency_hz": 0.3449997999705374,
+        "raw_model_vpp_delta_mV": 0.26130119904699,
+        "raw_residual_peak_mV": 0.47018365388920225,
+        "raw_residual_rms_mV": 0.18691128554763775,
+        "rms_mV": 0.3032563773199506,
+        "vpp_mV": 0.9781085747480205
+      }
+    },
+    "ORDER-400K-H07": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H07",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.042857100001128856,
+        "line_amplitude_mV": 0.39450000000000074,
+        "line_frequency_hz": 0.32999969995580614,
+        "raw_model_vpp_delta_mV": 0.09804244717440014,
+        "raw_residual_peak_mV": 0.46796595922003,
+        "raw_residual_rms_mV": 0.17714384167830938,
+        "rms_mV": 0.2822563773199498,
+        "vpp_mV": 0.8979986006821861
+      }
+    },
+    "ORDER-400K-H08": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H08",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.05000000000291038,
+        "line_amplitude_mV": 0.43299999999999983,
+        "line_frequency_hz": 0.4400000000023283,
+        "raw_model_vpp_delta_mV": 0.15330604156477534,
+        "raw_residual_peak_mV": 0.48533368557270895,
+        "raw_residual_rms_mV": 0.18059207699038812,
+        "rms_mV": 0.31075637731995087,
+        "vpp_mV": 1.01340500719148
+      }
+    },
+    "ORDER-400K-H09": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H09",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.04055560000415426,
+        "line_amplitude_mV": 0.4559999999999995,
+        "line_frequency_hz": 0.36000039998907596,
+        "raw_model_vpp_delta_mV": 0.005938591493503509,
+        "raw_residual_peak_mV": 0.4681596667533676,
+        "raw_residual_rms_mV": 0.18084721303508855,
+        "rms_mV": 0.3262563773199503,
+        "vpp_mV": 1.058000000000007
+      }
+    },
+    "ORDER-400K-H10": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H10",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.04499999999825377,
+        "line_amplitude_mV": 0.4660000000000011,
+        "line_frequency_hz": 0.4549999999580905,
+        "raw_model_vpp_delta_mV": 0.1564458729539382,
+        "raw_residual_peak_mV": 0.48396293177170246,
+        "raw_residual_rms_mV": 0.18053661778884011,
+        "rms_mV": 0.3332563773199517,
+        "vpp_mV": 1.0816107340287857
+      }
+    },
+    "ORDER-400K-H11": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H11",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.03863640000054147,
+        "line_amplitude_mV": 0.4540000000000006,
+        "line_frequency_hz": 0.39000040001701564,
+        "raw_model_vpp_delta_mV": 0.30570732941308165,
+        "raw_residual_peak_mV": 0.4882254577358337,
+        "raw_residual_rms_mV": 0.18061143238100624,
+        "rms_mV": 0.3247563773199502,
+        "vpp_mV": 1.0399798212986653
+      }
+    },
+    "ORDER-400K-H12": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H12",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.03666670000529848,
+        "line_amplitude_mV": 0.48100000000000165,
+        "line_frequency_hz": 0.4100003999774344,
+        "raw_model_vpp_delta_mV": 0.07131807822742076,
+        "raw_residual_peak_mV": 0.48926287542764757,
+        "raw_residual_rms_mV": 0.18056318880977829,
+        "rms_mV": 0.3447563773199498,
+        "vpp_mV": 1.1235565592096393
+      }
+    },
+    "ORDER-400K-H13": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H13",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.024230799997894792,
+        "line_amplitude_mV": 0.46000000000000085,
+        "line_frequency_hz": 0.3150004000053741,
+        "raw_model_vpp_delta_mV": 0.2798596280007075,
+        "raw_residual_peak_mV": 0.5070073045743444,
+        "raw_residual_rms_mV": 0.18028707158223756,
+        "rms_mV": 0.328756377319948,
+        "vpp_mV": 1.0605000000000118
+      }
+    },
+    "ORDER-400K-H14": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H14",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.021428600000945153,
+        "line_amplitude_mV": 0.4280000000000008,
+        "line_frequency_hz": 0.2500004000030458,
+        "raw_model_vpp_delta_mV": 0.06455807841341965,
+        "raw_residual_peak_mV": 0.507456720398175,
+        "raw_residual_rms_mV": 0.1835928361732616,
+        "rms_mV": 0.3062563773199507,
+        "vpp_mV": 0.9851319098860642
+      }
+    },
+    "ORDER-400K-H15": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H15",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.02333329999964917,
+        "line_amplitude_mV": 0.4720000000000013,
+        "line_frequency_hz": 0.4099994999705814,
+        "raw_model_vpp_delta_mV": 0.15687886652828098,
+        "raw_residual_peak_mV": 0.49019558655647755,
+        "raw_residual_rms_mV": 0.18398242692102232,
+        "rms_mV": 0.3367563773199507,
+        "vpp_mV": 1.0745675985414636
+      }
+    },
+    "ORDER-400K-H16": {
+      "directory": "tool-of-rei/evidence/m12-live-order-400k-resume-20260801_110718/ORDER-400K-H16",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.01999999999679858,
+        "line_amplitude_mV": 0.43249999999999744,
+        "line_frequency_hz": 0.28499999997438863,
+        "raw_model_vpp_delta_mV": 0.10786398171986633,
+        "raw_residual_peak_mV": 0.49124191379068105,
+        "raw_residual_rms_mV": 0.18185955952776603,
+        "rms_mV": 0.30975637731994965,
+        "vpp_mV": 1.0068472667219766
+      }
+    },
+    "PHASE-H2-000-H3-000": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-000-H3-000",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.010000000002037268,
+        "line_amplitude_mV": 0.5529999999999973,
+        "line_frequency_hz": 0.029999999998835847,
+        "raw_model_vpp_delta_mV": 0.32706764055440374,
+        "raw_residual_peak_mV": 0.4922758529156239,
+        "raw_residual_rms_mV": 0.19358677651381606,
+        "rms_mV": 0.47449999999999903,
+        "vpp_mV": 1.7192842338474463
+      }
+    },
+    "PHASE-H2-000-H3-090": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-000-H3-090",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.00999999999476131,
+        "line_amplitude_mV": 0.5459999999999994,
+        "line_frequency_hz": 0.024999999994179234,
+        "raw_model_vpp_delta_mV": 0.04435614529711529,
+        "raw_residual_peak_mV": 0.5198280342593709,
+        "raw_residual_rms_mV": 0.189559937264036,
+        "rms_mV": 0.48449999999999704,
+        "vpp_mV": 1.6181529874020129
+      }
+    },
+    "PHASE-H2-000-H3-180": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-000-H3-180",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.010000000002037268,
+        "line_amplitude_mV": 0.5360000000000014,
+        "line_frequency_hz": 0.029999999998835847,
+        "raw_model_vpp_delta_mV": 0.4969781375179423,
+        "raw_residual_peak_mV": 0.4827679487815675,
+        "raw_residual_rms_mV": 0.18776135914352815,
+        "rms_mV": 0.4720000000000013,
+        "vpp_mV": 1.668196683914104
+      }
+    },
+    "PHASE-H2-000-H3-270": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-000-H3-270",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.01999999999679858,
+        "line_amplitude_mV": 0.4795000000000016,
+        "line_frequency_hz": 0.05499999999301508,
+        "raw_model_vpp_delta_mV": 0.1933830069391007,
+        "raw_residual_peak_mV": 0.5129022730086457,
+        "raw_residual_rms_mV": 0.1842995253074664,
+        "rms_mV": 0.4200000000000017,
+        "vpp_mV": 1.3486529874020192
+      }
+    },
+    "PHASE-H2-090-H3-000": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-090-H3-000",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.014999999999417923,
+        "line_amplitude_mV": 0.536999999999999,
+        "line_frequency_hz": 0.03999999997904524,
+        "raw_model_vpp_delta_mV": 0.10213060122868,
+        "raw_residual_peak_mV": 0.4716217579871056,
+        "raw_residual_rms_mV": 0.19318958932661673,
+        "rms_mV": 0.46749999999999403,
+        "vpp_mV": 1.2933996863814627
+      }
+    },
+    "PHASE-H2-090-H3-090": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-090-H3-090",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.020000000004074536,
+        "line_amplitude_mV": 0.5649999999999977,
+        "line_frequency_hz": 0.05499999999301508,
+        "raw_model_vpp_delta_mV": 0.3076432282897201,
+        "raw_residual_peak_mV": 0.5303711926394278,
+        "raw_residual_rms_mV": 0.1934202908326756,
+        "rms_mV": 0.4934999999999903,
+        "vpp_mV": 1.6583919034163586
+      }
+    },
+    "PHASE-H2-090-H3-180": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-090-H3-180",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.010000000002037268,
+        "line_amplitude_mV": 0.5739999999999981,
+        "line_frequency_hz": 0.029999999998835847,
+        "raw_model_vpp_delta_mV": 0.004052786261922847,
+        "raw_residual_peak_mV": 0.5148493313174088,
+        "raw_residual_rms_mV": 0.18896715642483886,
+        "rms_mV": 0.5069999999999908,
+        "vpp_mV": 1.600999999999999
+      }
+    },
+    "PHASE-H2-090-H3-270": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-090-H3-270",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.0,
+        "line_amplitude_mV": 0.5534999999999997,
+        "line_frequency_hz": 0.010000000009313226,
+        "raw_model_vpp_delta_mV": 0.25518120004818456,
+        "raw_residual_peak_mV": 0.5182858677162481,
+        "raw_residual_rms_mV": 0.19483102858447193,
+        "rms_mV": 0.48349999999999227,
+        "vpp_mV": 1.574891903416372
+      }
+    },
+    "PHASE-H2-180-H3-000": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-180-H3-000",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.00999999999476131,
+        "line_amplitude_mV": 0.5319999999999965,
+        "line_frequency_hz": 0.03499999997438863,
+        "raw_model_vpp_delta_mV": 0.2880803311592075,
+        "raw_residual_peak_mV": 0.5121735609697596,
+        "raw_residual_rms_mV": 0.18771546488717072,
+        "rms_mV": 0.46399999999999153,
+        "vpp_mV": 1.6987842338474195
+      }
+    },
+    "PHASE-H2-180-H3-090": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-180-H3-090",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.01999999999679858,
+        "line_amplitude_mV": 0.4795000000000016,
+        "line_frequency_hz": 0.059999999997671694,
+        "raw_model_vpp_delta_mV": 0.22461899174534494,
+        "raw_residual_peak_mV": 0.47770572326492555,
+        "raw_residual_rms_mV": 0.1799169131001156,
+        "rms_mV": 0.4199999999999946,
+        "vpp_mV": 1.3766529874019824
+      }
+    },
+    "PHASE-H2-180-H3-180": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-180-H3-180",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.010000000002037268,
+        "line_amplitude_mV": 0.5260000000000034,
+        "line_frequency_hz": 0.029999999998835847,
+        "raw_model_vpp_delta_mV": 0.04013313037206956,
+        "raw_residual_peak_mV": 0.533665191209079,
+        "raw_residual_rms_mV": 0.1965824284967181,
+        "rms_mV": 0.4649999999999963,
+        "vpp_mV": 1.662196683914118
+      }
+    },
+    "PHASE-H2-180-H3-270": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-180-H3-270",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.010000000002037268,
+        "line_amplitude_mV": 0.5450000000000017,
+        "line_frequency_hz": 0.029999999998835847,
+        "raw_model_vpp_delta_mV": 0.14424269431114567,
+        "raw_residual_peak_mV": 0.49229820138958424,
+        "raw_residual_rms_mV": 0.19007019684748516,
+        "rms_mV": 0.4830000000000041,
+        "vpp_mV": 1.5796529874019996
+      }
+    },
+    "PHASE-H2-270-H3-000": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-270-H3-000",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.005000000004656613,
+        "line_amplitude_mV": 0.5015000000000001,
+        "line_frequency_hz": 0.015000000013969839,
+        "raw_model_vpp_delta_mV": 0.01048120008917408,
+        "raw_residual_peak_mV": 0.4982374305619943,
+        "raw_residual_rms_mV": 0.18212590995739136,
+        "rms_mV": 0.4369999999999905,
+        "vpp_mV": 1.1688996863814793
+      }
+    },
+    "PHASE-H2-270-H3-090": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-270-H3-090",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.00999999999476131,
+        "line_amplitude_mV": 0.4969999999999999,
+        "line_frequency_hz": 0.02000000001862645,
+        "raw_model_vpp_delta_mV": 0.08933139780467059,
+        "raw_residual_peak_mV": 0.49045878954543776,
+        "raw_residual_rms_mV": 0.18251517512487517,
+        "rms_mV": 0.42899999999999494,
+        "vpp_mV": 1.4008919034163654
+      }
+    },
+    "PHASE-H2-270-H3-180": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-270-H3-180",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.0,
+        "line_amplitude_mV": 0.5189999999999984,
+        "line_frequency_hz": 0.01999999998952262,
+        "raw_model_vpp_delta_mV": 0.21220020863036382,
+        "raw_residual_peak_mV": 0.49398724434455976,
+        "raw_residual_rms_mV": 0.1932086064537897,
+        "rms_mV": 0.4540000000000006,
+        "vpp_mV": 1.4039999999999964
+      }
+    },
+    "PHASE-H2-270-H3-270": {
+      "directory": "tool-of-rei/evidence/m12-live-phase-20260801_111318/PHASE-H2-270-H3-270",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.004999999997380655,
+        "line_amplitude_mV": 0.49800000000000466,
+        "line_frequency_hz": 0.010000000009313226,
+        "raw_model_vpp_delta_mV": 0.040698511479845934,
+        "raw_residual_peak_mV": 0.5085471663236556,
+        "raw_residual_rms_mV": 0.19253664683427923,
+        "rms_mV": 0.43199999999999505,
+        "vpp_mV": 1.3708919034163785
+      }
+    },
+    "UA-BASE-WEAK": {
+      "directory": "tool-of-rei/evidence/m12-live-ua-ub-20260801_111910/UA-BASE-WEAK",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.01999999999679858,
+        "line_amplitude_mV": 0.6850000000000023,
+        "line_frequency_hz": 0.059999999997671694,
+        "raw_model_vpp_delta_mV": 0.02617933778526549,
+        "raw_residual_peak_mV": 0.5367599658571767,
+        "raw_residual_rms_mV": 0.18627024001562253,
+        "rms_mV": 0.5800013267037869,
+        "vpp_mV": 2.2974751525375154
+      }
+    },
+    "UA-CREST-HIGH": {
+      "directory": "tool-of-rei/evidence/m12-live-ua-ub-20260801_111910/UA-CREST-HIGH",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.029999999998835847,
+        "line_amplitude_mV": 0.5905000000000058,
+        "line_frequency_hz": 0.16000000000349246,
+        "raw_model_vpp_delta_mV": 0.07007140134047063,
+        "raw_residual_peak_mV": 0.5697664690875683,
+        "raw_residual_rms_mV": 0.2058137130818869,
+        "rms_mV": 0.5633655293195403,
+        "vpp_mV": 2.668500000000023
+      }
+    },
+    "UA-CREST-LOW": {
+      "directory": "tool-of-rei/evidence/m12-live-ua-ub-20260801_111910/UA-CREST-LOW",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.029999999998835847,
+        "line_amplitude_mV": 0.5220000000000056,
+        "line_frequency_hz": 0.15499999999883585,
+        "raw_model_vpp_delta_mV": 0.00974597668084698,
+        "raw_residual_peak_mV": 0.5265349113363315,
+        "raw_residual_rms_mV": 0.1866156934564681,
+        "rms_mV": 0.5013655293195427,
+        "vpp_mV": 1.5358640771508476
+      }
+    },
+    "UB-H16": {
+      "directory": "tool-of-rei/evidence/m12-live-ua-ub-20260801_111910/UB-H16",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.020000000000436557,
+        "line_amplitude_mV": 0.9709999999999965,
+        "line_frequency_hz": 0.3800000000046566,
+        "raw_model_vpp_delta_mV": 0.1837680570874909,
+        "raw_residual_peak_mV": 0.5627184083517867,
+        "raw_residual_rms_mV": 0.20499534309868656,
+        "rms_mV": 0.8471649025256909,
+        "vpp_mV": 3.727124146410574
+      }
+    },
+    "UB-HIGH": {
+      "directory": "tool-of-rei/evidence/m12-live-ua-ub-20260801_111910/UB-HIGH",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.08999999999650754,
+        "line_amplitude_mV": 1.0815000000000055,
+        "line_frequency_hz": 0.4699999999720603,
+        "raw_model_vpp_delta_mV": 0.10976899345848778,
+        "raw_residual_peak_mV": 0.5206856589211397,
+        "raw_residual_rms_mV": 0.20128984923207843,
+        "rms_mV": 0.9667317180633006,
+        "vpp_mV": 2.917619944240272
+      }
+    },
+    "UB-LOW": {
+      "directory": "tool-of-rei/evidence/m12-live-ua-ub-20260801_111910/UB-LOW",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.00999999999839929,
+        "line_amplitude_mV": 0.26599999999999824,
+        "line_frequency_hz": 0.05000000000291038,
+        "raw_model_vpp_delta_mV": 0.07818408619824169,
+        "raw_residual_peak_mV": 0.5990594924011801,
+        "raw_residual_rms_mV": 0.21046881531088554,
+        "rms_mV": 0.2223517460196529,
+        "vpp_mV": 0.7310099110119239
+      }
+    },
+    "UB-WEAK": {
+      "directory": "tool-of-rei/evidence/m12-live-ua-ub-20260801_111910/UB-WEAK",
+      "failures": [],
+      "values": {
+        "f0_hz": 0.020000000000436557,
+        "line_amplitude_mV": 0.8765000000000001,
+        "line_frequency_hz": 0.2800000000279397,
+        "raw_model_vpp_delta_mV": 0.15723946145956802,
+        "raw_residual_peak_mV": 0.5152124540005811,
+        "raw_residual_rms_mV": 0.18661926462117626,
+        "rms_mV": 0.7467553114623797,
+        "vpp_mV": 2.7909808847888655
+      }
+    }
+  },
+  "failures": [],
+  "format": "CycleScope M12 P4-only completion audit v1",
+  "interference_pair_drift": {
+    "J-H10-1M": {
+      "f0_hz": 0.014999999999417923,
+      "lines": [
+        {
+          "amplitude_mVpk": 0.056999999999995055,
+          "frequency_hz": 0.014999999999417923,
+          "order": 1
+        },
+        {
+          "amplitude_mVpk": 0.009499999999999176,
+          "frequency_hz": 0.060000000055879354,
+          "order": 3
+        },
+        {
+          "amplitude_mVpk": 0.04150000000000276,
+          "frequency_hz": 0.09000000002561137,
+          "order": 5
+        }
+      ],
+      "rms_mV": 0.03900000000000858,
+      "vpp_mV": 0.09600000000000364
+    },
+    "J-H16-1M6": {
+      "f0_hz": 0.005000000004656613,
+      "lines": [
+        {
+          "amplitude_mVpk": 0.03549999999999898,
+          "frequency_hz": 0.005000000004656613,
+          "order": 1
+        },
+        {
+          "amplitude_mVpk": 0.0034999999999989484,
+          "frequency_hz": 0.030000000027939677,
+          "order": 3
+        },
+        {
+          "amplitude_mVpk": 0.030999999999998806,
+          "frequency_hz": 0.029999999969732016,
+          "order": 5
+        }
+      ],
+      "rms_mV": 0.02200000000000557,
+      "vpp_mV": 0.09099999999997976
+    },
+    "J-H16-2M": {
+      "f0_hz": 0.014999999999417923,
+      "lines": [
+        {
+          "amplitude_mVpk": 0.03800000000000381,
+          "frequency_hz": 0.014999999999417923,
+          "order": 1
+        },
+        {
+          "amplitude_mVpk": 0.006999999999997897,
+          "frequency_hz": 0.03500000000349246,
+          "order": 2
+        },
+        {
+          "amplitude_mVpk": 0.009000000000000341,
+          "frequency_hz": 0.0650000000023283,
+          "order": 4
+        }
+      ],
+      "rms_mV": 0.022500000000000853,
+      "vpp_mV": 0.04550000000000409
+    }
+  },
+  "max_abs_error": {
+    "f0_hz": 0.17999999999301508,
+    "line_amplitude_mV": 1.0815000000000055,
+    "line_frequency_hz": 0.625,
+    "raw_model_vpp_delta_mV": 0.4969781375179423,
+    "raw_residual_peak_mV": 0.5990594924011801,
+    "raw_residual_rms_mV": 0.21046881531088554,
+    "rms_mV": 0.9667317180633006,
+    "vpp_mV": 3.727124146410574
+  },
+  "missing_cases": [],
+  "observed_case_count": 60,
+  "pass": true,
+  "planned_case_count": 59,
+  "reference_case_present": true,
+  "unexpected_cases": []
+}

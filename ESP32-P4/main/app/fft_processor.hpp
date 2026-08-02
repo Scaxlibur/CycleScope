@@ -6,6 +6,7 @@
 
 #include "esp_err.h"
 
+#include "frequency_response_compensation.hpp"
 #include "spectrum_types.hpp"
 
 namespace cyclescope {
@@ -17,6 +18,8 @@ struct FftAnalysisResult {
     std::array<SpectralLine, kMaximumSpectralLines> spectral_lines{};
     std::array<SpectralLine, kMaximumDisplayedSpectralLines>
         displayed_spectral_lines{};
+    std::array<float, kMaximumSpectralLines>
+        spectral_line_phases_radians{};
     float voltage_peak_to_peak = 0.0F;
     float true_rms_volts = 0.0F;
     float fundamental_hz = 0.0F;
@@ -27,6 +30,8 @@ struct FftAnalysisResult {
     uint32_t analysis_time_us = 0;
     uint32_t spectral_line_count = 0;
     uint32_t displayed_spectral_line_count = 0;
+    uint32_t p4_response_profile_id = 0;
+    bool frequency_response_compensated = false;
     bool valid = false;
 };
 
@@ -48,7 +53,9 @@ public:
     esp_err_t initialize();
     void deinitialize();
     esp_err_t process(const int16_t *samples, size_t sample_count, float sample_rate_hz,
-                      uint32_t scale_uV_per_lsb, int32_t offset_uV, FftAnalysisResult *result);
+                      uint32_t scale_uV_per_lsb, int32_t offset_uV,
+                      FftAnalysisResult *result,
+                      const FrequencyResponseProfile *response_profile = nullptr);
 
     bool initialized() const;
     bool resources_released() const;

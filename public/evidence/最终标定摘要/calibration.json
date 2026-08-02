@@ -1,0 +1,85 @@
+{
+  "excluded_compressed_case_ids": [
+    "m4-cross-10000Hz-450mVpp",
+    "m4-cross-200000Hz-450mVpp",
+    "m4-cross-500000Hz-450mVpp"
+  ],
+  "format": "CycleScope P4 local final calibration v2",
+  "frequency_interpolation": "piecewise linear; no extrapolation",
+  "holdout_case_ids_reserved_but_not_read": [
+    "m6-holdout-15000Hz",
+    "m6-holdout-75000Hz",
+    "m6-holdout-150000Hz",
+    "m6-holdout-250000Hz",
+    "m6-holdout-350000Hz",
+    "m6-holdout-425000Hz",
+    "m6-holdout-485000Hz"
+  ],
+  "identity_sha256": "c5dcde41b09fb2b474504fcf84f6e22d68b33d2c4c97557407d2c31f30e43945",
+  "maximum_amplitude_dependence_percent": 0.5101970873661377,
+  "p4_response_profile_id": 3319586369,
+  "phase_compensation": false,
+  "reference_basis": "DG4202_CH1_50OHM_SETTING",
+  "scope_amendment": {
+    "amendment_sha256": "c64cc8c33054a15c7a774ddbe04086a8706556a110622e43fb6a268a5a58ae18",
+    "case_catalog_sha256": "8bb9bf1a56e9fb40f24174e17a90cc054988ce6cdf7006088334dd4d9ff2c214",
+    "excluded_case_ids": [
+      "m4-cross-10000Hz-450mVpp",
+      "m4-cross-200000Hz-450mVpp",
+      "m4-cross-500000Hz-450mVpp"
+    ],
+    "manifest_sha256": "c4428a6ee5912e2400645900064800038a2089380f61febef0a537bac8ed6b33",
+    "supported_source_max_vpp_v": 0.25,
+    "version": 2
+  },
+  "status": "fit-frozen-before-holdout",
+  "supported_source_max_vpp_v": 0.25,
+  "training_case_ids": [
+    "m3-train-up-10000Hz",
+    "m3-train-up-10500Hz",
+    "m3-train-up-20000Hz",
+    "m3-train-up-50000Hz",
+    "m3-train-up-100000Hz",
+    "m3-train-up-200000Hz",
+    "m3-train-up-300000Hz",
+    "m3-train-up-400000Hz",
+    "m3-train-up-450000Hz",
+    "m3-train-up-475000Hz",
+    "m3-train-up-490000Hz",
+    "m3-train-up-500000Hz",
+    "m3-train-down-500000Hz",
+    "m3-train-down-490000Hz",
+    "m3-train-down-475000Hz",
+    "m3-train-down-450000Hz",
+    "m3-train-down-400000Hz",
+    "m3-train-down-300000Hz",
+    "m3-train-down-200000Hz",
+    "m3-train-down-100000Hz",
+    "m3-train-down-50000Hz",
+    "m3-train-down-20000Hz",
+    "m3-train-down-10500Hz",
+    "m3-train-down-10000Hz",
+    "m4-minline-10000Hz",
+    "m4-minline-100000Hz",
+    "m4-minline-500000Hz",
+    "m4-cross-10000Hz-50mVpp",
+    "m4-cross-10000Hz-250mVpp",
+    "m4-cross-200000Hz-50mVpp",
+    "m4-cross-200000Hz-250mVpp",
+    "m4-cross-500000Hz-50mVpp",
+    "m4-cross-500000Hz-250mVpp"
+  ],
+  "upstream_identity": {
+    "calibration_id": 25030,
+    "filter_profile": 1,
+    "frame_sample_count": 8192,
+    "offset_uv": -6761,
+    "sample_rate_hz": 4062500,
+    "scale_uv_per_lsb": 516
+  },
+  "valid_frequency_hz": {
+    "maximum": 500000.0,
+    "minimum": 10000.0
+  },
+  "zero_mean_code": 13.78546142578125
+}

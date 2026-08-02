@@ -1,0 +1,134 @@
+ESP-ROM:esp32p4-eco2-20240710
+Build:Jul 10 2024
+rst:0x1 (POWERON),boot:0x30f (SPI_FAST_FLASH_BOOT)
+SPI mode:DIO, clock div:2
+load:0x4ff33ce0,len:0x1738
+load:0x4ff28ed0,len:0xfb8
+load:0x4ff2bbd0,len:0x36cc
+entry 0x4ff28eda
+I (28) boot: ESP-IDF v6.0.2 2nd stage bootloader
+I (28) boot: compile time Aug  1 2026 19:28:19
+I (28) boot: Multicore bootloader
+I (30) boot: chip revision: v1.0
+I (31) boot: efuse block revision: v0.1
+I (35) qio_mode: Enabling default flash chip QIO
+I (39) boot.esp32p4: SPI Speed      : 40MHz
+I (43) boot.esp32p4: SPI Mode       : QIO
+I (47) boot.esp32p4: SPI Flash Size : 16MB
+I (51) boot: Enabling RNG early entropy source...
+I (55) boot: Partition Table:
+I (58) boot: ## Label            Usage          Type ST Offset   Length
+I (64) boot:  0 nvs              WiFi data        01 02 00011000 00006000
+I (71) boot:  1 phy_init         RF data          01 01 00017000 00001000
+I (77) boot:  2 factory          factory app      00 00 00020000 00800000
+I (84) boot:  3 storage          Unknown data     01 82 00820000 00700000
+I (91) boot: End of partition table
+I (94) esp_image: segment 0: paddr=00020020 vaddr=480b0020 size=3a30ch (238348) map
+I (138) esp_image: segment 1: paddr=0005a334 vaddr=30100000 size=00088h (   136) load
+I (139) esp_image: segment 2: paddr=0005a3c4 vaddr=4ff00000 size=05c54h ( 23636) load
+I (147) esp_image: segment 3: paddr=00060020 vaddr=48000020 size=a19e0h (661984) map
+I (249) esp_image: segment 4: paddr=00101a08 vaddr=4ff05c54 size=22fech (143340) load
+I (275) esp_image: segment 5: paddr=001249fc vaddr=4ff28c80 size=00760h (  1888) load
+I (277) esp_image: segment 6: paddr=00125164 vaddr=4ff40000 size=0ffb0h ( 65456) load
+I (291) esp_image: segment 7: paddr=0013511c vaddr=50108080 size=00024h (    36) load
+I (302) boot: Loaded app from partition at offset 0x20000
+I (303) boot: Disabling RNG early entropy source...
+W (312) pmu_pvt: blk_version is less than 2, pvt auto dbias init not supported in efuse.
+I (314) hex_psram: vendor id    : 0x0d (AP)
+I (315) hex_psram: Latency      : 0x01 (Fixed)
+I (317) hex_psram: DriveStr.    : 0x00 (25 Ohm)
+I (321) hex_psram: dev id       : 0x03 (generation 4)
+I (326) hex_psram: density      : 0x07 (256 Mbit)
+I (330) hex_psram: good-die     : 0x06 (Pass)
+I (334) hex_psram: SRF          : 0x02 (Slow Refresh)
+I (339) hex_psram: BurstType    : 0x00 ( Wrap)
+I (343) hex_psram: BurstLen     : 0x03 (2048 Byte)
+I (348) hex_psram: BitMode      : 0x01 (X16 Mode)
+I (352) hex_psram: Readlatency  : 0x04 (14 cycles@Fixed)
+I (357) hex_psram: DriveStrength: 0x00 (1/1)
+I (361) MSPI Timing: Enter psram timing tuning
+I esp_psram: Found 32MB PSRAM device
+I esp_psram: Speed: 200MHz
+I (555) mmu_psram: .rodata xip on psram
+I (609) mmu_psram: .text xip on psram
+I (610) hex_psram: psram CS IO is dedicated
+I (610) cpu_start: Multicore app
+I (1059) esp_psram: SPI SRAM memory test OK
+I (1068) cpu_start: GPIO 38 and 37 are used as console UART I/O pins
+I (1069) cpu_start: Pro cpu start user code
+I (1069) cpu_start: cpu freq: 360000000 Hz
+I (1071) app_init: Application information:
+I (1075) app_init: Project name:     CycleScopeP4
+I (1079) app_init: App version:      v1.1.0-dirty
+I (1084) app_init: Compile time:     Aug  1 2026 19:28:08
+I (1089) app_init: ELF file SHA256:  e23e0ca90...
+I (1093) app_init: ESP-IDF:          v6.0.2
+I (1097) efuse_init: Min chip rev:     v0.0
+I (1101) efuse_init: Max chip rev:     v1.99 
+I (1105) efuse_init: Chip rev:         v1.0
+I (1109) heap_init: Initializing. RAM available for dynamic allocation:
+I (1115) heap_init: At 4FF2A520 len 00010AA0 (66 KiB): RETENT_RAM
+I (1121) heap_init: At 4FF3AFC0 len 00004BF0 (18 KiB): RAM
+I (1126) heap_init: At 4FF595D0 len 00026A30 (154 KiB): RAM
+I (1132) heap_init: At 501080A4 len 00007F5C (31 KiB): RTCRAM
+I (1137) heap_init: At 30100088 len 00001F78 (7 KiB): SPM
+I (1142) esp_psram: Adding pool of 31808K of PSRAM memory to heap allocator
+I (1149) esp_psram: Adding pool of 57K of PSRAM memory gap generated due to end address alignment of irom to the heap allocator
+I (1160) esp_psram: Adding pool of 23K of PSRAM memory gap generated due to end address alignment of drom to the heap allocator
+I (1172) spi_flash: detected chip: gd
+I (1175) spi_flash: flash io: qio
+I (1178) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (1184) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (1191) main_task: Started on CPU0
+I (1194) esp_psram: Reserving pool of 32K of internal memory for DMA/internal allocations
+I (1202) main_task: Calling app_main()
+I (1205) ESP32_P4_EV: MIPI DSI PHY Powered on
+I (1210) ESP32_P4_EV: Install MIPI DSI LCD control panel
+I (1214) ESP32_P4_EV: Install EK79007 LCD control panel
+I (1219) ek79007: version: 2.0.2
+I (1392) ESP32_P4_EV: Display initialized
+I (1392) esp_lvgl:adapter: LVGL adapter initialized successfully
+I (1392) cyclescope_lvgl: LVGL worker pinned to Core 0
+I (1396) esp_lvgl:bridge_v9: Initializing hardware resources
+I (1400) esp_lvgl:bridge_v9: Hardware resources initialized successfully
+I (1407) esp_lvgl:bridge: Initializing hardware resources
+I (1412) esp_lvgl:bridge: Hardware resources initialized successfully
+W (1418) esp_lvgl:bridge_v9: on_frame_buf_complete unavailable; buffer-switch release and dummy-draw may not function on MIPI DSI
+I (1429) GT911: I2C address initialization procedure skipped - using default GT9xx setup
+I (1438) GT911: TouchPad_ID:0x39,0x31,0x31
+I (1441) GT911: TouchPad_Config_Version:89
+W (1445) esp_lvgl:touch: LV_USE_GESTURE_RECOGNITION is disabled; only single-point pointer events are available
+I (1454) esp_lvgl:touch: Touch input device registered successfully (IRQ mode: disabled)
+I (1463) esp_lvgl:adapter: LVGL task started successfully
+I (1467) ESP32_P4_EV: Setting LCD backlight: 100%
+I (1488) cyclescope_wave: RGB565 waveform canvas ready: 638x302, 385352 bytes in PSRAM
+I (1491) cyclescope_spectrum: RGB565 spectrum canvas ready: 638x284, 362384 bytes in PSRAM
+I (1507) cyclescope_ui: Instrument UI shell ready; network starting
+I (1556) cyclescope_fft: esp-dsp ready: N=8192, positive bins=4097, Hann gain=0.499938, work=PSRAM, table=PSRAM, window=PSRAM, spectrum=PSRAM
+I (1557) cyclescope_fft: heap after FFT init: internal free/min=171831/169131, PSRAM free/min=28046620/28046620 bytes
+I (1737) cyclescope_pipe: FFT startup self-test: F0=40750.00Hz Vpp=181.422mV RMS=55.453mV elapsed=17484us PASS
+I (1934) cyclescope_pipe: FFT exact weak startup self-test: crc=0x4ECFD324 F0=10000.04Hz Vpp=50.002mV RMS=16.141mV lines=2 P1=5.537mVpk P2=22.145mVpk elapsed=13916us heap=PASS PASS
+I (1939) cyclescope_pipe: Formal CSLP FFT pipeline prepared; result=15752 bytes p4_response=ON profile=C5DCDE41
+I (1948) cyclescope_ui: Instrument analysis preparation: READY
+I (2005) esp_eth.netif.netif_glue: 60:55:f9:fc:00:43
+I (2005) esp_eth.netif.netif_glue: ethernet attached to netif
+I (4006) ethernet_init: Ethernet(IP101[31,52]) Started
+I (4006) ethernet_init: Ethernet(IP101[31,52]) Link Up
+I (4006) ethernet_init: Ethernet(IP101[31,52]) HW Addr 60:55:f9:fc:00:43
+I (4011) esp_netif_handlers: eth ip: 192.168.10.3, mask: 255.255.255.0, gw: 0.0.0.0
+I (4018) cslp_rx: Ethernet static IPv4 ready: 192.168.10.3
+I (4023) cslp_rx: Ethernet startup us: platform=634 drivers=50513 attach=427 start=2017846 total=2069420
+I (4032) cslp_rx: CSLP v1 receiver ready on Core 1; golden packet PASS
+I (4033) cslp_rx: UDP 192.168.10.3:50001 -> 192.168.10.2:50000
+I (4040) cyclescope_pipe: Formal CSLP pipeline started on Core 1: mailbox consumer prio 4 -> latest UI queue
+I (4045) cslp_rx: CSLP session ready: session=0x0AB15408 boot=1131729830 config=11
+I (4054) cyclescope_ui: Instrument UI started; formal CSLP FFT8192: RUNNING
+I (4045) cyclescope_pipe: CSLP 8192-point analysis consumer running on Core 1
+I (4068) main_task: Returned from app_main()
+I (4104) cslp_rx: Published frame=122959 completed=1
+I (4169) cyclescope_pipe: Spectrum scale committed: session=0AB15408 config=0000000B epoch=2 frame=122959 previous=0.0mVpk Amax=50.0mVpk reason=NEW_STREAM
+I (4171) cyclescope_pipe: measurement: session=0AB15408 config=0000000B epoch=2 frame=122959 gen=1 F0=62078.71Hz Vpp=71.742mV RMS=29.067mV peaks=4 P1=62078.71Hz/38.281mVpk P2=186236.12Hz/12.841mVpk P3=310393.56Hz/7.711mVpk up_cal=1 test=0 p4cal=1 profile=C5DCDE41
+I (4199) cyclescope_ui: Spectrum UI bridge on Core 0: session=0AB15408 frame=122959 gen=1 A/B=255 columns=640 peaks=4 Fs=4.0625MHz axis=0.50000MHz Amax=50.0mVpk view=9.57mV/div p4cal=1 profile=C5DCDE41
+I (4212) cyclescope_ui: CSLP UI stream state: WAITING -> LIVE; session=0AB15408 frame=122959
+I (9054) cslp_rx: Published frame=123058 completed=100
+I (10775) cyclescope_pipe: measurement: session=0AB15408 config=0000000B epoch=2 frame=123091 gen=100 F0=62078.70Hz Vpp=71.714mV RMS=29.070mV peaks=4 P1=62078.70Hz/38.287mVpk P2=186236.09Hz/12.836mVpk P3=310393.47Hz/7.714mVpk up_cal=1 test=0 p4cal=1 profile=C5DCDE41

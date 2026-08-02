@@ -92,6 +92,26 @@ float clamp_unit_offset(float value)
     return std::max(-1.0F, std::min(1.0F, value));
 }
 
+bool response_query_frequency(float component_frequency_hz,
+                              float edge_tolerance_hz,
+                              float *query_frequency_hz)
+{
+    if (query_frequency_hz == nullptr
+        || !std::isfinite(component_frequency_hz)
+        || !std::isfinite(edge_tolerance_hz)
+        || edge_tolerance_hz < 0.0F
+        || component_frequency_hz
+               < kResponseMinimumHz - edge_tolerance_hz
+        || component_frequency_hz
+               > kResponseMaximumHz + edge_tolerance_hz) {
+        return false;
+    }
+    *query_frequency_hz = std::clamp(
+        component_frequency_hz,
+        kResponseMinimumHz, kResponseMaximumHz);
+    return true;
+}
+
 }  // namespace
 
 FftProcessor8192::~FftProcessor8192()
@@ -220,13 +240,26 @@ size_t FftProcessor8192::positive_spectrum_size() const
 }
 
 esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count, float sample_rate_hz,
-                                    uint32_t scale_uV_per_lsb, int32_t offset_uV, FftAnalysisResult *result)
+                                    uint32_t scale_uV_per_lsb, int32_t offset_uV,
+                                    FftAnalysisResult *result,
+                                    const FrequencyResponseProfile *response_profile)
 {
     if (!initialized()) {
         return ESP_ERR_INVALID_STATE;
     }
     if (samples == nullptr || result == nullptr || sample_count != kSampleCount || !(sample_rate_hz > 0.0F)
         || scale_uV_per_lsb == 0 || sample_rate_hz * 0.5F < kMaximumMeasurementHz) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (response_profile != nullptr
+        && (!frequency_response_profile_valid(*response_profile)
+            || response_profile->upstream.scale_uv_per_lsb
+                   != scale_uV_per_lsb
+            || response_profile->upstream.offset_uv != offset_uV
+            || response_profile->upstream.sample_rate_hz
+                   != static_cast<uint32_t>(sample_rate_hz)
+            || response_profile->upstream.frame_sample_count
+                   != sample_count)) {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -274,6 +307,8 @@ esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count,
     }
 
     const float bin_width_hz = sample_rate_hz / static_cast<float>(kSampleCount);
+    const float band_edge_tolerance_hz =
+        kBandEdgeToleranceBins * bin_width_hz;
     std::array<PeakCandidate, kMaximumCandidates> candidates{};
     const size_t candidate_count = collect_peak_candidates(bin_width_hz, &candidates);
     std::array<size_t, kMaximumSpectralLines> selected_indices{};
@@ -313,11 +348,27 @@ esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count,
             const float component_frequency = fundamental_hz * static_cast<float>(harmonic_orders[line]);
             components[line] = project_at_frequency(samples, volts_per_lsb, offset_volts, dc_offset_volts,
                                                      sample_rate_hz, component_frequency);
+            float response_frequency_hz = 0.0F;
+            if (response_profile != nullptr
+                && response_query_frequency(
+                    component_frequency, band_edge_tolerance_hz,
+                    &response_frequency_hz)) {
+                float correction_factor = 0.0F;
+                if (!frequency_response_correction_factor(
+                        *response_profile, response_frequency_hz,
+                        scale_uV_per_lsb, &correction_factor)) {
+                    return ESP_ERR_INVALID_ARG;
+                }
+                components[line].amplitude_volts_peak *=
+                    correction_factor;
+            }
             result->spectral_lines[line] = {
                 .frequency_hz = component_frequency,
                 .amplitude_volts_peak = components[line].amplitude_volts_peak,
                 .harmonic_order = harmonic_orders[line],
             };
+            result->spectral_line_phases_radians[line] =
+                components[line].phase_radians;
             reconstructed_rms_square += components[line].amplitude_volts_peak
                                         * components[line].amplitude_volts_peak * 0.5F;
         }
@@ -346,6 +397,19 @@ esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count,
                     samples, volts_per_lsb, offset_volts, dc_offset_volts,
                     sample_rate_hz, component_frequency)
                                           .amplitude_volts_peak;
+                float response_frequency_hz = 0.0F;
+                if (response_profile != nullptr
+                    && response_query_frequency(
+                        component_frequency, band_edge_tolerance_hz,
+                        &response_frequency_hz)) {
+                    float correction_factor = 0.0F;
+                    if (!frequency_response_correction_factor(
+                            *response_profile, response_frequency_hz,
+                            scale_uV_per_lsb, &correction_factor)) {
+                        return ESP_ERR_INVALID_ARG;
+                    }
+                    component_amplitude *= correction_factor;
+                }
             }
             result->displayed_spectral_lines[line] = {
                 .frequency_hz = component_frequency,
@@ -358,12 +422,15 @@ esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count,
     result->spectral_line_count = static_cast<uint32_t>(selected_count);
     result->displayed_spectral_line_count =
         static_cast<uint32_t>(displayed_count);
+    result->p4_response_profile_id =
+        response_profile == nullptr ? 0U : response_profile->profile_id;
+    result->frequency_response_compensated =
+        response_profile != nullptr;
     result->fundamental_hz = fundamental_hz;
     result->fundamental_phase_radians = fundamental_phase_radians;
     result->dc_offset_volts = dc_offset_volts;
     result->sample_rate_hz = sample_rate_hz;
     result->bin_width_hz = bin_width_hz;
-    const float band_edge_tolerance_hz = kBandEdgeToleranceBins * bin_width_hz;
     bool components_in_measurement_band = selected_count >= 2U
                                           && harmonic_orders[0] == 1U
                                           && std::isfinite(fundamental_hz)
@@ -382,6 +449,22 @@ esp_err_t FftProcessor8192::process(const int16_t *samples, size_t sample_count,
                                          && frequency_hz <= kMaximumMeasurementHz + band_edge_tolerance_hz;
     }
     result->valid = components_in_measurement_band;
+    if (response_profile != nullptr) {
+        for (size_t bin = 0U; bin < kPositiveBinCount; ++bin) {
+            const float frequency_hz = static_cast<float>(bin) * bin_width_hz;
+            if (frequency_hz < kResponseMinimumHz
+                || frequency_hz > kResponseMaximumHz) {
+                continue;
+            }
+            float correction_factor = 0.0F;
+            if (!frequency_response_correction_factor(
+                    *response_profile, frequency_hz, scale_uV_per_lsb,
+                    &correction_factor)) {
+                return ESP_ERR_INVALID_ARG;
+            }
+            positive_spectrum_[bin] *= correction_factor;
+        }
+    }
     if (selected_count > 0) {
         result->voltage_peak_to_peak = reconstruct_peak_to_peak(components, harmonic_orders, selected_count);
         result->true_rms_volts = std::sqrt(reconstructed_rms_square);

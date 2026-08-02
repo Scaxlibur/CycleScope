@@ -1,0 +1,123 @@
+{
+  "fit_frozen_before_holdout": true,
+  "format": "CycleScope P4 local final calibration holdout report v2",
+  "hard_5mv_1khz_pass": true,
+  "holdout_refit_performed": false,
+  "maximum_absolute_error_v": 0.00032054184471361213,
+  "maximum_frequency_error_hz": 234.98535158642335,
+  "p4_response_profile_id": 3319586369,
+  "pass": true,
+  "records": [
+    {
+      "absolute_error_v": 5.8971475289854025e-05,
+      "case_id": "m6-holdout-15000Hz",
+      "expected_source_vpp_v": 0.1,
+      "frequency_1khz_hard_pass": true,
+      "frequency_500hz_target_pass": true,
+      "frequency_error_hz": 122.68066406487742,
+      "frequency_hz": 15000.0,
+      "hard_5mv_pass": true,
+      "predicted_source_vpp_v": 0.10005897147528986,
+      "signed_error_v": 5.8971475289854025e-05,
+      "target_3mv_pass": true,
+      "wavebench_fft_frequency_hz": 14877.319335935123
+    },
+    {
+      "absolute_error_v": 0.00032054184471361213,
+      "case_id": "m6-holdout-75000Hz",
+      "expected_source_vpp_v": 0.1,
+      "frequency_1khz_hard_pass": true,
+      "frequency_500hz_target_pass": true,
+      "frequency_error_hz": 117.49267579321167,
+      "frequency_hz": 75000.0,
+      "hard_5mv_pass": true,
+      "predicted_source_vpp_v": 0.10032054184471362,
+      "signed_error_v": 0.00032054184471361213,
+      "target_3mv_pass": true,
+      "wavebench_fft_frequency_hz": 74882.50732420679
+    },
+    {
+      "absolute_error_v": 0.00019075140474009156,
+      "case_id": "m6-holdout-150000Hz",
+      "expected_source_vpp_v": 0.1,
+      "frequency_1khz_hard_pass": true,
+      "frequency_500hz_target_pass": true,
+      "frequency_error_hz": 234.98535158642335,
+      "frequency_hz": 150000.0,
+      "hard_5mv_pass": true,
+      "predicted_source_vpp_v": 0.1001907514047401,
+      "signed_error_v": 0.00019075140474009156,
+      "target_3mv_pass": true,
+      "wavebench_fft_frequency_hz": 149765.01464841358
+    },
+    {
+      "absolute_error_v": 0.00018901720379260745,
+      "case_id": "m6-holdout-250000Hz",
+      "expected_source_vpp_v": 0.1,
+      "frequency_1khz_hard_pass": true,
+      "frequency_500hz_target_pass": true,
+      "frequency_error_hz": 61.035156289930455,
+      "frequency_hz": 250000.0,
+      "hard_5mv_pass": true,
+      "predicted_source_vpp_v": 0.10018901720379261,
+      "signed_error_v": 0.00018901720379260745,
+      "target_3mv_pass": true,
+      "wavebench_fft_frequency_hz": 249938.96484371007
+    },
+    {
+      "absolute_error_v": 0.00022474880943708364,
+      "case_id": "m6-holdout-350000Hz",
+      "expected_source_vpp_v": 0.1,
+      "frequency_1khz_hard_pass": true,
+      "frequency_500hz_target_pass": true,
+      "frequency_error_hz": 112.91503900656244,
+      "frequency_hz": 350000.0,
+      "hard_5mv_pass": true,
+      "predicted_source_vpp_v": 0.10022474880943709,
+      "signed_error_v": 0.00022474880943708364,
+      "target_3mv_pass": true,
+      "wavebench_fft_frequency_hz": 350112.91503900656
+    },
+    {
+      "absolute_error_v": 9.52076220074316e-05,
+      "case_id": "m6-holdout-425000Hz",
+      "expected_source_vpp_v": 0.1,
+      "frequency_1khz_hard_pass": true,
+      "frequency_500hz_target_pass": true,
+      "frequency_error_hz": 4.57763678667834,
+      "frequency_hz": 425000.0,
+      "hard_5mv_pass": true,
+      "predicted_source_vpp_v": 0.10009520762200744,
+      "signed_error_v": 9.52076220074316e-05,
+      "target_3mv_pass": true,
+      "wavebench_fft_frequency_hz": 424995.4223632133
+    },
+    {
+      "absolute_error_v": 0.00021729380977604518,
+      "case_id": "m6-holdout-485000Hz",
+      "expected_source_vpp_v": 0.1,
+      "frequency_1khz_hard_pass": true,
+      "frequency_500hz_target_pass": true,
+      "frequency_error_hz": 0.6103514850256033,
+      "frequency_hz": 485000.0,
+      "hard_5mv_pass": true,
+      "predicted_source_vpp_v": 0.10021729380977605,
+      "signed_error_v": 0.00021729380977604518,
+      "target_3mv_pass": true,
+      "wavebench_fft_frequency_hz": 485000.610351485
+    }
+  ],
+  "scope_amendment": {
+    "amendment_sha256": "c64cc8c33054a15c7a774ddbe04086a8706556a110622e43fb6a268a5a58ae18",
+    "case_catalog_sha256": "8bb9bf1a56e9fb40f24174e17a90cc054988ce6cdf7006088334dd4d9ff2c214",
+    "excluded_case_ids": [
+      "m4-cross-10000Hz-450mVpp",
+      "m4-cross-200000Hz-450mVpp",
+      "m4-cross-500000Hz-450mVpp"
+    ],
+    "manifest_sha256": "c4428a6ee5912e2400645900064800038a2089380f61febef0a537bac8ed6b33",
+    "supported_source_max_vpp_v": 0.25,
+    "version": 2
+  },
+  "target_3mv_500hz_pass": true
+}

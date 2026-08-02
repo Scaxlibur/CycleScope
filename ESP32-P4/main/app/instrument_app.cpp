@@ -24,6 +24,7 @@ constexpr int32_t kMetricsWidth = 278;
 constexpr int32_t kCardRadius = 12;
 constexpr int32_t kMetricCardWidth = 116;
 constexpr int32_t kMetricHorizontalPadding = 13;
+constexpr int32_t kFundamentalHorizontalPadding = 1;
 constexpr uint32_t kLiveUiPeriodMs = 250;
 constexpr uint32_t kStartupLiveUiPeriodMs = 20;
 constexpr uint32_t kStartupLiveUiWindowMs = 1000;
@@ -38,6 +39,8 @@ constexpr uint32_t kMutedText = 0x89A6B9;
 constexpr uint32_t kAccent = 0x20D6B5;
 constexpr uint32_t kAccentDark = 0x135C58;
 constexpr uint32_t kTrace = 0x75E6FF;
+constexpr uint32_t kWarning = 0xFFB454;
+constexpr uint32_t kError = 0xFF6B6B;
 
 lv_obj_t *create_text(lv_obj_t *parent, const char *text, const lv_font_t *font, uint32_t color)
 {
@@ -81,10 +84,9 @@ bool metric_text_contract_passes(int32_t spectrum_legend_width)
         const char *text;
         const lv_font_t *font;
     };
-    const std::array<MetricValueContract, 4> worst_metric_values = {{
+    const std::array<MetricValueContract, 3> worst_metric_values = {{
         {"500.00mV", &lv_font_montserrat_16},
         {"500.00mV", &lv_font_montserrat_16},
-        {"500,000Hz", &lv_font_montserrat_16},
         {"4.0625", &lv_font_montserrat_22},
     }};
     const int32_t metric_content_width =
@@ -94,11 +96,21 @@ bool metric_text_contract_passes(int32_t spectrum_legend_width)
             return false;
         }
     }
+    constexpr int32_t summary_content_width = kMetricsWidth - 56;
     return text_fits(
-        "125.00mV/div  •  500,000Hz 250.00mV  •  "
-        "500,000Hz 250.00mV  •  "
-        "500,000Hz 250.00mV  •  +5",
-        &lv_font_montserrat_12, spectrum_legend_width);
+               "500,000.00Hz", &lv_font_montserrat_16,
+               kMetricCardWidth - 2 * kFundamentalHorizontalPadding)
+           && text_fits(
+               "125.00mV/div  •  500,000Hz 250.00mV  •  "
+               "500,000Hz 250.00mV  •  "
+               "500,000Hz 250.00mV  •  +5",
+               &lv_font_montserrat_12, spectrum_legend_width)
+           && text_fits("DATA REJECTED", &lv_font_montserrat_22,
+                        summary_content_width)
+           && text_fits("CSLP SESSION NOT ESTABLISHED",
+                        &lv_font_montserrat_12, summary_content_width)
+           && text_fits("CHECK SOURCE STATUS ABOVE",
+                        &lv_font_montserrat_12, summary_content_width);
 }
 
 struct FormattedPeak {
@@ -205,7 +217,8 @@ bool InstrumentApp::start_ui()
     return true;
 }
 
-bool InstrumentApp::prepare_live_data()
+bool InstrumentApp::prepare_live_data(
+    const FrequencyResponseProfile *response_profile)
 {
     if (!ui_started_) {
         ESP_LOGE("cyclescope_ui",
@@ -215,7 +228,7 @@ bool InstrumentApp::prepare_live_data()
     if (pipeline_prepared_) {
         return true;
     }
-    pipeline_prepared_ = live_pipeline_.prepare();
+    pipeline_prepared_ = live_pipeline_.prepare(response_profile);
     ESP_LOGI("cyclescope_ui",
              "Instrument analysis preparation: %s",
              pipeline_prepared_ ? "READY" : "FAILED");
@@ -236,12 +249,16 @@ bool InstrumentApp::connect(CslpUdpReceiver *receiver)
         lv_label_set_text(
             source_label_,
             "SOURCE  CSLP OFFLINE   •   ANALYSIS INIT FAILED");
+        set_connection_status(
+            live_stream_freshness::ConnectionState::SystemError);
         return false;
     }
     if (receiver == nullptr) {
         lv_label_set_text(
             source_label_,
             "SOURCE  CSLP OFFLINE   •   NO LOCAL FALLBACK");
+        set_connection_status(
+            live_stream_freshness::ConnectionState::NoFpgaLink);
         ESP_LOGI("cyclescope_ui",
                  "Instrument UI started; formal CSLP FFT8192: FAILED");
         return false;
@@ -255,6 +272,8 @@ bool InstrumentApp::connect(CslpUdpReceiver *receiver)
         lv_label_set_text(
             source_label_,
             "SOURCE  CSLP OFFLINE   •   UI TIMER FAILED");
+        set_connection_status(
+            live_stream_freshness::ConnectionState::SystemError);
         ESP_LOGI("cyclescope_ui",
                  "Instrument UI started; formal CSLP FFT8192: UI TIMER FAILED");
         return false;
@@ -274,6 +293,8 @@ bool InstrumentApp::connect(CslpUdpReceiver *receiver)
         lv_label_set_text(
             source_label_,
             "SOURCE  CSLP OFFLINE   •   ANALYSIS START FAILED");
+        set_connection_status(
+            live_stream_freshness::ConnectionState::SystemError);
     }
     ESP_LOGI("cyclescope_ui", "Instrument UI started; formal CSLP FFT8192: %s",
              live_mode_ ? "RUNNING" : "FAILED");
@@ -431,6 +452,11 @@ bool InstrumentApp::build_layout()
         metrics, 14, 166, kMetricCardWidth, metric_height);
     fundamental_value_ = style_metric(
         fundamental, "F0", "--", &lv_font_montserrat_16, 14, 166);
+    lv_obj_set_width(
+        fundamental_value_,
+        kMetricCardWidth - 2 * kFundamentalHorizontalPadding);
+    lv_obj_align(fundamental_value_, LV_ALIGN_BOTTOM_LEFT,
+                 kFundamentalHorizontalPadding, -12);
     lv_obj_t *sample_rate = create_card(
         metrics, 148, 166, kMetricCardWidth, metric_height);
     sample_rate_value_ = style_metric(
@@ -438,12 +464,16 @@ bool InstrumentApp::build_layout()
         148, 166);
 
     lv_obj_t *summary = create_card(metrics, 14, 278, kMetricsWidth - 28, 118);
-    lv_obj_t *summary_title = create_text(summary, "ACTIVE VIEW", &lv_font_montserrat_12, kMutedText);
+    lv_obj_t *summary_title = create_text(
+        summary, "FPGA CONNECTION", &lv_font_montserrat_12, kMutedText);
     lv_obj_align(summary_title, LV_ALIGN_TOP_LEFT, 14, 12);
-    active_view_value_ = create_text(summary, "TIME", &lv_font_montserrat_22, kAccent);
-    lv_obj_align(active_view_value_, LV_ALIGN_LEFT_MID, 14, 10);
-    lv_obj_t *summary_hint = create_text(summary, "TOUCH MODE BUTTONS TO SWITCH", &lv_font_montserrat_12, kMutedText);
-    lv_obj_align(summary_hint, LV_ALIGN_BOTTOM_LEFT, 14, -12);
+    connection_status_value_ = create_text(
+        summary, "CHECKING", &lv_font_montserrat_22, kMutedText);
+    lv_obj_align(connection_status_value_, LV_ALIGN_LEFT_MID, 14, 10);
+    connection_status_hint_ = create_text(
+        summary, "WAITING FOR CSLP SESSION", &lv_font_montserrat_12,
+        kMutedText);
+    lv_obj_align(connection_status_hint_, LV_ALIGN_BOTTOM_LEFT, 14, -12);
 
     lv_obj_t *footer = lv_obj_create(ui_root_);
     lv_obj_set_size(footer, width - kScreenPadding * 2, kFooterHeight);
@@ -494,6 +524,8 @@ bool InstrumentApp::rollback_ui_start()
     last_render_frame_id_ = 0;
     live_stream_stale_ = false;
     stale_transport_ready_ = false;
+    connection_state_ = live_stream_freshness::ConnectionState::Checking;
+    invalid_frames_baseline_ = 0;
     return ui_start_resources_released();
 }
 
@@ -507,7 +539,9 @@ bool InstrumentApp::ui_start_resources_released() const
            && spectrum_line_count_label_ == nullptr
            && mode_label_ == nullptr
            && plot_title_ == nullptr && plot_hint_ == nullptr
-           && plot_subhint_ == nullptr && active_view_value_ == nullptr
+           && plot_subhint_ == nullptr
+           && connection_status_value_ == nullptr
+           && connection_status_hint_ == nullptr
            && vpp_value_ == nullptr && rms_value_ == nullptr
            && fundamental_value_ == nullptr && sample_rate_value_ == nullptr
            && timebase_label_ == nullptr && spectrum_legend_ == nullptr
@@ -516,7 +550,10 @@ bool InstrumentApp::ui_start_resources_released() const
            && spectrum_view_.resources_released()
            && live_data_timer_ == nullptr && !ui_started_
            && !pipeline_prepared_ && !live_mode_ && !live_stream_stale_
-           && !stale_transport_ready_;
+           && !stale_transport_ready_
+           && connection_state_
+                  == live_stream_freshness::ConnectionState::Checking
+           && invalid_frames_baseline_ == 0U;
 }
 
 void InstrumentApp::clear_ui_object_pointers()
@@ -533,7 +570,8 @@ void InstrumentApp::clear_ui_object_pointers()
     plot_title_ = nullptr;
     plot_hint_ = nullptr;
     plot_subhint_ = nullptr;
-    active_view_value_ = nullptr;
+    connection_status_value_ = nullptr;
+    connection_status_hint_ = nullptr;
     vpp_value_ = nullptr;
     rms_value_ = nullptr;
     fundamental_value_ = nullptr;
@@ -620,7 +658,6 @@ void InstrumentApp::select_view(View view)
         }
         update_spectrum_line_controls();
     }
-    lv_label_set_text(active_view_value_, is_time ? "TIME" : "FFT");
 }
 
 void InstrumentApp::select_periods(uint8_t periods)
@@ -758,7 +795,8 @@ void InstrumentApp::update_measurement_values(float voltage_peak_to_peak,
     lv_label_set_text(vpp_value_, value);
     measurement_format::millivolts(value, sizeof(value), true_rms_volts);
     lv_label_set_text(rms_value_, value);
-    measurement_format::hertz(value, sizeof(value), fundamental_hz);
+    measurement_format::hertz_hundredths(
+        value, sizeof(value), fundamental_hz);
     lv_label_set_text(fundamental_value_, value);
     snprintf(value, sizeof(value), "%.4f",
              static_cast<double>(sample_rate_hz / 1000000.0F));
@@ -781,12 +819,14 @@ void InstrumentApp::on_live_data_timer(lv_timer_t *timer)
                >= kStartupLiveUiWindowMs) {
         lv_timer_set_period(timer, kLiveUiPeriodMs);
     }
+    const PipelineStats stats = app->live_pipeline_.stats();
     app->update_live_stream_state(app->live_pipeline_.stream_ready(),
-                                  lv_tick_get());
+                                  lv_tick_get(), stats.invalid_frames);
 }
 
 void InstrumentApp::update_live_stream_state(bool transport_ready,
-                                             uint32_t now_ms)
+                                             uint32_t now_ms,
+                                             uint32_t invalid_frames)
 {
     const bool has_valid_frame = ui_frames_applied_ != 0U;
     const uint32_t freshness_anchor_ms =
@@ -795,6 +835,15 @@ void InstrumentApp::update_live_stream_state(bool transport_ready,
         live_stream_freshness::classify(
             has_valid_frame, live_stream_stale_, transport_ready, now_ms,
             freshness_anchor_ms);
+    if (!transport_ready) {
+        // A future session starts with a clean rejection baseline, so an old
+        // bad frame cannot make a newly connected FPGA look rejected.
+        invalid_frames_baseline_ = invalid_frames;
+    }
+    const bool rejection_observed =
+        invalid_frames != invalid_frames_baseline_;
+    set_connection_status(live_stream_freshness::classify_connection(
+        state, rejection_observed));
     if (state == live_stream_freshness::DisplayState::Waiting
         || state == live_stream_freshness::DisplayState::Live) {
         return;
@@ -849,6 +898,54 @@ void InstrumentApp::update_live_stream_state(bool transport_ready,
     }
 }
 
+void InstrumentApp::set_connection_status(
+    live_stream_freshness::ConnectionState state)
+{
+    if (connection_status_value_ == nullptr
+        || connection_status_hint_ == nullptr
+        || state == connection_state_) {
+        return;
+    }
+
+    const char *value = "CHECKING";
+    const char *hint = "WAITING FOR CSLP SESSION";
+    uint32_t color = kMutedText;
+    switch (state) {
+    case live_stream_freshness::ConnectionState::Checking:
+        break;
+    case live_stream_freshness::ConnectionState::NoFpgaLink:
+        value = "NO FPGA LINK";
+        hint = "CSLP SESSION NOT ESTABLISHED";
+        color = kError;
+        break;
+    case live_stream_freshness::ConnectionState::NoValidData:
+        value = "NO VALID DATA";
+        hint = "LAN OK  •  WAITING FOR FRAME";
+        color = kWarning;
+        break;
+    case live_stream_freshness::ConnectionState::DataRejected:
+        value = "DATA REJECTED";
+        hint = "OUTSIDE CAPTURE RULES";
+        color = kWarning;
+        break;
+    case live_stream_freshness::ConnectionState::Normal:
+        value = "NORMAL";
+        hint = "LAN + VALID FRAME OK";
+        color = kAccent;
+        break;
+    case live_stream_freshness::ConnectionState::SystemError:
+        value = "SYSTEM ERROR";
+        hint = "CHECK SOURCE STATUS ABOVE";
+        color = kError;
+        break;
+    }
+    lv_label_set_text(connection_status_value_, value);
+    lv_label_set_text(connection_status_hint_, hint);
+    lv_obj_set_style_text_color(
+        connection_status_value_, lv_color_hex(color), 0);
+    connection_state_ = state;
+}
+
 void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
 {
     // This method is called by an LVGL timer, therefore in the adapter's UI
@@ -889,7 +986,8 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
                  "Spectrum UI bridge on Core %d: session=%08" PRIX32
                  " frame=%" PRIu32 " gen=%" PRIu32
                  " A/B=%u columns=%u peaks=%u Fs=%.4fMHz axis=%.5fMHz"
-                 " Amax=%.1fmVpk view=%.2fmV/div",
+                 " Amax=%.1fmVpk view=%.2fmV/div"
+                 " p4cal=%u profile=%08" PRIX32,
                  xPortGetCoreID(), frame.session_id, frame.frame_id,
                  frame.spectrum.generation,
                  frame.spectrum.source_buffer_index,
@@ -900,7 +998,10 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
                  static_cast<double>(
                      frame.spectrum.amplitude_max_volts * 1000.0F),
                  static_cast<double>(
-                     spectrum_view_.volts_per_division() * 1000.0F));
+                     spectrum_view_.volts_per_division() * 1000.0F),
+                 static_cast<unsigned>(
+                     frame.frequency_response_compensated),
+                 frame.p4_response_profile_id);
     }
 
     update_measurement_values(
@@ -912,20 +1013,30 @@ void InstrumentApp::apply_live_measurement(const DynamicMeasurementFrame &frame)
         (frame.source_flags & cslp::kFlagCalibrated) != 0;
     const bool test_pattern =
         (frame.source_flags & cslp::kFlagTestPattern) != 0;
+    char p4_response[24];
+    if (frame.frequency_response_compensated
+        && frame.p4_response_profile_id != 0U) {
+        snprintf(p4_response, sizeof(p4_response),
+                 "P4CAL %08" PRIX32,
+                 frame.p4_response_profile_id);
+    } else {
+        snprintf(p4_response, sizeof(p4_response), "P4RAW");
+    }
     snprintf(value, sizeof(value),
-             "SOURCE  CSLP %s   •   %s   •   FRAME %lu",
+             "SOURCE  CSLP %s   •   UP %s   •   %s   •   FRAME %lu",
              test_pattern ? "TEST" : "LIVE",
              calibrated ? "CAL" : "NOMINAL",
+             p4_response,
              static_cast<unsigned long>(frame.frame_id));
     lv_label_set_text(source_label_, value);
-    snprintf(value, sizeof(value), "%s / GEN #%lu",
-             active_view_ == View::Time ? "TIME" : "FFT",
-             static_cast<unsigned long>(frame.generation));
-    lv_label_set_text(active_view_value_, value);
     snprintf(value, sizeof(value), "LIVE  %lu frames", static_cast<unsigned long>(ui_frames_applied_));
     lv_label_set_text(footer_left_, value);
     live_stream_stale_ = false;
     stale_transport_ready_ = false;
+    const PipelineStats current_stats = live_pipeline_.stats();
+    invalid_frames_baseline_ = current_stats.invalid_frames;
+    set_connection_status(
+        live_stream_freshness::ConnectionState::Normal);
     if (recovered_from_stale) {
         ESP_LOGI("cyclescope_ui",
                  "CSLP UI stream state: STALE -> LIVE; session=%08" PRIX32

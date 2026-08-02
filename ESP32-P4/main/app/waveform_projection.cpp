@@ -1,6 +1,7 @@
 #include "waveform_projection.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 
@@ -10,6 +11,7 @@ namespace {
 constexpr float kMinimumVerticalRangeVolts = 0.01F;
 constexpr float kVerticalHeadroom = 1.15F;
 constexpr double kTwoPi = 6.28318530717958647692;
+constexpr size_t kReconstructionSubsamplesPerColumn = 4U;
 
 float calibrated_sample(const int16_t *samples, size_t index,
                         float volts_per_lsb, float offset_volts,
@@ -170,6 +172,106 @@ bool build_envelope(const int16_t *samples, size_t sample_count,
     return true;
 }
 
+bool build_reconstructed_envelope(
+    const SpectralLine *lines, const float *phases_radians,
+    size_t line_count, float fundamental_hz, float periods,
+    WaveformEnvelope *envelope, float *minimum_volts,
+    float *maximum_volts)
+{
+    if (lines == nullptr || phases_radians == nullptr || envelope == nullptr
+        || minimum_volts == nullptr || maximum_volts == nullptr
+        || line_count == 0U || line_count > kMaximumSpectralLines
+        || !std::isfinite(fundamental_hz) || !(fundamental_hz > 0.0F)
+        || !std::isfinite(periods) || !(periods > 0.0F)) {
+        return false;
+    }
+    const float fundamental_phase = phases_radians[0];
+    if (lines[0].harmonic_order != 1U
+        || !std::isfinite(fundamental_phase)) {
+        return false;
+    }
+    double anchor_seconds =
+        -static_cast<double>(fundamental_phase)
+        / (kTwoPi * static_cast<double>(fundamental_hz));
+    const double fundamental_period =
+        1.0 / static_cast<double>(fundamental_hz);
+    anchor_seconds = std::fmod(anchor_seconds, fundamental_period);
+    if (anchor_seconds < 0.0) {
+        anchor_seconds += fundamental_period;
+    }
+    const size_t steps =
+        kWaveformDisplayColumns * kReconstructionSubsamplesPerColumn;
+    const double span_seconds =
+        static_cast<double>(periods) * fundamental_period;
+    const double step_seconds = span_seconds / static_cast<double>(steps);
+    std::array<double, kMaximumSpectralLines> oscillator_sine{};
+    std::array<double, kMaximumSpectralLines> oscillator_cosine{};
+    std::array<double, kMaximumSpectralLines> step_sine{};
+    std::array<double, kMaximumSpectralLines> step_cosine{};
+    for (size_t line = 0U; line < line_count; ++line) {
+        if (!std::isfinite(lines[line].frequency_hz)
+            || !(lines[line].frequency_hz > 0.0F)
+            || !std::isfinite(lines[line].amplitude_volts_peak)
+            || !(lines[line].amplitude_volts_peak > 0.0F)
+            || !std::isfinite(phases_radians[line])) {
+            return false;
+        }
+        const double angle =
+            kTwoPi * static_cast<double>(lines[line].frequency_hz)
+                * anchor_seconds
+            + static_cast<double>(phases_radians[line]);
+        const double step_angle =
+            kTwoPi * static_cast<double>(lines[line].frequency_hz)
+            * step_seconds;
+        oscillator_sine[line] = std::sin(angle);
+        oscillator_cosine[line] = std::cos(angle);
+        step_sine[line] = std::sin(step_angle);
+        step_cosine[line] = std::cos(step_angle);
+    }
+    auto current_value = [&]() {
+        double value = 0.0;
+        for (size_t line = 0U; line < line_count; ++line) {
+            value += static_cast<double>(
+                         lines[line].amplitude_volts_peak)
+                     * oscillator_sine[line];
+        }
+        return static_cast<float>(value);
+    };
+    *envelope = {};
+    envelope->span_us = static_cast<float>(span_seconds * 1.0e6);
+    envelope->column_count = static_cast<uint16_t>(kWaveformDisplayColumns);
+    float global_minimum = std::numeric_limits<float>::max();
+    float global_maximum = std::numeric_limits<float>::lowest();
+    for (size_t column = 0U; column < kWaveformDisplayColumns;
+         ++column) {
+        float column_minimum = current_value();
+        float column_maximum = column_minimum;
+        for (size_t substep = 0U;
+             substep < kReconstructionSubsamplesPerColumn; ++substep) {
+            for (size_t line = 0U; line < line_count; ++line) {
+                const double next_sine =
+                    oscillator_sine[line] * step_cosine[line]
+                    + oscillator_cosine[line] * step_sine[line];
+                oscillator_cosine[line] =
+                    oscillator_cosine[line] * step_cosine[line]
+                    - oscillator_sine[line] * step_sine[line];
+                oscillator_sine[line] = next_sine;
+            }
+            const float value = current_value();
+            column_minimum = std::min(column_minimum, value);
+            column_maximum = std::max(column_maximum, value);
+        }
+        envelope->columns[column] = {column_minimum, column_maximum};
+        global_minimum = std::min(global_minimum, column_minimum);
+        global_maximum = std::max(global_maximum, column_maximum);
+    }
+    envelope->peak_preserved = true;
+    *minimum_volts = global_minimum;
+    *maximum_volts = global_maximum;
+    return std::isfinite(global_minimum) && std::isfinite(global_maximum)
+           && global_maximum > global_minimum;
+}
+
 }  // namespace
 
 bool project_waveform(const int16_t *samples, size_t sample_count,
@@ -250,6 +352,54 @@ bool project_waveform(const int16_t *samples, size_t sample_count,
     frame->vertical_range_volts =
         std::max(kMinimumVerticalRangeVolts, maximum_magnitude * kVerticalHeadroom);
     return true;
+}
+
+bool project_reconstructed_waveform(
+    const SpectralLine *lines, const float *phases_radians,
+    size_t line_count, float sample_rate_hz, float fundamental_hz,
+    uint32_t generation,
+    float voltage_peak_to_peak, float true_rms_volts,
+    WaveformDisplayFrame *frame)
+{
+    if (frame == nullptr) {
+        return false;
+    }
+    *frame = {};
+    if (lines == nullptr || phases_radians == nullptr || line_count == 0U
+        || line_count > kMaximumSpectralLines
+        || !std::isfinite(sample_rate_hz) || !(sample_rate_hz > 0.0F)
+        || !std::isfinite(fundamental_hz) || !(fundamental_hz > 0.0F)
+        || !std::isfinite(voltage_peak_to_peak)
+        || !(voltage_peak_to_peak > 0.0F)
+        || !std::isfinite(true_rms_volts) || !(true_rms_volts > 0.0F)) {
+        return false;
+    }
+    frame->generation = generation;
+    frame->sample_rate_hz = sample_rate_hz;
+    frame->fundamental_hz = fundamental_hz;
+    frame->voltage_peak_to_peak = voltage_peak_to_peak;
+    frame->true_rms_volts = true_rms_volts;
+    float one_minimum = 0.0F;
+    float one_maximum = 0.0F;
+    float three_minimum = 0.0F;
+    float three_maximum = 0.0F;
+    if (!build_reconstructed_envelope(
+            lines, phases_radians, line_count, fundamental_hz, 1.0F,
+            &frame->one_period, &one_minimum, &one_maximum)
+        || !build_reconstructed_envelope(
+            lines, phases_radians, line_count, fundamental_hz, 3.0F,
+            &frame->three_periods, &three_minimum, &three_maximum)) {
+        *frame = {};
+        return false;
+    }
+    const float maximum_magnitude = std::max(
+        std::fabs(three_minimum), std::fabs(three_maximum));
+    frame->vertical_range_volts = std::max(
+        kMinimumVerticalRangeVolts,
+        maximum_magnitude * kVerticalHeadroom);
+    return std::isfinite(frame->vertical_range_volts)
+           && frame->one_period.peak_preserved
+           && frame->three_periods.peak_preserved;
 }
 
 bool aggregate_waveform_column(const WaveformEnvelope &envelope,

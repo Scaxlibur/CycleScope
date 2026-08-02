@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CycleScope 周期信号测量分析装置设计报告</title>
+  <style>
+    @page { size: A4; margin: 12mm 13mm 13mm; }
+    :root {
+      --ink: #17212b;
+      --muted: #5b6875;
+      --blue: #0b5f9f;
+      --blue-soft: #eaf4fb;
+      --line: #b8c7d3;
+      --green: #18724a;
+      --amber: #8a5700;
+      --red: #a63a3a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Noto Serif CJK SC", "Noto Sans CJK SC", "Source Han Serif SC", serif;
+      font-size: 9.45pt;
+      line-height: 1.42;
+      background: #edf1f4;
+    }
+    .notice {
+      max-width: 210mm;
+      margin: 8mm auto;
+      padding: 3mm 5mm;
+      color: #44515c;
+      border: 1px solid #d4dde4;
+      border-radius: 5px;
+      background: #fff;
+      font-family: "Noto Sans CJK SC", sans-serif;
+      font-size: 9pt;
+    }
+    .page {
+      position: relative;
+      width: 210mm;
+      min-height: 272mm;
+      margin: 8mm auto;
+      padding: 0;
+      background: #fff;
+      box-shadow: 0 1mm 4mm rgba(25, 40, 52, .15);
+      break-after: page;
+      page-break-after: always;
+    }
+    .page:last-of-type { break-after: auto; page-break-after: auto; }
+    .page-inner { min-height: 255mm; padding: 0 1mm 12mm; }
+    .abstract-page { display: flex; flex-direction: column; min-height: 255mm; }
+    .eyebrow {
+      margin-top: 5mm;
+      color: var(--blue);
+      font-family: "Noto Sans CJK SC", sans-serif;
+      font-size: 10pt;
+      letter-spacing: .12em;
+      text-align: center;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 {
+      margin: 33mm 0 4mm;
+      font-family: "Noto Sans CJK SC", sans-serif;
+      font-size: 25pt;
+      line-height: 1.24;
+      letter-spacing: .04em;
+      text-align: center;
+    }
+    .subtitle {
+      margin: 0 0 19mm;
+      color: var(--muted);
+      font-size: 12pt;
+      text-align: center;
+    }
+    .rule { height: 1.5px; margin: 0 12mm 7mm; background: linear-gradient(90deg, transparent, var(--blue), transparent); }
+    .abstract-title, h2 {
+      margin: 0 0 4mm;
+      color: #113e62;
+      font-family: "Noto Sans CJK SC", sans-serif;
+      font-size: 15pt;
+      line-height: 1.2;
+    }
+    .abstract-title { text-align: center; }
+    h2 { padding-bottom: 1.8mm; border-bottom: 1.2px solid var(--blue); }
+    h3 {
+      margin: 3mm 0 1.5mm;
+      color: #1c4c70;
+      font-family: "Noto Sans CJK SC", sans-serif;
+      font-size: 10.6pt;
+    }
+    .abstract {
+      margin: 0 10mm;
+      text-align: justify;
+      font-size: 10.8pt;
+      line-height: 1.65;
+    }
+    .keywords { margin: 5mm 10mm 0; font-size: 9.8pt; }
+    .keywords b { color: var(--blue); }
+    .hero-card {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2mm;
+      margin: auto 9mm 18mm;
+      padding: 4mm;
+      border: 1px solid #bfd4e3;
+      background: linear-gradient(135deg, #f7fbfe, #e8f3f9);
+    }
+    .hero-card div { padding: 1mm 2mm; text-align: center; border-right: 1px solid #c7d9e5; }
+    .hero-card div:last-child { border-right: 0; }
+    .hero-card strong { display: block; color: var(--blue); font-family: "Noto Sans CJK SC", sans-serif; font-size: 11.5pt; }
+    .hero-card span { display: block; margin-top: 1mm; color: var(--muted); font-size: 8.5pt; }
+    .kicker { margin: 5mm 0 3mm; color: var(--muted); font-size: 8.5pt; text-align: center; }
+    .lead { margin-bottom: 3mm; text-align: justify; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 2mm 0 3mm; font-size: 8.55pt; }
+    th, td { padding: 1.55mm 1.6mm; border: .65px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+    th { color: #143d5d; background: var(--blue-soft); font-family: "Noto Sans CJK SC", sans-serif; font-weight: 700; text-align: center; }
+    .small { color: var(--muted); font-size: 8.1pt; line-height: 1.35; }
+    .very-small { color: var(--muted); font-size: 7.55pt; line-height: 1.28; }
+    .emph { color: var(--blue); font-weight: 700; }
+    .pass { color: var(--green); font-weight: 700; }
+    .warn { color: var(--amber); font-weight: 700; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+    .callout { margin: 2.5mm 0; padding: 2.5mm 3mm; border-left: 3px solid var(--blue); background: #f3f8fc; text-align: justify; }
+    .callout.warnbox { border-left-color: #bd7a00; background: #fff8e8; }
+    .formula {
+      margin: 2.2mm 0;
+      padding: 1.8mm 3mm;
+      border-radius: 2px;
+      background: #f7f9fa;
+      color: #152c40;
+      font-family: "Noto Sans CJK SC", sans-serif;
+      font-size: 9.2pt;
+      text-align: center;
+    }
+    .figure { margin: 2mm 0 3mm; }
+    .figure svg { display: block; width: 100%; height: auto; border: .7px solid #c4d1da; background: #fbfdff; }
+    figcaption { margin-top: 1mm; color: var(--muted); font-size: 8.15pt; text-align: center; }
+    .legend { display: flex; gap: 4mm; margin: 1.6mm 0; color: var(--muted); font-size: 8pt; }
+    .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 1mm; border-radius: 50%; }
+    ul, ol { margin: 1.2mm 0 1.8mm 4.5mm; padding-left: 3.5mm; }
+    li { margin: .7mm 0; }
+    .metric { font-family: "Noto Sans CJK SC", sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .footer {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      padding-top: 2mm;
+      border-top: .55px solid #cad4dc;
+      color: #71808c;
+      font-family: "Noto Sans CJK SC", sans-serif;
+      font-size: 7.8pt;
+      text-align: center;
+    }
+    .no-print { display: block; }
+    @media print {
+      body { background: #fff; }
+      .notice { display: none; }
+      .page { width: auto; min-height: 0; margin: 0; box-shadow: none; }
+      .page-inner { min-height: 255mm; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="notice no-print">打印建议：选择 A4、100% 缩放并勾选“打印背景图形”。本文件按“摘要 1 页 + 正文 6 页”排版，正文不超过 8 页。</aside>
+
+  <!-- 摘要页 -->
+  <section class="page">
+    <div class="page-inner abstract-page">
+      <div class="eyebrow">2026 年全国大学生电子设计竞赛赛区赛 · G 题</div>
+      <h1>CycleScope<br>周期信号测量分析装置<br>设计报告</h1>
+      <p class="subtitle">周期信号测量、谐波分析与可视化显示</p>
+      <div class="rule"></div>
+      <h2 class="abstract-title">摘要</h2>
+      <p class="abstract">面向 G 题周期信号测量需求，设计了由模拟前端、AD9226、Zynq-7010、以太网和 ESP32-P4 组成的 CycleScope。AD9226 以 65 MSPS 采样；FPGA 三级 FIR 后 16 倍抽取；P4 对 8192 点帧完成 Hann 窗 FFT、谐波识别、真有效值和合成峰峰值计算，并在触摸屏显示 1/3 周期波形及正频率线谱。60 例联合验收的最大 F0、Vpp、真 RMS、谱线峰值误差为 0.180 Hz、3.727 mV、0.967 mV、1.082 mV；4～10 MHz 干扰的最小抑制下界为 65.997 dB。</p>
+      <p class="keywords"><b>关键词：</b>周期信号；谐波分析；Hann 窗；真有效值；FPGA；ESP32-P4</p>
+      <div class="hero-card">
+        <div><strong>65 MSPS</strong><span>AD9226 原始采样率</span></div>
+        <div><strong>495.91 Hz</strong><span>FFT 频点间隔</span></div>
+        <div><strong>8192 点</strong><span>固定分析帧长</span></div>
+        <div><strong>7 英寸</strong><span>1024×600 触摸显示</span></div>
+      </div>
+      <p class="kicker">设计报告中文摘要（300 字以内）</p>
+    </div>
+    <div class="footer">CycleScope 周期信号测量分析装置 · 摘要页</div>
+  </section>
+
+  <!-- 正文第 1 页 -->
+  <section class="page">
+    <div class="page-inner">
+      <h2>1　任务分解与方案论证</h2>
+      <p class="lead">被测对象为“基波 + 1 个或 2 个谐波”的纯交流周期信号。题设中的 <i>U</i><sub>pp</sub> 指<strong>合成波形总峰峰值</strong>；频谱幅值统一按正弦分量的<strong>峰值</strong>（mVpk）表示。系统以持续采集、按键切换显示为工作方式，避免在测量期间调节模拟电路。</p>
+      <table>
+        <thead><tr><th style="width:12%">工况</th><th style="width:26%">输入边界</th><th style="width:38%">显示与测量要求</th><th style="width:24%">设计响应</th></tr></thead>
+        <tbody>
+          <tr><td><i>u</i><sub>a</sub></td><td>总 100～250 mVpp；全部分量 10～200 kHz</td><td>键控 1P/3P；<i>U</i><sub>pp</sub>、真 RMS ≤5 mV；<i>f</i><sub>0</sub> ≤1 kHz；正频率线谱及各分量幅值 ≤5 mV</td><td>8192 点 FFT、相位重构、H1 相位锚定</td></tr>
+          <tr><td><i>u</i><sub>b</sub></td><td>总 50～250 mVpp；全部分量 10～500 kHz</td><td>同上，覆盖高阶谐波与弱基波</td><td>谐波族识别支持 H2～H16 实测覆盖</td></tr>
+          <tr><td><i>u</i><sub>b</sub>+<i>u</i><sub>J</sub></td><td><i>u</i><sub>b</sub> 同上；<i>u</i><sub>J</sub>=200 mVpp，<i>f</i><sub>J</sub>≥1 MHz</td><td>抑制干扰后完成同类波形、参数和线谱显示</td><td>模拟调理 + FPGA 抽取前低通 + P4 带内谐波判别</td></tr>
+        </tbody>
+      </table>
+      <div class="grid-2">
+        <div>
+          <h3>1.1 方案比较</h3>
+          <table>
+            <thead><tr><th>方案</th><th>评价</th><th>结论</th></tr></thead>
+            <tbody>
+              <tr><td>P4 直接高速采样与 FFT</td><td>难以承担 65 MSPS 采样接口，抗混叠与实时传输余量不足。</td><td>不采用</td></tr>
+              <tr><td>FPGA 完成全部测量和 UI</td><td>硬实时性好，但谐波算法、界面和调试迭代成本高。</td><td>不采用</td></tr>
+              <tr><td>FPGA 采集/滤波，P4 分析/显示</td><td>将硬实时采集与可迭代算法分层，数据率与计算量均可控。</td><td><span class="pass">采用</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>1.2 选型理由</h3>
+          <ul>
+            <li>单颗 AD9226 通道 A 采样，避免双 ADC 交织的增益、偏置和相位失配。</li>
+            <li>先低通再 16 倍抽取，既抑制抽取折叠，又将板间载荷降至约 2.62 Mbit/s。</li>
+            <li>UDP 数据面采用“坏帧整帧丢弃 + 最新帧优先”，不让旧帧积压破坏显示实时性。</li>
+            <li>7 英寸独立触摸屏支持 TIME/FFT 与 1P/3P 虚拟按键切换，符合题目键控要求。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout"><b>关键约束：</b>FFT 频点间隔须不大于 500 Hz；外部只允许一路 5 V 供电；现场以 50 Ω 信号源设置值为测量基准。高频干扰没有上限，因此不能把“软件忽略 500 kHz 以上频线”误当成抗混叠方案。</div>
+    </div>
+    <div class="footer">CycleScope 周期信号测量分析装置 · 正文 1 / 6</div>
+  </section>
+
+  <!-- 正文第 2 页 -->
+  <section class="page">
+    <div class="page-inner">
+      <h2>2　系统与硬件设计</h2>
+      <figure class="figure">
+        <svg viewBox="0 0 1180 255" role="img" aria-label="CycleScope 系统组成框图">
+          <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#2d6d9d"/></marker></defs>
+          <style>.b{fill:#eef7fc;stroke:#2d6d9d;stroke-width:1.5}.g{fill:#eef8f2;stroke:#34775a;stroke-width:1.5}.t{font-family:'Noto Sans CJK SC',sans-serif;fill:#163b56;font-size:16px;font-weight:700}.s{font-family:'Noto Sans CJK SC',sans-serif;fill:#426075;font-size:12px}.a{stroke:#2d6d9d;stroke-width:2;marker-end:url(#arrow)}</style>
+          <rect class="b" x="18" y="83" width="120" height="82" rx="7"/><text class="t" x="78" y="116" text-anchor="middle">BNC 输入</text><text class="s" x="78" y="141" text-anchor="middle">50 Ω 信号源</text>
+          <line class="a" x1="139" y1="124" x2="183" y2="124"/>
+          <rect class="b" x="185" y="61" width="170" height="126" rx="7"/><text class="t" x="270" y="99" text-anchor="middle">模拟调理</text><text class="s" x="270" y="123" text-anchor="middle">AD8065 前端</text><text class="s" x="270" y="143" text-anchor="middle">保护 / 匹配 / 抗混叠</text><text class="s" x="270" y="163" text-anchor="middle">输入标定</text>
+          <line class="a" x1="356" y1="124" x2="400" y2="124"/>
+          <rect class="b" x="402" y="83" width="128" height="82" rx="7"/><text class="t" x="466" y="115" text-anchor="middle">AD9226</text><text class="s" x="466" y="140" text-anchor="middle">通道 A，65 MSPS</text>
+          <line class="a" x1="531" y1="124" x2="575" y2="124"/>
+          <rect class="g" x="577" y="50" width="202" height="148" rx="7"/><text class="t" x="678" y="85" text-anchor="middle">Zynq-7010 FPGA</text><text class="s" x="678" y="110" text-anchor="middle">码型归一化、三级 FIR</text><text class="s" x="678" y="130" text-anchor="middle">÷16 抽取、帧缓存、DMA</text><text class="s" x="678" y="150" text-anchor="middle">4.0625 MS/s、8192 点</text><text class="s" x="678" y="170" text-anchor="middle">CSLP/UDP，20 frame/s</text>
+          <line class="a" x1="780" y1="124" x2="824" y2="124"/>
+          <rect class="b" x="826" y="61" width="172" height="126" rx="7"/><text class="t" x="912" y="98" text-anchor="middle">ESP32-P4</text><text class="s" x="912" y="122" text-anchor="middle">重组、FFT、谐波测量</text><text class="s" x="912" y="142" text-anchor="middle">1P/3P 投影、LVGL</text><text class="s" x="912" y="162" text-anchor="middle">双核任务解耦</text>
+          <line class="a" x1="999" y1="124" x2="1043" y2="124"/>
+          <rect class="b" x="1045" y="83" width="120" height="82" rx="7"/><text class="t" x="1105" y="115" text-anchor="middle">触摸显示</text><text class="s" x="1105" y="140" text-anchor="middle">7 英寸，1024×600</text>
+          <path d="M210,217 H1085" stroke="#a36917" stroke-width="2" marker-end="url(#arrow)"/><text x="160" y="222" text-anchor="end" class="s" style="fill:#81550e">外部单路 5 V</text><text x="650" y="242" text-anchor="middle" class="s" style="fill:#81550e">装置内部 DC-DC / LDO 生成各模块所需电源轨</text>
+        </svg>
+        <figcaption>图 1　CycleScope 整机原理框图</figcaption>
+      </figure>
+      <div class="grid-2">
+        <div>
+          <h3>2.1 模拟输入与采样前端</h3>
+          <p>信号从 BNC 输入后进入 AD8065 同相前端。反馈网络取 <span class="metric">R<sub>F</sub>=1.608 kΩ</span>、<span class="metric">R<sub>G</sub>=200.2 Ω</span>，理论闭环增益为 <span class="metric">1+R<sub>F</sub>/R<sub>G</sub>=9.032</span>；输出串联约 50 Ω 驱动 AD9226 的 50 Ω 负载时，理论加载增益为 <span class="metric">4.516</span>。真实电压比例由端到端校准身份 <span class="metric">calibration_id=25030</span> 管理，不把名义增益当作测量结果。</p>
+          <div class="callout"><b>抗混叠职责：</b>模拟前端负责限制 ADC 采样前的带外能量；FPGA FIR 负责抽取前抗折叠。后一项不能修复已在 ADC 前混叠进测量带的干扰。</div>
+        </div>
+        <div>
+          <h3>2.2 FPGA 采集、滤波与传输</h3>
+          <ul>
+            <li>AD9226 offset-binary 数据经 IOB 寄存器锁存并转换为零中心有符号量。</li>
+            <li>三级对称 Q1.17 FIR：<span class="metric">21 taps/÷4 → 31 taps/÷4 → 79 taps/÷1</span>，总抽取 16；群延迟 694 个 ADC tick 写入时间戳语义。</li>
+            <li>双 Bank、AXI-Stream 与 100 MHz S2MM DMA 保证帧所有权；每帧为 8192×S16_LE，50 ms 投递一次。</li>
+            <li>Zynq PS 以 CSLP/UDP 发送 12 个分片；CRC、UDP 校验和和帧元数据共同构成接收门禁。</li>
+          </ul>
+        </div>
+      </div>
+      <figure class="figure">
+        <svg viewBox="0 0 1180 100" role="img" aria-label="模拟前端功能电路示意">
+          <style>.x{font-family:'Noto Sans CJK SC',sans-serif;fill:#193e58;font-size:14px}.xs{font-family:'Noto Sans CJK SC',sans-serif;fill:#526d7d;font-size:12px}.ln{stroke:#205f8e;stroke-width:2;fill:none}.c{fill:#eff7fc;stroke:#2b6c9d;stroke-width:1.4}</style>
+          <text class="x" x="30" y="58">BNC</text><path class="ln" d="M76 53 H180"/><rect class="c" x="180" y="25" width="205" height="55" rx="6"/><text class="x" x="282" y="49" text-anchor="middle">AD8065 同相前端</text><text class="xs" x="282" y="69" text-anchor="middle">R<tspan baseline-shift="sub">F</tspan>=1.608 kΩ，R<tspan baseline-shift="sub">G</tspan>=200.2 Ω</text><path class="ln" d="M385 53 H493"/><path class="ln" d="M493 53 l12 -12 l12 24 l12 -24 l12 24 l12 -12"/><text class="xs" x="530" y="30" text-anchor="middle">R<tspan baseline-shift="sub">s</tspan>≈50 Ω</text><path class="ln" d="M553 53 H690"/><rect class="c" x="690" y="25" width="170" height="55" rx="6"/><text class="x" x="775" y="49" text-anchor="middle">AD9226 输入</text><text class="xs" x="775" y="69" text-anchor="middle">真实 50 Ω 负载</text><path class="ln" d="M860 53 H975"/><text class="x" x="994" y="58">FPGA</text><text class="xs" x="590" y="91" text-anchor="middle">模拟调理、匹配与滤波在 ADC 之前完成；数字 FIR 仅用于抽取前进一步抑制带外成分。</text>
+        </svg>
+        <figcaption>图 2　模拟前端与 ADC 功能电路示意（反馈和匹配参数见正文）</figcaption>
+      </figure>
+    </div>
+    <div class="footer">CycleScope 周期信号测量分析装置 · 正文 2 / 6</div>
+  </section>
+
+  <!-- 正文第 3 页 -->
+  <section class="page">
+    <div class="page-inner">
+      <h2>3　理论分析与关键计算</h2>
+      <div class="grid-2">
+        <div>
+          <h3>3.1 采样率、抽取与分辨率</h3>
+          <p>原始采样率为 <span class="metric">f<sub>s0</sub>=65 MSPS</span>。为使 8192 点 FFT 频点间隔不超过 500 Hz，抽取倍数应满足：</p>
+          <div class="formula">65×10<sup>6</sup> / (D×8192) ≤ 500　⇒　D ≥ 15.869</div>
+          <p>取 <span class="metric">D=16</span>，故线上连续样点率和 FFT 栅格为：</p>
+          <div class="formula">f<sub>s</sub>=65 000 000/16=4 062 500 S/s；　Δf=f<sub>s</sub>/8192=495.9106 Hz&lt;500 Hz</div>
+          <p>单帧采样窗口为 <span class="metric">8192/4 062 500=2.016492 ms</span>；10 kHz 基波在窗口内约含 20.16 个周期，500 kHz 分量仍有 8.125 点/周期，兼顾低频完整周期显示与高频谱线识别。</p>
+        </div>
+        <div>
+          <h3>3.2 幅值标定与单边谱</h3>
+          <p>按帧携带的比例和偏置将 ADC 码值换算至 BNC 输入端电压：<span class="metric">x[n]=q[n]K<sub>LSB</sub>+V<sub>off</sub></span>。先去直流，再加 Hann 窗：</p>
+          <div class="formula">w[n]=0.5(1−cos(2πn/(N−1)))，　A[k]=2|X[k]|/Σw[n]</div>
+          <p>其中 <span class="metric">A[k]</span> 是正频率轴上的正弦峰值；DC 与 Nyquist 点不乘 2。此归一化补偿了 Hann 窗的相干增益，避免把窗函数损失误报为谱线幅值误差。</p>
+          <h3>3.3 谐波族而非最大谱线</h3>
+          <p>在 10～500 kHz 搜索局部峰值，对相邻三 Bin 作对数插值，并以整数倍关系选出“基波 + 1/2 谐波”族。随后在精确频率上直接正弦投影，支持谐波强于基波的情形；不满足帧格式、CRC、谱线族或有限性门限时，结果 fail-closed。</p>
+        </div>
+      </div>
+      <h3>3.4 真有效值、总峰峰值与完整周期波形</h3>
+      <p>设已识别的正弦分量为 <span class="metric">u(t)=ΣA<sub>i</sub>sin(2πh<sub>i</sub>f<sub>0</sub>t+φ<sub>i</sub>)</span>。题设各次谐波在一个基波周期内正交，因此按定义计算真有效值：</p>
+      <div class="formula">U<sub>RMS</sub>=√(ΣA<sub>i</sub><sup>2</sup>/2)</div>
+      <p>总峰峰值不能用 <span class="metric">2ΣA<sub>i</sub></span> 代替，因为相位会移动极值。程序保持每条谱线的幅相，在一个基波周期内重构 4096 个点，并取 <span class="metric">max(û)−min(û)</span>。时域显示以 H1 上升过零点作统一锚定；在同一帧内分别提取 1P 与 3P，并通过列内 min/max 包络保留窄峰。</p>
+      <div class="grid-2">
+        <div class="callout"><b>频域显示：</b>只绘制通过谐波族校验的正频率离散谱线，横坐标按频率映射，纵坐标按 mVpk 及动态 mV/div 映射，避免把 Hann 主瓣和旁瓣画成“假谐波”。</div>
+        <div class="callout"><b>抗干扰机理：</b>高频 <i>u</i><sub>J</sub> 首先由前端与 FPGA FIR 衰减；P4 仅对 10～500 kHz 的合法谐波族做投影。若干扰在 ADC 前已混叠进带内，后级不能凭空恢复，因此以真实扫频和组合测试验证。</div>
+      </div>
+    </div>
+    <div class="footer">CycleScope 周期信号测量分析装置 · 正文 3 / 6</div>
+  </section>
+
+  <!-- 正文第 4 页 -->
+  <section class="page">
+    <div class="page-inner">
+      <h2>4　软件设计与人机交互</h2>
+      <p class="lead">软件按“接收—分析—显示”分离。接收任务只处理网络和帧完整性；分析任务只处理最新完整帧；LVGL 任务只消费固定容量显示结果。这样可以把短时绘图波动与实时收包隔离，避免 UI 阻塞导致数据堆积。</p>
+      <figure class="figure">
+        <svg viewBox="0 0 1180 260" role="img" aria-label="CycleScope 软件处理流程图">
+          <defs><marker id="fa" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#2d6d9d"/></marker></defs>
+          <style>.p{fill:#eff7fc;stroke:#2d6d9d;stroke-width:1.4}.q{fill:#fff8e7;stroke:#b57908;stroke-width:1.4}.r{fill:#edf8f1;stroke:#397857;stroke-width:1.4}.tt{font-family:'Noto Sans CJK SC',sans-serif;fill:#173e5a;font-size:15px;font-weight:700}.ss{font-family:'Noto Sans CJK SC',sans-serif;fill:#466679;font-size:12px}.fl{stroke:#2d6d9d;stroke-width:1.8;fill:none;marker-end:url(#fa)}</style>
+          <rect class="p" x="22" y="88" width="160" height="84" rx="7"/><text class="tt" x="102" y="119" text-anchor="middle">CSLP/UDP 接收</text><text class="ss" x="102" y="143" text-anchor="middle">来源、长度、CRC、12 分片</text><path class="fl" d="M183 130 H232"/>
+          <rect class="q" x="234" y="72" width="175" height="116" rx="7"/><text class="tt" x="321" y="106" text-anchor="middle">帧门禁与三缓冲</text><text class="ss" x="321" y="130" text-anchor="middle">session/config/元数据</text><text class="ss" x="321" y="150" text-anchor="middle">assembling/latest/in_use</text><text class="ss" x="321" y="170" text-anchor="middle">坏帧整帧丢弃</text><path class="fl" d="M410 130 H459"/>
+          <rect class="p" x="461" y="72" width="170" height="116" rx="7"/><text class="tt" x="546" y="106" text-anchor="middle">Core 1 分析任务</text><text class="ss" x="546" y="130" text-anchor="middle">标定、去直流、Hann、FFT</text><text class="ss" x="546" y="150" text-anchor="middle">谐波族、精确投影</text><text class="ss" x="546" y="170" text-anchor="middle">F0 / Vpp / 真 RMS</text><path class="fl" d="M632 130 H681"/>
+          <rect class="p" x="683" y="72" width="180" height="116" rx="7"/><text class="tt" x="773" y="106" text-anchor="middle">结果投影</text><text class="ss" x="773" y="130" text-anchor="middle">1P/3P min-max 包络</text><text class="ss" x="773" y="150" text-anchor="middle">正频率语义线谱</text><text class="ss" x="773" y="170" text-anchor="middle">深度 1 latest 队列</text><path class="fl" d="M864 130 H913"/>
+          <rect class="r" x="915" y="72" width="240" height="116" rx="7"/><text class="tt" x="1035" y="106" text-anchor="middle">Core 0 · LVGL 触摸界面</text><text class="ss" x="1035" y="130" text-anchor="middle">TIME / FFT 页面；1P / 3P 键控</text><text class="ss" x="1035" y="150" text-anchor="middle">Vpp、TRUE RMS、F0、mV/div</text><text class="ss" x="1035" y="170" text-anchor="middle">LIVE / STALE 数据新鲜度状态</text>
+          <path d="M321 188 V230 H102 V173" class="fl"/><text class="ss" x="211" y="248" text-anchor="middle">无效帧不进入 FFT；新帧覆盖未使用 latest，永不覆盖 in_use</text>
+        </svg>
+        <figcaption>图 3　接收、分析与显示解耦流程</figcaption>
+      </figure>
+      <div class="grid-2">
+        <div>
+          <h3>4.1 实时任务与容错</h3>
+          <ul>
+            <li>Core 1 优先级 6：<span class="metric">cslp_udp_rx</span> 完成来源、会话、配置、CRC 与分片检查；每帧固定 12 包。</li>
+            <li>Core 1 优先级 4：<span class="metric">cs_analyze</span> 完成频谱、时域参数和投影；结果在发布前再次确认其仍为 current 帧。</li>
+            <li>Core 0 独占 LVGL：PSRAM RGB565 画布只绘制已投影数据；显示队列深度为 1，采用 latest-wins。</li>
+            <li>无新有效测量 1000 ms 后进入 STALE；只有新有效帧可恢复 LIVE，避免旧数据被误显示为实时值。</li>
+          </ul>
+        </div>
+        <div>
+          <h3>4.2 显示与交互</h3>
+          <ul>
+            <li>TIME 页面显示相位锚定后的 1P 或 3P 完整波形，并给出 <i>U</i><sub>pp</sub>、TRUE RMS、<i>f</i><sub>0</sub>。</li>
+            <li>FFT 页面显示正频率离散线谱、各线的频率和 mVpk；纵轴随可见谱线动态给出 mV/div。</li>
+            <li>触摸虚拟按键完成 TIME/FFT、1P/3P 切换；程序化序列 <span class="metric">TIME→FFT→TIME→1P→3P</span> 已完成两轮状态验证。</li>
+            <li>正式 FFT 固定使用经弱基波门禁验证的 <span class="metric">dsps_fft2r_fc32_ansi</span>；出现非法谱线/参数时不发布伪结果。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout"><b>显示稳定性策略：</b>时域以统一 H1 相位锚点选窗，频域只显示语义谱线；二者均从同一份分析结果生成。这样既避免相位变化造成波形跨帧跳动，也避免频谱泄漏造成的视觉“毛刺”。</div>
+    </div>
+    <div class="footer">CycleScope 周期信号测量分析装置 · 正文 4 / 6</div>
+  </section>
+
+  <!-- 正文第 5 页 -->
+  <section class="page">
+    <div class="page-inner">
+      <h2>5　测试方案与测试结果</h2>
+      <p class="lead">测试采用分层取证：前端/FPGA 侧以 DG4202、示波器原始波形、LAN 帧和 pcap 共同验证；P4 侧以 FPGA 同步镜像帧、UART 测量结果和审计脚本交叉验证。所有定量结论均由归档原始数据复算，截图只用于形态与现场状态说明。</p>
+      <h3>5.1 真实前端与 FPGA 数据链</h3>
+      <table>
+        <thead><tr><th style="width:22%">测试项目</th><th style="width:26%">覆盖范围</th><th style="width:35%">结果</th><th style="width:17%">结论</th></tr></thead>
+        <tbody>
+          <tr><td>M11 历史动态范围与链路完整性</td><td>10/100/200/500 kHz × 10/50/100/250/450 mVpp；20 点、796 帧</td><td>ADC、FIR、LAN、pcap、UDP checksum、分片与错误计数均通过；450 mV 点用于压缩风险观察，不属于当前 ≤250 mVpp 正式校准/验收范围。</td><td>历史证据</td></tr>
+          <tr><td>最终逐频校准独立保留集</td><td>36 个训练点后，15/75/150/250/350/425/485 kHz、100 mVpp 的7点 holdout</td><td>最终 <code>fit-v2</code> 在不重拟合下通过；最大幅值/频率误差为 <span class="metric">0.320542 mV / 234.985 Hz</span>，生成 P4 profile <code>C5DCDE41</code>。</td><td><span class="pass">PASS</span></td></tr>
+          <tr><td>多音 <i>u</i><sub>a</sub>/<i>u</i><sub>b</sub></td><td>10 点、650 帧；弱谱线与不同相位/波峰形状</td><td>最大谱线、总 Vpp、真 RMS 误差分别为 <span class="metric">0.693/0.912/0.396 mV</span>。</td><td><span class="pass">PASS</span></td></tr>
+          <tr><td><i>u</i><sub>b</sub>+<i>u</i><sub>J</sub> 组合</td><td>15 点、975 帧；200 mVpp 单频干扰</td><td>最大谱线、总 Vpp、真 RMS 误差分别为 <span class="metric">0.444/0.704/0.245 mV</span>；最差干扰抑制下界 <span class="metric">74.846 dB</span>。</td><td><span class="pass">PASS</span></td></tr>
+          <tr><td>高频干扰扩展</td><td>4/5/7.2/7.5/10 MHz；7 点、287 帧</td><td>最差抑制下界 <span class="metric">65.997 dB</span>；最大谱线/总 Vpp/真 RMS 误差为 <span class="metric">0.332/0.555/0.111 mV</span>。</td><td><span class="pass">PASS</span></td></tr>
+          <tr><td>长时间运行</td><td>请求 10 000 帧，实收 10 001 帧/120 012 WAVE 包</td><td>首完整帧延迟 <span class="metric">58.438 ms</span>；10 个千帧块增益跨度 <span class="metric">0.001908 dB</span>；GEM、NIC、pcap 错误均为 0。</td><td><span class="pass">PASS</span></td></tr>
+        </tbody>
+      </table>
+      <h3>5.2 DG→FPGA/LAN→P4 全矩阵验收</h3>
+      <table>
+        <thead><tr><th style="width:31%">覆盖组</th><th style="width:15%">例数</th><th style="width:54%">审计结果（共 60 份 P4 验收报告）</th></tr></thead>
+        <tbody>
+          <tr><td>H2～H16 谐波掩码；400 kHz 跨阶次</td><td class="metric" style="text-align:center">15 + 15</td><td>覆盖弱 H1、不同谐波阶次和高端频率；400 kHz 强谱线幅值极差仅 <span class="metric">0.297 mV</span>。</td></tr>
+          <tr><td>H2/H3 相位 4×4</td><td class="metric" style="text-align:center">16</td><td>谱线峰值最大跨相位漂移 <span class="metric">0.095 mV</span>；Vpp 随真实相位变化 <span class="metric">96.388～126.139 mV</span>，未被误判为幅值误差。</td></tr>
+          <tr><td><i>u</i><sub>a</sub>/<i>u</i><sub>b</sub>；H1/H3/H5 基准</td><td class="metric" style="text-align:center">7 + 1</td><td>覆盖低/高幅值、弱基波、H16 与高频端；每例至少保留 214 个源端 ON 的完整 FPGA 镜像帧。</td></tr>
+          <tr><td><i>u</i><sub>b</sub>+<i>u</i><sub>J</sub></td><td class="metric" style="text-align:center">6</td><td>1/1.6/2 MHz、100 mVpk 干扰与无干扰基线成对测试；干扰不进入目标谱线。</td></tr>
+          <tr><td><b>最大绝对误差</b></td><td colspan="2">F0 <span class="metric">0.180 Hz</span>；Vpp <span class="metric">3.727 mV</span>；真 RMS <span class="metric">0.967 mV</span>；谱线频率 <span class="metric">0.625 Hz</span>；谱线峰值 <span class="metric">1.082 mVpk</span>。均低于题目 <span class="metric">1 kHz / 5 mV</span> 门限，审计 <span class="pass">PASS</span>。</td></tr>
+        </tbody>
+      </table>
+      <div class="callout"><b>干扰对照结果：</b>相对于无干扰基线，加入 1/1.6/2 MHz、200 mVpp 单频干扰后，最大漂移为 F0 <span class="metric">0.015 Hz</span>、Vpp <span class="metric">0.096 mV</span>、真 RMS <span class="metric">0.039 mV</span>、谱线峰值 <span class="metric">0.057 mVpk</span>。</div>
+    </div>
+    <div class="footer">CycleScope 周期信号测量分析装置 · 正文 5 / 6</div>
+  </section>
+
+  <!-- 正文第 6 页 -->
+  <section class="page">
+    <div class="page-inner">
+      <h2>6　误差、时限分析与结论</h2>
+      <div class="grid-2">
+        <div>
+          <h3>6.1 误差来源与抑制</h3>
+          <table>
+            <thead><tr><th style="width:33%">来源</th><th>控制措施</th></tr></thead>
+            <tbody>
+              <tr><td>前端增益、偏置与 ADC 量化</td><td>以 DG 50 Ω 设置值建立端到端标定；非零 <span class="metric">calibration_id</span> 与训练/保留集报告绑定。</td></tr>
+              <tr><td>非相干采样与谱泄漏</td><td>Hann 窗、单边幅值归一化、三 Bin 插值和精确频率投影。</td></tr>
+              <tr><td>谐波相位导致的峰峰值变化</td><td>保持幅相重构求极差；H1 相位锚定后再提取完整 1P/3P。</td></tr>
+              <tr><td>高频干扰与抽取混叠</td><td>模拟调理限制 ADC 前带外能量；三级 FIR 在抽取前抑制带外；以 1～10 MHz 组合/上限点实测。</td></tr>
+              <tr><td>UDP 丢包、坏帧和显示阻塞</td><td>CRC、来源、会话、配置与 12 分片门禁；三缓冲 + latest-wins，坏帧不发布。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>6.2 2 s 时限的软件预算</h3>
+          <table>
+            <thead><tr><th>环节</th><th style="width:36%">已测结果</th></tr></thead>
+            <tbody>
+              <tr><td>FPGA 启动推送至首完整帧</td><td><span class="metric">58.438 ms</span></td></tr>
+              <tr><td>真实 FPGA 600 帧 P4 FFT</td><td>平均/最大 <span class="metric">16.923/24.219 ms</span></td></tr>
+              <tr><td>TIME→FFT→TIME→1P→3P 软件回调</td><td>最大 <span class="metric">18.827 ms</span></td></tr>
+              <tr><td>帧发布周期</td><td><span class="metric">50 ms（20 frame/s）</span></td></tr>
+            </tbody>
+          </table>
+          <p>上述数据说明数据链、分析与界面提交具有充分余量。题目计时从系统已启动且会话已建立后的按键开始；冷启动约 3.5～4.4 s 不计入该窗口。</p>
+        </div>
+      </div>
+      <h3>6.3 结果边界与现场复核</h3>
+      <div class="callout warnbox"><b>证据口径：</b>第 5.2 节的 60 例为“DG 设置理论值→真实 FPGA/LAN 帧→P4 FFT/时域投影”的联合验收；第 5.1 节补充了模拟前端、ADC、FIR 与高频干扰的真实测试。两者共同支撑定量测量结论，但不能把软件截图、UI 回调或数据链日志冒充为真实面板完成刷新的证据。</div>
+      <ul>
+        <li><b>待现场人工留证：</b>系统已经运行并持续分析时，TIME、FFT、1P、3P 按键至真实 panel flush 的时间；同时核对完整周期视觉稳定性、谱线相对位置/高度与可读性。</li>
+        <li><b>结构与供电留证：</b>提交前拍摄板载 BNC、50 Ω 电缆、7 英寸独立显示屏与整机单路 5 V 供电照片/视频。开发板规格为 7 英寸 1024×600，满足尺寸选型要求。</li>
+        <li><b>频率与量程边界说明：</b>已实测至 10 MHz 干扰；题设没有给出 <i>u</i><sub>J</sub> 上限，因此不将该测试外推为任意高频下的 ADC 前抗混叠保证。100 kHz、450 mV 与 250 mV 相比的增益变化为 0.632%，仅保留为历史工程警示；当前正式标定/验收普通输入范围冻结为 ≤250 mVpp。</li>
+      </ul>
+      <h3>6.4 结论</h3>
+      <p>CycleScope 以“模拟前端—高速采样—FPGA 实时抽取—P4 频域分析与触摸显示”的分层结构，实现了 495.91 Hz 频率栅格、完整 1P/3P 波形、正频率离散线谱、总 Vpp、真 RMS、基频和分量峰值的统一计算。归档测试显示：真实前端与 FPGA 链在动态范围、多音、干扰和 10 001 帧长稳下通过；最新 DG→FPGA/LAN→P4 的 60 例矩阵中各定量误差均低于题目门限。该方案具备完成 G 题核心测量分析任务的技术基础，最终交付时应按上述现场清单补齐显示物理刷新与整机结构供电证据。</p>
+      <h3>证据与资料索引</h3>
+      <p class="very-small">E1《G题_周期信号测量分析装置》及主办方答疑；E2 <code>public/CSLP-G题采样与处理-Profile-v0.1.md</code>；E3 <code>CycleScope-FPGA/tool-of-rei/evidence/m11-real-frontend-20260731/</code>（校准、动态范围、多音、干扰和长稳）；E4 <code>CycleScope-main/tool-of-rei/evidence/m12-final-completion-audit.json</code>（60 例 P4 联合审计，2026-08-01）；E5 <code>CycleScope-main/tool-of-rei/项目快照.md</code>。旧《CycleScope设计报告初稿》标注为非最终提交，其“未握手”描述已由 E4 的后续证据覆盖。</p>
+    </div>
+    <div class="footer">CycleScope 周期信号测量分析装置 · 正文 6 / 6</div>
+  </section>
+</body>
+</html>

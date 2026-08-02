@@ -1,0 +1,374 @@
+{
+  "base_m8_strict_reanalysis": {
+    "M8-010K-H1": {
+      "audited_uart_rows": 2,
+      "pass": true,
+      "sha256": "cb926f16686ed6336e184a8da5249f6e3931fd6627a929fa8ed9182a31543bc5"
+    },
+    "M8-015K-H1": {
+      "audited_uart_rows": 3,
+      "pass": true,
+      "sha256": "ae20545349d3ed1b500c8e1ac5a1e2494d193d7cfa1e1ec334dfc874aff57eb0"
+    },
+    "M8-075K-H5": {
+      "audited_uart_rows": 3,
+      "pass": true,
+      "sha256": "84511d58f14db9dcd2c141a12639c4a018327086c298414741ef0e87f0c1f1bb"
+    },
+    "M8-100K-H1": {
+      "audited_uart_rows": 3,
+      "pass": true,
+      "sha256": "69140993710adbde7d3db562ffddadc9aaceca137b421b67b8c6b7d067c493a8"
+    },
+    "M8-150K-H2": {
+      "audited_uart_rows": 3,
+      "pass": true,
+      "sha256": "35c80284e97071acb55a483f80eff59a0230da6004914a3305cf1877d882323a"
+    },
+    "M8-250K-H2": {
+      "audited_uart_rows": 3,
+      "pass": true,
+      "sha256": "d2e0a66534c95bb80e737d7921d990d05edb2bcbd2ff5f53a001c52c4c1336cf"
+    },
+    "M8-350K-H5": {
+      "audited_uart_rows": 3,
+      "pass": true,
+      "sha256": "b699d3e7958e8c8563b908c84a2c63bd3c2ea8dc1d94193a3d5a44e83cddc986"
+    },
+    "M8-425K-H5": {
+      "audited_uart_rows": 3,
+      "pass": true,
+      "sha256": "42f7076570b4bcabe4fd8fbef0ce031b45776e5035f50eb931e96e7681443612"
+    },
+    "M8-485K-H5": {
+      "audited_uart_rows": 3,
+      "pass": true,
+      "sha256": "71afaffc06aef9002ef64326feb7a5a189c08bdc885591b25bb797629bd8c705"
+    }
+  },
+  "branch": "main",
+  "build_and_flash": {
+    "app_bin_sha256": "d819641dee546e912482c6ff1170b81ab97755fa0d4f533688cf2ba8d8207007",
+    "app_readback_identical": true,
+    "app_readback_sha256": "d819641dee546e912482c6ff1170b81ab97755fa0d4f533688cf2ba8d8207007",
+    "app_size_bytes": 1134096,
+    "cmake_cache_sha256": "98a6b3f71d671708f542e537d96b13be1b44c18b8a69f049c7b4726049b3b4ea",
+    "elf_sha256": "11c3c88650a9af9cd414e076fb87aac18bc2c816a877b97d4376686d3be18b27",
+    "local_test_cmake": "",
+    "lvgl_perf_monitor": false,
+    "peer_ipv4": "192.168.10.2",
+    "sdkconfig_sha256": "2f9422546f8a77499e1fc28ead175c95bdf6fbfc445443d9e44887d6bbc598ad"
+  },
+  "case_count": 20,
+  "case_evidence": [
+    {
+      "acceptance_sha256": "9dfe71382f78329cab3de9d5e5318aaf8730cbd47a5bce657a52036017c69c68",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 4,
+      "case_id": "M8-010K-H1",
+      "case_result_sha256": "47788182c05b881a2f3a17fc1af86fb55b5e4e5f097522d8221db7a0c7eb001c",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": true,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-20260801_181529+0800",
+      "uart_sha256": "26a4d4a4a59921e8499d2e8287588df1d81611f10aecac6cfa44f1864c6d41a8"
+    },
+    {
+      "acceptance_sha256": "2911fd230b797515699da1e4c485b7b5a7cdbdcc29391c55ce71934063087aef",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 3,
+      "case_id": "M8-015K-H1",
+      "case_result_sha256": "29d41c44010ae00760b2acfc011c68cdb5081220cba8f00bd0ea7b1c524d1266",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": true,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-20260801_181529+0800",
+      "uart_sha256": "86ce63d3234ce0540087eed43e44d09a57510c83980d099c1c2076ca684ddc46"
+    },
+    {
+      "acceptance_sha256": "56fe74bd7f11a63298b12bfef244a7c18d08e4ecefc1049927b2781d4390a437",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 3,
+      "case_id": "M8-075K-H5",
+      "case_result_sha256": "b56725835f6a7348d1dbeca7cb1f33c22d50cc901510bd40220710f0c5f33bd7",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": true,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-20260801_181529+0800",
+      "uart_sha256": "518a574064e6ebecd30fa36671e101ee64845061d26e60f03626c316830e205e"
+    },
+    {
+      "acceptance_sha256": "61be6295a9472a13f15bb94053c221cbe172e77d64ad4e8686f40cf69abfd4e2",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 3,
+      "case_id": "M8-100K-H1",
+      "case_result_sha256": "9e0e21bb1334056788ab135f48a83a7d8641beaaab9769c87c21bfad0ae47fca",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": true,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-20260801_181529+0800",
+      "uart_sha256": "99036c02594cf7a32e4c8f191b358eaf4546e59f1e4ebd47fd66eee9c868a3cd"
+    },
+    {
+      "acceptance_sha256": "e71ba69b3cb6fb3b9d4160d434022e50badba2bc873d9a5aa21000564215f601",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 3,
+      "case_id": "M8-150K-H2",
+      "case_result_sha256": "cfadb4c96d9075f5fa622cc249cca10907a5772f5154b5c3a648b15786114808",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": true,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-20260801_181529+0800",
+      "uart_sha256": "94911d6200a281a2bb34adffbb41ca40a51748cc7b6095d69fc50f61d83baec6"
+    },
+    {
+      "acceptance_sha256": "432c78b32537279325500ce89ada28788461c50092ae1b0110f7266e4c88397a",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 3,
+      "case_id": "M8-250K-H2",
+      "case_result_sha256": "a58654251bdf8afcd3ecc1664f58ab724bf1f5ab563c77e7a9c8b67e6796a35a",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": true,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-20260801_181529+0800",
+      "uart_sha256": "6a4541477aade35b4977b1966affbf89a7f97847b8561fcf5a9acd32ab128a0f"
+    },
+    {
+      "acceptance_sha256": "297dd3fc25326fd9bcd67e8fe46399ae82c259aeffc8266840af37a30a463901",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 3,
+      "case_id": "M8-350K-H5",
+      "case_result_sha256": "8751488147ea79ae25765c1ebb6bb69dff70a67e655f73e23d41267e38cb6017",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": true,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-20260801_181529+0800",
+      "uart_sha256": "5cf8491f43377e731522cab1e3a28dbd318dcad2dad20326d41549dd87040d35"
+    },
+    {
+      "acceptance_sha256": "732742f9b54b139d71fd54d06be5770a26743da110cede3acb248a19a30d0df1",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 3,
+      "case_id": "M8-425K-H5",
+      "case_result_sha256": "4483026df3708db9669175e3d6fb4f0e8dbf39a5c7ac4347ce7d708dedaa2e8d",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": true,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-20260801_181529+0800",
+      "uart_sha256": "251b409ac473bb56b4e2baba54bbe340386919b40bccf0f441f222fd03b0d151"
+    },
+    {
+      "acceptance_sha256": "19613366e0346ff98dc1989065099f52e677618209e1febf6c30bd0f2d8f7b46",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 3,
+      "case_id": "M8-485K-H5",
+      "case_result_sha256": "17e66ec72462975321a975af9d130aac3e985af3f56e120befb0a9c658a6e011",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": true,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-20260801_181529+0800",
+      "uart_sha256": "72f75e6a432d48555e5c469639cb13ea17d1baa6ccadaa947d9039e66f11a720"
+    },
+    {
+      "acceptance_sha256": "84a467001a68155437210810273f3fd2bdde84c22f7724e7fc5d3d9a9163b3ec",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 3,
+      "case_id": "M8-500K-H2",
+      "case_result_sha256": "91043113b67d60d583ca72ff40e7bbe80a8c57b96d9a9f275bf2ff3bf8fb1aa8",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "fb337c8afa9e5aca610939ee0464d0f220ef40e191435690618b52e9429fbd77"
+    },
+    {
+      "acceptance_sha256": "70d956f7f4eac325cb91afb2b547acb3ccc0fc06cf7ebd0f9078978e759b297d",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 2,
+      "case_id": "M9-66K7-H1H3H5",
+      "case_result_sha256": "836e4300b8a108be7a757bbb1e74dfeedc0b393f7a774d888623e074312db03c",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "cbae7f7a1ff371c26ccf4c0bf30617b04a4178a6db245939e0532eb5e8fe0867"
+    },
+    {
+      "acceptance_sha256": "88387aea7d4ea805614bc87315f03a3614efef2e6e80a19ceb35237eea9b80b6",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 2,
+      "case_id": "M9-CREST-HIGH",
+      "case_result_sha256": "90b2251fb56c625c17ec7293b71f907cded31f64eb5a101b7a556e3a4f8c6d7a",
+      "complete_mirror_frames": 319,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "11834593af9260a8c386777a4fcf99b44d0df47214d4f24e7fd8bab3e329f149"
+    },
+    {
+      "acceptance_sha256": "fddb39c1f79f4521b6c0144da2913f6a291e39e86be14770774db552a3bba36c",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 2,
+      "case_id": "M9-CREST-LOW",
+      "case_result_sha256": "df6b041240e5fe824280133684e2cdf970ea94fc7ce8b86a4e61b0278abf4185",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "6dc70c2bb4570dcac760f941a83da2943ce7ac026110f54a84d1c27f67454081"
+    },
+    {
+      "acceptance_sha256": "a135ab36931429ba7131bd026dad7a270f6e53f998f2d1669fe7c1c072dedca7",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 3,
+      "case_id": "M9-UA-100MV-LOW",
+      "case_result_sha256": "fbd7a3cb618c0797f3a3b8c5c4afd72ab1adf83d1acdf9363ccd05ae330cc239",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "768cd8429fb9f2983b6b86dc4d9d5b60f96901279dc76366ff7bdcd28a476972"
+    },
+    {
+      "acceptance_sha256": "d365b2df541495aef609e9ad16eb4f8336126176d25b204aa62fe3cd9bb3d7ae",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 2,
+      "case_id": "M9-UA-250MV-HIGH",
+      "case_result_sha256": "c1d911d3f086b1561057991b362796e475fa73a62f5898cfb37117d4100fd143",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "04ba01f8efe8709bcf0aa204c20e2d25546050d2316e1f711ef91330b16df046"
+    },
+    {
+      "acceptance_sha256": "a8374e127e322a2fb7cdff58b47263635cb8a445be4ffd0c0d4d2f02384d7afc",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 2,
+      "case_id": "M9-UB-250MV-HIGH",
+      "case_result_sha256": "796c1e36b2ce9b8af37618c33ce795496c6251bb007cbfed09a6860554b61183",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "d1af89276a05bb0d8e3fbdad288208138a131f96b37b9be625ccf785271bee65"
+    },
+    {
+      "acceptance_sha256": "edad3b2f3680d274c619c3cb5a9fcac9817320c4e093d3249e263f461848cd29",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 2,
+      "case_id": "M9-UB-50MV-LOW",
+      "case_result_sha256": "35aaa693bb1050411c434fbc7be7c4fefd0f7af0f2936331fdc0a292cc3d674e",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "34e58ad88ef7c0941405771104ad5af112ca611c80be596c1d229b2bd2f2ae98"
+    },
+    {
+      "acceptance_sha256": "451da1389982973f76816d777e935cb3d0c6b61ab9efd0222bf821fc33a101c7",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 2,
+      "case_id": "M9-UJ-1MHZ-200MVPP",
+      "case_result_sha256": "4945a7800aaa7d885dca3bb25d1e0c1f02690283a84728ebe160db74a8db1be1",
+      "complete_mirror_frames": 319,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "1f6055eba178d7a0b1bd52bbb5e00744a9b4e04a648149970e6d6e54a797a674"
+    },
+    {
+      "acceptance_sha256": "75a149f3f5c27654e8670d7993452c7499aa2410efba97646a99f255e8d20a88",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 2,
+      "case_id": "M9-UJ-BASE",
+      "case_result_sha256": "371d973a32c587f4319b9025536df80be7760176722e947bbaff5f722c26f941",
+      "complete_mirror_frames": 319,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "fb5a912a0362165c074112b50f5e8e8b9815cf6dd5731360dc78bb286924ed20"
+    },
+    {
+      "acceptance_sha256": "e0a0e5672f9c09830485cd5971e6c79c805af2d109e556a3f59f2e715db1a6f3",
+      "active_mirror_frames": 256,
+      "audited_uart_rows": 2,
+      "case_id": "M9-WEAK-H1-5MV",
+      "case_result_sha256": "786251ae7847a38e1a9717a0caed488b74837267b10d480d1645b2278b1b0f8c",
+      "complete_mirror_frames": 320,
+      "legacy_uart_schema": false,
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800",
+      "uart_sha256": "b4915366013cf454a20cbeb2674216db820138b66f823d04ab4cb5ff9194bee7"
+    }
+  ],
+  "case_ids": [
+    "M8-010K-H1",
+    "M8-015K-H1",
+    "M8-075K-H5",
+    "M8-100K-H1",
+    "M8-150K-H2",
+    "M8-250K-H2",
+    "M8-350K-H5",
+    "M8-425K-H5",
+    "M8-485K-H5",
+    "M8-500K-H2",
+    "M9-UA-100MV-LOW",
+    "M9-UA-250MV-HIGH",
+    "M9-UB-50MV-LOW",
+    "M9-UB-250MV-HIGH",
+    "M9-CREST-LOW",
+    "M9-CREST-HIGH",
+    "M9-WEAK-H1-5MV",
+    "M9-66K7-H1H3H5",
+    "M9-UJ-BASE",
+    "M9-UJ-1MHZ-200MVPP"
+  ],
+  "created_at": "2026-08-01T19:01:34.580522+08:00",
+  "format": "CycleScope final calibrated P4 M8/M9 combined audit v1",
+  "git_head_before_final_commit": "3f9ec4dee6ee0bd52a437db2fac814f6133ee2b5",
+  "input_boundaries": {
+    "formal_normal_maximum_vpp": 0.25,
+    "formal_reference": "DG4202 CH1 50-ohm setting",
+    "interference_programmed_envelope_vpp": 0.26508089220009823,
+    "rtm_ch1_used": false,
+    "user_measured_maximum_undistorted_vpp": 0.38
+  },
+  "interference_pair": {
+    "combined_programmed_envelope_limit_vpp": 0.38,
+    "deltas": {
+      "fundamental_hz": 0.0,
+      "line_amplitude_mVpk": 0.022999999999996135,
+      "line_frequency_hz": 0.015000000013969839,
+      "true_rms_mV": 0.009500000000002728,
+      "voltage_peak_to_peak_mV": 0.03849999999999909
+    },
+    "executed": true,
+    "interference": "1 MHz / 200 mVpp",
+    "pass": true,
+    "user_measured_undistorted_limit_vpp": 0.38
+  },
+  "maximum_absolute_errors": {
+    "fundamental_hz": 0.08000000000174623,
+    "line_amplitude_mVpk": 0.8049999999999997,
+    "line_frequency_hz": 0.25,
+    "true_rms_mV": 0.5541344706804594,
+    "voltage_peak_to_peak_mV": 1.982500000000016
+  },
+  "operations": {
+    "dg_final_output": "OFF",
+    "dp800_writes": 0,
+    "fpga_changes": false
+  },
+  "pass": true,
+  "profile_id": "C5DCDE41",
+  "selected_evidence_roots": {
+    "base_first_nine_m8": {
+      "files_verified": 369,
+      "manifest_sha256": "a352f47f6c2fa69ccc29cdd5b01d4bdc3938da8f5279c3e0cb52b3c157954c1f",
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-20260801_181529+0800"
+    },
+    "continuation_500k_and_m9": {
+      "files_verified": 362,
+      "manifest_sha256": "493bd6a40eaf551fa5d813922c677b7cf9d0dcc24738312424bc64a0fb95f82d",
+      "root": "/home/feisibo/git-projects/CycleScope/CycleScope-main/tool-of-rei/evidence/final-p4-m8m9-fixed-20260801_184849+0800"
+    }
+  },
+  "stage_counts": {
+    "m8": 10,
+    "m9": 10
+  },
+  "superseded_negative": {
+    "acceptance_sha256": "970812e3950a75755b035f7f63ad285507dac0b17d96696d6af7fdd80ba277a6",
+    "case_id": "M8-500K-H2",
+    "reason": "pre-fix response discontinuity above 500 kHz",
+    "selected_for_final_result": false
+  },
+  "watchdog_ab": {
+    "negative_acceptance_sha256": "744244360411a24de723490d6088a92508b200f81f0240ca7fe0de9d76ba5c8f",
+    "negative_manifest_sha256": "0d471b1a2b1842b191b313874f4d8ad5c2dba21fb863382c37edd63b1a00561e",
+    "pass": true,
+    "positive_manifest_sha256": "f8684a694b646fb16b1b6c23bf9d4708d649a3ae77df177121e33610fab04237",
+    "positive_uart_sha256": "41aec7f31dfa717af9fd17d277d8a99a43d16eeefddc3d81bedaebd54f6082e1"
+  }
+}

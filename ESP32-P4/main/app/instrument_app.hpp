@@ -20,7 +20,8 @@ public:
     explicit InstrumentApp(lv_display_t *display);
 
     bool start_ui();
-    bool prepare_live_data();
+    bool prepare_live_data(
+        const FrequencyResponseProfile *response_profile = nullptr);
     bool connect(CslpUdpReceiver *receiver);
 
 private:
@@ -52,7 +53,10 @@ private:
     void update_time_metrics();
     void update_spectrum_metrics();
     void update_timebase_label();
-    void update_live_stream_state(bool transport_ready, uint32_t now_ms);
+    void update_live_stream_state(bool transport_ready, uint32_t now_ms,
+                                  uint32_t invalid_frames);
+    void set_connection_status(
+        live_stream_freshness::ConnectionState state);
     void apply_live_measurement(const DynamicMeasurementFrame &frame);
     lv_obj_t *create_card(lv_obj_t *parent, int32_t x, int32_t y, int32_t width, int32_t height) const;
     lv_obj_t *create_mode_button(lv_obj_t *parent, const char *text, int32_t x, int32_t width);
@@ -77,7 +81,8 @@ private:
     lv_obj_t *plot_title_ = nullptr;
     lv_obj_t *plot_hint_ = nullptr;
     lv_obj_t *plot_subhint_ = nullptr;
-    lv_obj_t *active_view_value_ = nullptr;
+    lv_obj_t *connection_status_value_ = nullptr;
+    lv_obj_t *connection_status_hint_ = nullptr;
     lv_obj_t *vpp_value_ = nullptr;
     lv_obj_t *rms_value_ = nullptr;
     lv_obj_t *fundamental_value_ = nullptr;
@@ -97,7 +102,10 @@ private:
     bool live_mode_ = false;
     bool live_stream_stale_ = false;
     bool stale_transport_ready_ = false;
+    live_stream_freshness::ConnectionState connection_state_ =
+        live_stream_freshness::ConnectionState::Checking;
     uint32_t live_timer_started_ms_ = 0;
+    uint32_t invalid_frames_baseline_ = 0;
     uint32_t ui_frames_applied_ = 0;
     uint32_t last_ui_tick_ms_ = 0;
     uint32_t maximum_ui_gap_ms_ = 0;

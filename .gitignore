@@ -1,12 +1,28 @@
 # Codex 本地配置
 /.codex/
 
-# 项目驾驶舱：四件套纳入版本控制，其余日志/临时产物保持忽略
+# 项目驾驶舱：四件套、收口索引与可复现夹具源码纳入版本控制；原始证据、截图和运行产物保持忽略
 /tool-of-rei/*
 !/tool-of-rei/任务清单.md
 !/tool-of-rei/项目快照.md
 !/tool-of-rei/scratch-of-rei.md
 !/tool-of-rei/已知问题.md
+!/tool-of-rei/README.md
+!/tool-of-rei/最终系统标定里程碑.md
+
+# 合并时保留可复现夹具和轻量索引；原始证据、截图和运行缓存继续只作本地归档。
+!/tool-of-rei/test/
+!/tool-of-rei/test/**
+/tool-of-rei/test/**/__pycache__/
+/tool-of-rei/test/**/*.py[cod]
+
+!/tool-of-rei/evidence/
+/tool-of-rei/evidence/*
+!/tool-of-rei/evidence/README.md
+
+!/tool-of-rei/screenshots/
+/tool-of-rei/screenshots/*
+!/tool-of-rei/screenshots/README.md
 
 # 本地编辑器配置
 /.vscode/
@@ -21,3 +37,6 @@
 
 # FPGA的真实发送数据包，用于重放给ESP32-P4测试
 /source_data_for_test/
+!/source_data_for_test/
+/source_data_for_test/*
+!/source_data_for_test/README.md

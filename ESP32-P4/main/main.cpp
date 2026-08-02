@@ -15,6 +15,7 @@
 #if CONFIG_CYCLESCOPE_CSLP_DIAGNOSTIC_CONSUMER
 #include "cslp_frame_diagnostic.hpp"
 #endif
+#include "frequency_response_profile_generated.hpp"
 #include "instrument_app.hpp"
 #include "lvgl_adapter_init.h"
 #if CONFIG_CYCLESCOPE_STARTUP_FAULT_TEST \
@@ -147,7 +148,8 @@ extern "C" void app_main(void)
     // Startup duration is not part of the two-second expert interaction
     // budget. Commit display, UI and FFT preparation before creating the
     // receiver's permanent task, so every earlier failure leaves it Stopped.
-    if (!app.prepare_live_data()) {
+    if (!app.prepare_live_data(
+            &cyclescope::generated_calibration::kResponseProfile)) {
         ESP_LOGE(kTag,
                  "Instrument analysis preparation failed; receiver remains stopped");
         ESP_ERROR_CHECK(esp_lv_adapter_lock(-1));

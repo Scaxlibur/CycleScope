@@ -1,0 +1,37 @@
+{
+  "anchor_count": 12,
+  "fit_sha256s_manifest": "c3dab0581c75417cf01708d7fa604a52d76233291720d275ef1fcb2a2444147e",
+  "format": "CycleScope generated P4 frequency-response asset v1",
+  "fpga_changes_required": false,
+  "generated_header": {
+    "path": "frequency_response_profile_generated.hpp",
+    "sha256": "9e0317546ac6e12dce96d522dabe8f7addcfd8e105d68959d2598ba9dfef9d0a"
+  },
+  "holdout_hard_gate_pass": true,
+  "holdout_sha256s_manifest": "094166c6f70fbe3ed1515f237aae93ecb91ffb4b02488a39522566be9e386aee",
+  "holdout_target_gate_pass": true,
+  "identity_sha256": "c5dcde41b09fb2b474504fcf84f6e22d68b33d2c4c97557407d2c31f30e43945",
+  "installed_header": "/home/feisibo/git-projects/CycleScope/CycleScope-main/ESP32-P4/main/app/frequency_response_profile_generated.hpp",
+  "p4_response_profile_id": 3319586369,
+  "response_csv_sha256": "9d1aace37d65d82a7d3b1ff585ae95459a58e6cf90ece5030f7c313d80781c5f",
+  "scope_amendment": {
+    "amendment_sha256": "c64cc8c33054a15c7a774ddbe04086a8706556a110622e43fb6a268a5a58ae18",
+    "case_catalog_sha256": "8bb9bf1a56e9fb40f24174e17a90cc054988ce6cdf7006088334dd4d9ff2c214",
+    "excluded_case_ids": [
+      "m4-cross-10000Hz-450mVpp",
+      "m4-cross-200000Hz-450mVpp",
+      "m4-cross-500000Hz-450mVpp"
+    ],
+    "manifest_sha256": "c4428a6ee5912e2400645900064800038a2089380f61febef0a537bac8ed6b33",
+    "supported_source_max_vpp_v": 0.25,
+    "version": 2
+  },
+  "upstream_identity": {
+    "calibration_id": 25030,
+    "filter_profile": 1,
+    "frame_sample_count": 8192,
+    "offset_uv": -6761,
+    "sample_rate_hz": 4062500,
+    "scale_uv_per_lsb": 516
+  }
+}

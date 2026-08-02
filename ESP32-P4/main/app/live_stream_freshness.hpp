@@ -15,6 +15,19 @@ enum class DisplayState : uint8_t {
     OfflineStale,
 };
 
+// The summary card deliberately separates transport/session failure from
+// frames that reached the analysis pipeline but could not produce a valid
+// measurement. NoValidData remains distinct so an online-but-silent FPGA is
+// not falsely blamed on the signal acceptance rules.
+enum class ConnectionState : uint8_t {
+    Checking,
+    NoFpgaLink,
+    NoValidData,
+    DataRejected,
+    Normal,
+    SystemError,
+};
+
 constexpr DisplayState classify(bool has_valid_frame, bool stale_latched,
                                 bool transport_ready, uint32_t now_ms,
                                 uint32_t freshness_anchor_ms)
@@ -29,6 +42,24 @@ constexpr DisplayState classify(bool has_valid_frame, bool stale_latched,
                                : DisplayState::OfflineStale;
     }
     return DisplayState::Live;
+}
+
+constexpr ConnectionState classify_connection(DisplayState display_state,
+                                               bool rejection_observed)
+{
+    switch (display_state) {
+    case DisplayState::Waiting:
+        return rejection_observed ? ConnectionState::DataRejected
+                                  : ConnectionState::Checking;
+    case DisplayState::Live:
+        return ConnectionState::Normal;
+    case DisplayState::OnlineStale:
+        return rejection_observed ? ConnectionState::DataRejected
+                                  : ConnectionState::NoValidData;
+    case DisplayState::OfflineStale:
+        return ConnectionState::NoFpgaLink;
+    }
+    return ConnectionState::Checking;
 }
 
 }  // namespace cyclescope::live_stream_freshness

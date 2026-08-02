@@ -1,0 +1,67 @@
+{
+  "record_schema": "cyclescope.f0-display-release-record/v1",
+  "recorded_at": "2026-08-02T14:44:45+08:00",
+  "source": {
+    "worktree": "CycleScope-main",
+    "branch": "main",
+    "base_commit": "3f9ec4d",
+    "state": "dirty",
+    "scope": [
+      "MEASUREMENTS 卡片 F0 显示精度由整数 Hz 提升为 0.01 Hz",
+      "保留千位分隔；FFT 数值、频谱图例整数 Hz 格式和验收门限未改变"
+    ]
+  },
+  "build": {
+    "esp_idf": "6.0.2",
+    "target": "ESP32-P4 rev1.0",
+    "optimization": "-O2",
+    "application_size_bytes": 1134960,
+    "application_bin_sha256": "e30d16c4f207c5f1049ae5ab7be2c0135ac5694764dac84d04f22a0baa4bac0e",
+    "elf_sha256": "e23e0ca90f54507bdffcc0daafefbe4fc84e9dabc9fb98d3151a1746a416d946",
+    "frequency_response_profile": "C5DCDE41"
+  },
+  "network_configuration": {
+    "p4": "192.168.10.3:50001",
+    "fpga_peer": "192.168.10.2:50000"
+  },
+  "flash_verification": {
+    "method": "esptool 三段写入后的哈希校验",
+    "segments": [
+      {
+        "offset": "0x2000",
+        "file": "bootloader.bin",
+        "sha256": "cdbff2b84e0f19081966b76c897fa398e941ccdd7e5edffed41e3f256371bf87"
+      },
+      {
+        "offset": "0x10000",
+        "file": "partition-table.bin",
+        "sha256": "e6d9b622adb7dc850bfc0401f9efa7349671d7a8386f25fecba030e5b503559b"
+      },
+      {
+        "offset": "0x20000",
+        "file": "CycleScopeP4.bin",
+        "sha256": "e30d16c4f207c5f1049ae5ab7be2c0135ac5694764dac84d04f22a0baa4bac0e"
+      }
+    ]
+  },
+  "runtime_smoke": {
+    "startup_log_sha256": "e7b8c21dc1eb999a24bde296771fa1778839b7b8ae2931f8acbc0e8b7bf7cfd9",
+    "session": "0x0AB15408",
+    "observed": [
+      "P4 response ON，Profile C5DCDE41",
+      "CSLP 会话建立",
+      "WAITING 到 LIVE",
+      "completed=100"
+    ]
+  },
+  "regressions_completed": [
+    "F0 格式边界测试",
+    "66 例 G 参数回归",
+    "ESP-IDF fresh 正式构建"
+  ],
+  "scope_limit": {
+    "complete_m8_m9_physical_audit": false,
+    "reason": "20 例完整审计绑定较早应用 BIN d819641d…d8207007；本记录只覆盖显示层补丁的构建、烧录、启动和链路烟测。"
+  },
+  "local_archive": "tool-of-rei/evidence/final-p4-f0-display-20260801_192900+0800/"
+}

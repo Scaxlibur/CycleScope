@@ -1,0 +1,9 @@
+# Test-only allocation backtraces for the Display stack lifecycle matrix.
+CONFIG_HEAP_TRACING_STANDALONE=y
+CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
+CONFIG_HEAP_TRACING_STACK_DEPTH=8
+# Frame pointers enlarge P4 IRAM-resident code enough to overflow the normal
+# -O2 diagnostic image.  Size optimization is test-only; timing is not part of
+# this allocation-backtrace run.
+# CONFIG_COMPILER_OPTIMIZATION_PERF is not set
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y

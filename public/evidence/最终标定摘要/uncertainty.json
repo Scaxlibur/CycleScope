@@ -1,0 +1,20 @@
+{
+  "engineering_target_pass": true,
+  "format": "CycleScope final calibration uncertainty v2",
+  "hard_limit_pass": true,
+  "maximum_absolute_holdout_error_v": 0.00032054184471361213,
+  "maximum_frequency_error_hz": 234.98535158642335,
+  "p4_response_profile_id": 3319586369,
+  "scope_amendment": {
+    "amendment_sha256": "c64cc8c33054a15c7a774ddbe04086a8706556a110622e43fb6a268a5a58ae18",
+    "case_catalog_sha256": "8bb9bf1a56e9fb40f24174e17a90cc054988ce6cdf7006088334dd4d9ff2c214",
+    "excluded_case_ids": [
+      "m4-cross-10000Hz-450mVpp",
+      "m4-cross-200000Hz-450mVpp",
+      "m4-cross-500000Hz-450mVpp"
+    ],
+    "manifest_sha256": "c4428a6ee5912e2400645900064800038a2089380f61febef0a537bac8ed6b33",
+    "supported_source_max_vpp_v": 0.25,
+    "version": 2
+  }
+}

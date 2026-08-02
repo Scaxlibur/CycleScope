@@ -23,6 +23,7 @@ namespace {
 
 constexpr char kTag[] = "cyclescope_pipe";
 constexpr TickType_t kAnalysisPollPeriod = pdMS_TO_TICKS(2);
+constexpr TickType_t kAnalysisCooperativeDelay = pdMS_TO_TICKS(2);
 constexpr UBaseType_t kAnalysisPriority = 4;
 constexpr uint32_t kAnalysisStackBytes = 8192;
 constexpr uint32_t kHealthLogFramePeriod = 600;
@@ -173,7 +174,8 @@ uint32_t next_nonzero(uint32_t value)
 
 }  // namespace
 
-bool LiveDataPipeline::prepare()
+bool LiveDataPipeline::prepare(
+    const FrequencyResponseProfile *response_profile)
 {
 #ifdef CONFIG_CYCLESCOPE_CSLP_DIAGNOSTIC_CONSUMER
     ESP_LOGE(kTag,
@@ -182,7 +184,21 @@ bool LiveDataPipeline::prepare()
     return false;
 #endif
 
+    if (response_profile != nullptr
+        && !frequency_response_profile_valid(*response_profile)) {
+        ESP_LOGE(kTag,
+                 "Invalid P4 frequency-response profile; refusing analysis preparation");
+        if (preparation_state_ == PreparationState::Unprepared) {
+            preparation_state_ = PreparationState::Failed;
+        }
+        return false;
+    }
     if (preparation_state_ == PreparationState::Prepared) {
+        if (response_profile_ != response_profile) {
+            ESP_LOGE(kTag,
+                     "Cannot replace the P4 response profile after preparation");
+            return false;
+        }
         return true;
     }
     if (preparation_state_ != PreparationState::Unprepared
@@ -195,6 +211,7 @@ bool LiveDataPipeline::prepare()
     }
 
     preparation_state_ = PreparationState::Preparing;
+    response_profile_ = response_profile;
     const auto fail_prepare = [this]() {
         release_resources();
         preparation_state_ = PreparationState::Failed;
@@ -225,8 +242,12 @@ bool LiveDataPipeline::prepare()
 
     preparation_state_ = PreparationState::Prepared;
     ESP_LOGI(kTag,
-             "Formal CSLP FFT pipeline prepared; result=%u bytes",
-             static_cast<unsigned>(sizeof(DynamicMeasurementFrame)));
+             "Formal CSLP FFT pipeline prepared; result=%u bytes "
+             "p4_response=%s profile=%08" PRIX32,
+             static_cast<unsigned>(sizeof(DynamicMeasurementFrame)),
+             response_profile_ == nullptr ? "OFF" : "ON",
+             response_profile_ == nullptr ? 0U
+                                          : response_profile_->profile_id);
     return true;
 }
 
@@ -245,7 +266,7 @@ bool LiveDataPipeline::start(CslpUdpReceiver *receiver)
         ESP_LOGE(kTag, "Formal CSLP analysis requires a started receiver");
         return false;
     }
-    if (!prepare()) {
+    if (!prepare(response_profile_)) {
         return false;
     }
 
@@ -478,6 +499,11 @@ void LiveDataPipeline::analysis_task(void *context)
             continue;
         }
 
+        // A calibrated multi-line projection can otherwise keep Core 1 busy
+        // through the next frame.  Briefly block while the triple-buffered
+        // lease is stable so IDLE1 can service the task watchdog.
+        vTaskDelay(kAnalysisCooperativeDelay);
+
         const CslpUdpReceiver::FrameView &view = lease.view();
         cursor = view.cursor();
         pipeline->acquired_frames_.fetch_add(1, std::memory_order_relaxed);
@@ -606,7 +632,8 @@ void LiveDataPipeline::analysis_task(void *context)
                      " frame=%" PRIu32 " gen=%" PRIu32
                      " F0=%.2fHz Vpp=%.3fmV RMS=%.3fmV peaks=%u "
                      "P1=%.2fHz/%.3fmVpk P2=%.2fHz/%.3fmVpk "
-                     "P3=%.2fHz/%.3fmVpk cal=%u test=%u",
+                     "P3=%.2fHz/%.3fmVpk up_cal=%u test=%u "
+                     "p4cal=%u profile=%08" PRIX32,
                      frame.session_id, frame.config_id, frame.stream_epoch,
                      frame.frame_id, frame.generation,
                      static_cast<double>(frame.fundamental_hz),
@@ -631,7 +658,10 @@ void LiveDataPipeline::analysis_task(void *context)
                          frame.spectrum.peaks[2].amplitude_volts_peak
                          * 1000.0F),
                      (frame.source_flags & cslp::kFlagCalibrated) != 0,
-                     (frame.source_flags & cslp::kFlagTestPattern) != 0);
+                     (frame.source_flags & cslp::kFlagTestPattern) != 0,
+                     static_cast<unsigned>(
+                         frame.frequency_response_compensated),
+                     frame.p4_response_profile_id);
         }
         if (analyzed_frames % kHealthLogFramePeriod == 0U) {
             const PipelineStats stats = pipeline->stats();
@@ -674,12 +704,60 @@ LiveDataPipeline::AnalysisOutcome LiveDataPipeline::analyze(
         return AnalysisOutcome::InvalidFrame;
     }
 
+    if (response_profile_ != nullptr) {
+        const UpstreamCalibrationIdentity actual_identity = {
+            .calibration_id = view.metadata.calibration_id,
+            .scale_uv_per_lsb = view.metadata.scale_uv_per_lsb,
+            .offset_uv = view.metadata.offset_uv,
+            .filter_profile = view.metadata.filter_profile,
+            .sample_rate_hz = view.metadata.sample_rate_hz,
+            .frame_sample_count = view.metadata.sample_count,
+        };
+        if (!upstream_identity_matches(
+                *response_profile_, actual_identity)) {
+            if (last_profile_mismatch_session_id_
+                    != view.metadata.session_id
+                || last_profile_mismatch_config_id_
+                       != view.metadata.config_id) {
+                last_profile_mismatch_session_id_ =
+                    view.metadata.session_id;
+                last_profile_mismatch_config_id_ =
+                    view.metadata.config_id;
+                const UpstreamCalibrationIdentity &expected =
+                    response_profile_->upstream;
+                ESP_LOGE(
+                    kTag,
+                    "P4 response profile mismatch: profile=%08" PRIX32
+                    " session=%08" PRIX32 " config=%08" PRIX32
+                    " expected=%u/%" PRIu32 "/%" PRId32
+                    "/%u/%" PRIu32 "/%" PRIu32
+                    " actual=%u/%" PRIu32 "/%" PRId32
+                    "/%u/%" PRIu32 "/%" PRIu32,
+                    response_profile_->profile_id,
+                    view.metadata.session_id, view.metadata.config_id,
+                    expected.calibration_id,
+                    expected.scale_uv_per_lsb, expected.offset_uv,
+                    expected.filter_profile, expected.sample_rate_hz,
+                    expected.frame_sample_count,
+                    actual_identity.calibration_id,
+                    actual_identity.scale_uv_per_lsb,
+                    actual_identity.offset_uv,
+                    actual_identity.filter_profile,
+                    actual_identity.sample_rate_hz,
+                    actual_identity.frame_sample_count);
+            }
+            return AnalysisOutcome::InvalidFrame;
+        }
+        last_profile_mismatch_session_id_ = 0U;
+        last_profile_mismatch_config_id_ = 0U;
+    }
+
     FftAnalysisResult fft_result{};
     const esp_err_t error = fft_processor_.process(
         view.samples, view.sample_count,
         static_cast<float>(view.metadata.sample_rate_hz),
         view.metadata.scale_uv_per_lsb, view.metadata.offset_uv,
-        &fft_result);
+        &fft_result, response_profile_);
     if (error != ESP_OK) {
         ESP_LOGE(kTag, "FFT failed for session=%08" PRIX32
                  " frame=%" PRIu32 ": %s",
@@ -705,8 +783,12 @@ LiveDataPipeline::AnalysisOutcome LiveDataPipeline::analyze(
     result->source_timestamp_us = view.metadata.timestamp_us;
     result->config_id = view.metadata.config_id;
     result->stream_epoch = view.stream_epoch;
+    result->p4_response_profile_id =
+        fft_result.p4_response_profile_id;
     result->calibration_id = view.metadata.calibration_id;
     result->source_flags = view.metadata.flags;
+    result->frequency_response_compensated =
+        fft_result.frequency_response_compensated;
     result->voltage_peak_to_peak = fft_result.voltage_peak_to_peak;
     result->true_rms_volts = fft_result.true_rms_volts;
     result->fundamental_hz = fft_result.fundamental_hz;
@@ -763,14 +845,27 @@ LiveDataPipeline::AnalysisOutcome LiveDataPipeline::analyze(
         return AnalysisOutcome::InvalidFrame;
     }
 
-    if (!project_waveform(
-            view.samples, view.sample_count,
-            view.metadata.scale_uv_per_lsb, view.metadata.offset_uv,
-            fft_result.dc_offset_volts, fft_result.sample_rate_hz,
-            fft_result.fundamental_hz,
-            fft_result.fundamental_phase_radians, generation,
-            fft_result.voltage_peak_to_peak, fft_result.true_rms_volts,
-            &result->waveform)) {
+    const bool waveform_projected =
+        fft_result.frequency_response_compensated
+            ? project_reconstructed_waveform(
+                  fft_result.spectral_lines.data(),
+                  fft_result.spectral_line_phases_radians.data(),
+                  fft_result.spectral_line_count,
+                  fft_result.sample_rate_hz,
+                  fft_result.fundamental_hz, generation,
+                  fft_result.voltage_peak_to_peak,
+                  fft_result.true_rms_volts, &result->waveform)
+            : project_waveform(
+                  view.samples, view.sample_count,
+                  view.metadata.scale_uv_per_lsb,
+                  view.metadata.offset_uv,
+                  fft_result.dc_offset_volts,
+                  fft_result.sample_rate_hz,
+                  fft_result.fundamental_hz,
+                  fft_result.fundamental_phase_radians, generation,
+                  fft_result.voltage_peak_to_peak,
+                  fft_result.true_rms_volts, &result->waveform);
+    if (!waveform_projected) {
         ESP_LOGW(kTag,
                  "Waveform projection rejected session=%08" PRIX32
                  " frame=%" PRIu32,
@@ -871,7 +966,8 @@ bool LiveDataPipeline::resources_released() const
 {
     return ui_queue_ == nullptr && analysis_frame_ == nullptr
            && analysis_task_handle_ == nullptr && receiver_ == nullptr
-           && fft_processor_.resources_released();
+           && fft_processor_.resources_released()
+           && response_profile_ == nullptr;
 }
 
 bool LiveDataPipeline::failed_preparation_is_clean() const
@@ -901,6 +997,9 @@ void LiveDataPipeline::release_resources()
         analysis_frame_ = nullptr;
     }
     receiver_ = nullptr;
+    response_profile_ = nullptr;
+    last_profile_mismatch_session_id_ = 0U;
+    last_profile_mismatch_config_id_ = 0U;
     fft_processor_.deinitialize();
     fft_self_test_passed_.store(false, std::memory_order_relaxed);
 }

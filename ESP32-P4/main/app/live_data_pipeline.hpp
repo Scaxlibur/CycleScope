@@ -30,8 +30,10 @@ struct DynamicMeasurementFrame {
     uint64_t source_timestamp_us;
     uint32_t config_id;
     uint32_t stream_epoch;
+    uint32_t p4_response_profile_id;
     uint16_t calibration_id;
     uint16_t source_flags;
+    bool frequency_response_compensated;
     float voltage_peak_to_peak;
     float true_rms_volts;
     float fundamental_hz;
@@ -59,7 +61,8 @@ struct PipelineStats {
 
 class LiveDataPipeline {
 public:
-    bool prepare();
+    bool prepare(
+        const FrequencyResponseProfile *response_profile = nullptr);
     bool start(CslpUdpReceiver *receiver);
     bool stream_ready() const;
     bool try_receive_latest(DynamicMeasurementFrame *frame);
@@ -102,6 +105,7 @@ private:
     TaskHandle_t analysis_task_handle_ = nullptr;
     CslpUdpReceiver *receiver_ = nullptr;
     FftProcessor8192 fft_processor_;
+    const FrequencyResponseProfile *response_profile_ = nullptr;
     PreparationState preparation_state_ = PreparationState::Unprepared;
     std::atomic<uint32_t> acquired_frames_{0};
     std::atomic<uint32_t> analyzed_frames_{0};
@@ -115,6 +119,8 @@ private:
     std::atomic<uint32_t> maximum_analysis_us_{0};
     std::atomic<bool> fft_self_test_passed_{false};
     uint64_t cumulative_analysis_us_ = 0;
+    uint32_t last_profile_mismatch_session_id_ = 0;
+    uint32_t last_profile_mismatch_config_id_ = 0;
 };
 
 }  // namespace cyclescope
