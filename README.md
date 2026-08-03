@@ -4,6 +4,15 @@ CycleScope 是面向周期信号测量与谐波分析的软硬件协同项目：
 
 本仓的 main 已整合 ESP32-P4 与 FPGA 主线；原 FPGA 工作树仍作为原始证据的只读来源保留。所有原始仪器、LAN、串口和构建档案均保留在本机，不会因合并被删除、移动或改写。
 
+## 🌟 特别鸣谢
+
+<p align="center">
+  <a href="https://linux.do">
+    <img src="doc/images/linuxdo.png" alt="LINUX DO" width="420" />
+  </a>
+</p>
+<p align="center"><b>学AI，上L站！祝小破站越来越好～</b></p>
+
 ## 当前交付边界
 
 - 正式模拟链标定的普通输入范围冻结为不超过 250 mVpp。450 mVpp 压缩点保留为历史负证据，不参与当前拟合、保留验证或验收。
