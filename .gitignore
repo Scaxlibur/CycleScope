@@ -14,6 +14,7 @@
 !/tool-of-rei/已知问题.md
 !/tool-of-rei/README.md
 !/tool-of-rei/最终系统标定里程碑.md
+!/tool-of-rei/WaveBench使用体验与优化建议清单.md
 
 # FPGA 四件套和证据索引以命名空间方式归档，避免覆盖 main 的历史流水。
 !/tool-of-rei/fpga-history/
