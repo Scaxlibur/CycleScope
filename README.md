@@ -8,7 +8,7 @@ CycleScope 是面向周期信号测量与谐波分析的软硬件协同项目：
 
 <p align="center">
   <a href="https://linux.do">
-    <img src="doc/images/linuxdo.png" alt="LINUX DO" width="420" />
+    <img src="docs/images/linuxdo.png" alt="LINUX DO" width="420" />
   </a>
 </p>
 <p align="center"><b>学AI，上L站！祝小破站越来越好～</b></p>
