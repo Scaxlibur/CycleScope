@@ -43,6 +43,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: requirements-docs.txt
       - run: python -m pip install -r requirements-docs.txt
       - run: python -m unittest -v tests/test_docs_tools.py
       - run: python scripts/audit_docs.py
