@@ -10,6 +10,7 @@ AD7608/AD9744 业务代码不参与本应用构建。
 - `tests/`：主机黄金报文、CRC、固定 12 分片、控制状态机和所有权测试。
 - `scripts/build_vitis.py`：从 M4 XSA 重建 Vitis 2025.1 platform/BSP/application；生成物只进入 `build/`。
 - BSP 构建后会断言 UDP 开启、DHCP/IPv6/IP 分片关闭，并确认 Zynq GEM 的 TX/RX checksum offload 生效。
+- [JTAG 临时下载入口](scripts/JTAG_DOWNLOAD.md)：默认只执行 dry-run，`--execute` 才会连接并改变板卡状态。
 
 ## 验证
 

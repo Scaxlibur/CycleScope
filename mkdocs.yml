@@ -1,0 +1,74 @@
+site_name: CycleScope
+site_description: 周期信号测量分析装置文档
+repo_url: https://github.com/Scaxlibur/CycleScope
+repo_name: Scaxlibur/CycleScope
+edit_uri: edit/main/
+
+strict: true
+
+exclude_docs: |
+  G题_周期信号测量分析装置/**
+  主办方答疑/**
+  AD9226_2CH模块使用手册_V1.0/**
+  ESP32-P4-Function-EV-Board v1.4 - ESP32-P4 - — esp-dev-kits latest 文档-0e31eb87-16e0-4fc4-9f05-805a80640e07/**
+  Z7-Nano 用户手册 — 微相科技FPGA用户手册 V1.0 文档-11c1ee4a-297f-4d5d-85f3-7d32378c2531/**
+  evidence/**/*.json
+  evidence/**/*.csv
+  evidence/**/*.log
+  evidence/**/*.txt
+  evidence/**/SHA256SUMS
+
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+plugins:
+  - search:
+      lang:
+        - zh
+        - en
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+
+nav:
+  - 首页: README.md
+  - 开始与交接:
+      - 安全构建与上板: getting-started/安全构建与上板.md
+      - 项目交接: 项目交接资料索引.md
+  - 系统原理:
+      - G 题采集与分析架构: concepts/G题采集与分析架构.md
+  - Reference:
+      - G 题采样与处理 Profile: 协议与接口/CSLP-G题采样与处理-Profile-v0.1.md
+      - CSLP UDP 通信协议: 协议与接口/CSLP-UDP-通信协议-v0.1.md
+      - AD9226 通道 A 接线: 协议与接口/AD9226通道A与Zynq-7010接线定义.md
+      - FPGA 双目的地 UDP: 协议与接口/FPGA双目的地UDP发送设计规划.md
+  - 操作与联调:
+      - FPGA 与 ESP32-P4 联调: how-to/FPGA与ESP32-P4联调.md
+      - 系统补偿方案: 系统补偿方案/README.md
+      - 前端增益与逐频补偿: 系统补偿方案/前端增益与逐频补偿指南.md
+      - 模拟前端调试: 系统补偿方案/模拟前端放大器调试注意事项.md
+      - ESP32-P4 端联调: 系统补偿方案/ESP32P4-FPGA联调指南-ESP32P4端.md
+      - FPGA 端联调: 系统补偿方案/ESP32P4-FPGA联调指南-FPGA端.md
+  - 证据与发布:
+      - 测试与证据边界: 测试与证据索引.md
+      - 详细验收证据: 验收证据索引.md
+      - FPGA 验收证据: FPGA验收证据索引.md
+      - 可版本化证据摘要: evidence/README.md
+      - F0 显示版证明: evidence/F0显示版构建烧录证明/README.md
+  - 文档维护:
+      - 文档规则: 文档规则.md
+      - 文档工作流: development/文档工作流.md
+  - 历史记录:
+      - Profile v0.1 实施与验收: history/CSLP-G题-Profile-v0.1-实施与验收记录.md
+      - M11 信号前端测量方案: 系统补偿方案/信号前端测量方案.md
+      - M12 DG4202 全链路计划: 系统补偿方案/DG4202谐波功能信号前端全链路测试计划.md
+      - WaveBench 使用反馈: 工具反馈/WaveBench使用体验与优化建议清单.md

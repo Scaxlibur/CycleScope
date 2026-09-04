@@ -27,7 +27,7 @@ bitstream、XSA 生成的 `ps7_init.tcl` 和 ELF，并打印操作计划，不�
 脚本只接受序列号默认为 `210241398254` 的 Digilent cable，并要求 `APU`、
 `xc7z010`、`ARM Cortex-A9 MPCore #0` 分别唯一匹配。完整顺序为：系统复位并停核、
 下载 bitstream、在强制内存访问保护下执行 `ps7_init`/`ps7_post_config`、下载 ELF、
-恢复原访问配置并继续 A9#0。脚本还会拒绝在 `codex/FPGA` 之外的分支运行。
+恢复原访问配置并继续 A9#0。脚本还会拒绝在 `main` 之外的分支运行。
 
 需要覆盖产物路径或远端 `hw_server` 时使用：
 

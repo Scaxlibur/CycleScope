@@ -9,6 +9,11 @@
 - `docs/`：PL/PS LAN 接口契约与历史诊断记录；
 - `build/`：全部生成物，已被 Git 忽略。
 
+接口与历史诊断入口：
+
+- [PL/PS LAN 接口契约](docs/PL-PS接口契约.md)
+- [SPI 诊断接口历史接线与验收](docs/SPI诊断接口上板接线与验收.md)
+
 统一工具版本为 Vivado 2025.1，目标器件为 `xc7z010clg400-1`。所有命令从仓库根目录的 `main` 分支执行：
 
 正式方案为 LAN-only：唯一对外数据链路是
@@ -72,7 +77,7 @@ probe、IOB、ADC 输入时序、全局时序、DRC/CDC 和 bit/ltx 哈希门禁
 只做 dry-run，且不会编程 FPGA、复位 PS、下载 ELF、写 QSPI 或访问 MIO47；实板
 运行前先用 `scripts/capture_adc_raw_ila.tcl --help` 审计完整边界。
 
-`xilinx_env.sh` 会校验仓库路径和 `codex/FPGA` 分支，并把 HOME、Vitis 数据、日志和缓存重定向到当前 worktree 内。禁止从其他 worktree 调用这些构建入口。
+`xilinx_env.sh` 会校验仓库路径和 `main` 分支，并把 HOME、Vitis 数据、日志和缓存重定向到当前 worktree 内。禁止从其他 worktree 调用这些构建入口。
 
 PS 侧 RTL8211F 固定按 `100 Mb/s` 全双工链路使用：Vivado 将 GEM0 默认参考
 时钟配置为 IO PLL `/8/5`，即 25 MHz。PHY 依赖板上冷上电复位；当前实板禁止

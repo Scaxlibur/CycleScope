@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="cyclescope-source-sha256" content="f394950e18db89b73a9015bec67aa7e756c16b368567a46f6cf96bffa907f59e">
   <title>CycleScope 周期信号测量分析装置设计报告</title>
   <style>
     @page { size: A4; margin: 12mm 13mm 13mm; }
@@ -174,7 +175,7 @@
       <p class="subtitle">周期信号测量、谐波分析与可视化显示</p>
       <div class="rule"></div>
       <h2 class="abstract-title">摘要</h2>
-      <p class="abstract">面向 G 题周期信号测量需求，设计了由模拟前端、AD9226、Zynq-7010、以太网和 ESP32-P4 组成的 CycleScope。AD9226 以 65 MSPS 采样；FPGA 三级 FIR 后 16 倍抽取；P4 对 8192 点帧完成 Hann 窗 FFT、谐波识别、真有效值和合成峰峰值计算，并在触摸屏显示 1/3 周期波形及正频率线谱。60 例联合验收的最大 F0、Vpp、真 RMS、谱线峰值误差为 0.180 Hz、3.727 mV、0.967 mV、1.082 mV；4～10 MHz 干扰的最小抑制下界为 65.997 dB。</p>
+      <p class="abstract">面向 G 题周期信号测量需求，设计了由模拟前端、AD9226、Zynq-7010、以太网和 ESP32-P4 组成的 CycleScope。AD9226 以 65 MSPS 采样；FPGA 三级 FIR 后 16 倍抽取；P4 对 8192 点帧完成 Hann 窗 FFT、谐波识别、真有效值和合成峰峰值计算，并在触摸屏显示 1/3 周期波形及正频率线谱。M12 的 60 个 P4 工程联调观测点中，最大 F0、Vpp、真 RMS、谱线峰值误差为 0.180 Hz、3.727 mV、0.967 mV、1.082 mV；4～10 MHz 干扰的最小抑制下界为 65.997 dB。</p>
       <p class="keywords"><b>关键词：</b>周期信号；谐波分析；Hann 窗；真有效值；FPGA；ESP32-P4</p>
       <div class="hero-card">
         <div><strong>65 MSPS</strong><span>AD9226 原始采样率</span></div>
@@ -363,17 +364,18 @@
       <table>
         <thead><tr><th style="width:22%">测试项目</th><th style="width:26%">覆盖范围</th><th style="width:35%">结果</th><th style="width:17%">结论</th></tr></thead>
         <tbody>
-          <tr><td>动态范围与链路完整性</td><td>10/100/200/500 kHz × 10/50/100/250/450 mVpp；20 点、796 帧</td><td>ADC、FIR、LAN、pcap、UDP checksum、分片与错误计数均通过；450 mV 点 ADC SFDR 中位数为 71.09～78.45 dB。</td><td><span class="pass">PASS</span></td></tr>
-          <tr><td>独立校准保留集</td><td>15/75/150/250/350/425/485 kHz；100 mVpp；7 点</td><td>先用 36 个训练点冻结模型，再测保留点；幅值最大绝对误差 <span class="metric">0.173011 mV</span>，RMS <span class="metric">0.116103 mV</span>。</td><td><span class="pass">PASS</span></td></tr>
+          <tr><td>动态范围与链路完整性</td><td>10/100/200/500 kHz × 10/50/100/250 mVpp；另含 450 mVpp 历史压力点，共 20 点、796 帧</td><td>ADC、FIR、LAN、pcap、UDP checksum、分片与错误计数均通过。450 mVpp 仅为历史链路与压缩风险观察点，已排除在 C5DCDE41 标定的拟合、验证和验收范围外。</td><td>≤250 mVpp <span class="pass">PASS</span><br>450 mVpp 历史证据</td></tr>
+          <tr><td>独立校准保留集</td><td>15/75/150/250/350/425/485 kHz；100 mVpp；7 点</td><td>先用 33 个拟合点冻结模型，再测保留点且不重新拟合；幅值最大绝对误差 <span class="metric">0.321 mV</span>，频率最大误差 <span class="metric">234.985 Hz</span>。</td><td><span class="pass">PASS</span></td></tr>
           <tr><td>多音 <i>u</i><sub>a</sub>/<i>u</i><sub>b</sub></td><td>10 点、650 帧；弱谱线与不同相位/波峰形状</td><td>最大谱线、总 Vpp、真 RMS 误差分别为 <span class="metric">0.693/0.912/0.396 mV</span>。</td><td><span class="pass">PASS</span></td></tr>
           <tr><td><i>u</i><sub>b</sub>+<i>u</i><sub>J</sub> 组合</td><td>15 点、975 帧；200 mVpp 单频干扰</td><td>最大谱线、总 Vpp、真 RMS 误差分别为 <span class="metric">0.444/0.704/0.245 mV</span>；最差干扰抑制下界 <span class="metric">74.846 dB</span>。</td><td><span class="pass">PASS</span></td></tr>
           <tr><td>高频干扰扩展</td><td>4/5/7.2/7.5/10 MHz；7 点、287 帧</td><td>最差抑制下界 <span class="metric">65.997 dB</span>；最大谱线/总 Vpp/真 RMS 误差为 <span class="metric">0.332/0.555/0.111 mV</span>。</td><td><span class="pass">PASS</span></td></tr>
           <tr><td>长时间运行</td><td>请求 10 000 帧，实收 10 001 帧/120 012 WAVE 包</td><td>首完整帧延迟 <span class="metric">58.438 ms</span>；10 个千帧块增益跨度 <span class="metric">0.001908 dB</span>；GEM、NIC、pcap 错误均为 0。</td><td><span class="pass">PASS</span></td></tr>
         </tbody>
       </table>
-      <h3>5.2 DG→FPGA/LAN→P4 全矩阵验收</h3>
+      <h3>5.2 DG→FPGA/LAN→P4 工程联调</h3>
+      <p class="very-small">M12 共记录 60 个 P4 工程联调观测点，其中包含计划矩阵和 1 个参考点。该审计覆盖“DG 设置理论值→真实 FPGA/LAN 帧→P4 FFT/时域投影”，不替代不超过 250 mVpp 的最终模拟链逐频标定，也不构成任一 P4 镜像的发布审计。</p>
       <table>
-        <thead><tr><th style="width:31%">覆盖组</th><th style="width:15%">例数</th><th style="width:54%">审计结果（共 60 份 P4 验收报告）</th></tr></thead>
+        <thead><tr><th style="width:31%">覆盖组</th><th style="width:15%">例数</th><th style="width:54%">审计结果（共 60 个 P4 工程联调观测点）</th></tr></thead>
         <tbody>
           <tr><td>H2～H16 谐波掩码；400 kHz 跨阶次</td><td class="metric" style="text-align:center">15 + 15</td><td>覆盖弱 H1、不同谐波阶次和高端频率；400 kHz 强谱线幅值极差仅 <span class="metric">0.297 mV</span>。</td></tr>
           <tr><td>H2/H3 相位 4×4</td><td class="metric" style="text-align:center">16</td><td>谱线峰值最大跨相位漂移 <span class="metric">0.095 mV</span>；Vpp 随真实相位变化 <span class="metric">96.388～126.139 mV</span>，未被误判为幅值误差。</td></tr>
@@ -382,7 +384,7 @@
           <tr><td><b>最大绝对误差</b></td><td colspan="2">F0 <span class="metric">0.180 Hz</span>；Vpp <span class="metric">3.727 mV</span>；真 RMS <span class="metric">0.967 mV</span>；谱线频率 <span class="metric">0.625 Hz</span>；谱线峰值 <span class="metric">1.082 mVpk</span>。均低于题目 <span class="metric">1 kHz / 5 mV</span> 门限，审计 <span class="pass">PASS</span>。</td></tr>
         </tbody>
       </table>
-      <div class="callout"><b>干扰对照结果：</b>相对于无干扰基线，加入 1/1.6/2 MHz、200 mVpp 单频干扰后，最大漂移为 F0 <span class="metric">0.015 Hz</span>、Vpp <span class="metric">0.096 mV</span>、真 RMS <span class="metric">0.039 mV</span>、谱线峰值 <span class="metric">0.057 mVpk</span>。</div>
+      <div class="callout"><b>身份边界：</b>M8/M9 的 20/20 物理审计绑定旧 BIN <span class="metric">d819641d…d8207007</span>；F0 显示 BIN <span class="metric">e30d16c4…a4bac0e</span> 仅完成构建、烧录、启动和 100 帧烟测，尚未重跑该 20 例审计。</div>
     </div>
     <div class="footer">CycleScope 周期信号测量分析装置 · 正文 5 / 6</div>
   </section>
@@ -420,16 +422,16 @@
         </div>
       </div>
       <h3>6.3 结果边界与现场复核</h3>
-      <div class="callout warnbox"><b>证据口径：</b>第 5.2 节的 60 例为“DG 设置理论值→真实 FPGA/LAN 帧→P4 FFT/时域投影”的联合验收；第 5.1 节补充了模拟前端、ADC、FIR 与高频干扰的真实测试。两者共同支撑定量测量结论，但不能把软件截图、UI 回调或数据链日志冒充为真实面板完成刷新的证据。</div>
+      <div class="callout warnbox"><b>证据口径：</b>M12 的 60 个观测点是“DG 设置理论值→真实 FPGA/LAN 帧→P4 FFT/时域投影”工程联调；M8/M9 的 20/20 物理审计绑定旧 BIN <span class="metric">d819641d…d8207007</span>；F0 显示 BIN <span class="metric">e30d16c4…a4bac0e</span> 只有构建、烧录与 100 帧烟测证据。三类结论不得相互替代。</div>
       <ul>
         <li><b>待现场人工留证：</b>系统已经运行并持续分析时，TIME、FFT、1P、3P 按键至真实 panel flush 的时间；同时核对完整周期视觉稳定性、谱线相对位置/高度与可读性。</li>
         <li><b>结构与供电留证：</b>提交前拍摄板载 BNC、50 Ω 电缆、7 英寸独立显示屏与整机单路 5 V 供电照片/视频。开发板规格为 7 英寸 1024×600，满足尺寸选型要求。</li>
-        <li><b>频率边界说明：</b>已实测至 10 MHz 干扰；题设没有给出 <i>u</i><sub>J</sub> 上限，因此不将该测试外推为任意高频下的 ADC 前抗混叠保证。100 kHz、450 mV 与 250 mV 相比的增益变化为 0.632%，虽通过 1% 硬门，仍保留为工程警示。</li>
+        <li><b>频率与幅值边界：</b>已实测至 10 MHz 干扰；题设没有给出 <i>u</i><sub>J</sub> 上限，因此不将该测试外推为任意高频下的 ADC 前抗混叠保证。正式普通输入范围止于 250 mVpp；450 mVpp 历史点已确认模拟前级压缩，只保留为负证据。</li>
       </ul>
       <h3>6.4 结论</h3>
-      <p>CycleScope 以“模拟前端—高速采样—FPGA 实时抽取—P4 频域分析与触摸显示”的分层结构，实现了 495.91 Hz 频率栅格、完整 1P/3P 波形、正频率离散线谱、总 Vpp、真 RMS、基频和分量峰值的统一计算。归档测试显示：真实前端与 FPGA 链在动态范围、多音、干扰和 10 001 帧长稳下通过；最新 DG→FPGA/LAN→P4 的 60 例矩阵中各定量误差均低于题目门限。该方案具备完成 G 题核心测量分析任务的技术基础，最终交付时应按上述现场清单补齐显示物理刷新与整机结构供电证据。</p>
+      <p>CycleScope 以“模拟前端—高速采样—FPGA 实时抽取—P4 频域分析与触摸显示”的分层结构，实现了 495.91 Hz 频率栅格、完整 1P/3P 波形、正频率离散线谱、总 Vpp、真 RMS、基频和分量峰值的统一计算。归档测试显示：不超过 250 mVpp 的正式范围、真实前端与 FPGA 数据链、M12 的 60 个 P4 工程联调观测点，以及旧 BIN 上的 M8/M9 20/20 物理审计均有各自证据。最终交付仍须补齐显示物理刷新与整机结构供电证据。</p>
       <h3>证据与资料索引</h3>
-      <p class="very-small">E1 <code>docs/G题_周期信号测量分析装置/full.md</code> 及主办方答疑；E2 <code>public/CSLP-G题采样与处理-Profile-v0.1.md</code>；E3 <code>tool-of-rei/evidence/m11-real-frontend-20260731/</code>（校准、动态范围、多音、干扰和长稳）；E4 <code>tool-of-rei/evidence/m12-final-completion-audit.json</code>（60 例 P4 联合审计，2026-08-01）；E5 <code>tool-of-rei/项目快照.md</code>。旧《CycleScope设计报告初稿》标注为非最终提交，其中“未握手”描述已由 E4 的后续证据覆盖。</p>
+      <p class="very-small">E1 <code>docs/G题_周期信号测量分析装置/full.md</code> 及主办方答疑；E2 <code>docs/协议与接口/CSLP-G题采样与处理-Profile-v0.1.md</code>；E3 <code>tool-of-rei/evidence/m11-real-frontend-20260731/</code>；E4 <code>tool-of-rei/evidence/m12-final-completion-audit.json</code>（60 个 P4 工程联调观测点）；E5 <code>tool-of-rei/evidence/final-p4-release-audit-20260801_190121+0800/</code>（旧 BIN 的 M8/M9 20/20 审计）；E6 <code>docs/evidence/F0显示版构建烧录证明/release-record.json</code>；E7 <code>tool-of-rei/项目快照.md</code>。</p>
     </div>
     <div class="footer">CycleScope 周期信号测量分析装置 · 正文 6 / 6</div>
   </section>

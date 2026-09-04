@@ -1,0 +1,51 @@
+name: docs
+
+on:
+  pull_request:
+    paths:
+      - "README.md"
+      - "docs/**"
+      - "final_doc/**"
+      - "scripts/audit_docs.py"
+      - "scripts/check_report_sync.py"
+      - "scripts/lint_chinese_docs.py"
+      - "tests/test_docs_tools.py"
+      - "mkdocs.yml"
+      - "requirements-docs.txt"
+      - ".github/workflows/docs.yml"
+      - "Zynq_7010_PL/**"
+      - "Zynq_7010_PS/cyclescope_cslp/**"
+      - "ESP32-P4/main/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "README.md"
+      - "docs/**"
+      - "final_doc/**"
+      - "scripts/audit_docs.py"
+      - "scripts/check_report_sync.py"
+      - "scripts/lint_chinese_docs.py"
+      - "tests/test_docs_tools.py"
+      - "mkdocs.yml"
+      - "requirements-docs.txt"
+      - ".github/workflows/docs.yml"
+      - "Zynq_7010_PL/**"
+      - "Zynq_7010_PS/cyclescope_cslp/**"
+      - "ESP32-P4/main/**"
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements-docs.txt
+      - run: python -m unittest -v tests/test_docs_tools.py
+      - run: python scripts/audit_docs.py
+      - run: python scripts/check_report_sync.py
+      - run: python scripts/lint_chinese_docs.py
+      - run: mkdocs build --strict

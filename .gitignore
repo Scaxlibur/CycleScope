@@ -2,6 +2,7 @@
 /.codex/
 /.build-home/
 /.pytest_cache/
+/site/
 
 # 工作区根保留的外部工具（例如 WaveBench）不属于本仓版本控制。
 /tools/

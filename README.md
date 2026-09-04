@@ -1,39 +1,66 @@
 # CycleScope
 
-CycleScope 是面向周期信号测量与谐波分析的软硬件协同项目：FPGA 采集并通过 CSLP/UDP 发送连续帧，ESP32-P4 完成实时 FFT、频响补偿、时域/频域投影和 LVGL 显示。
+CycleScope 是面向全国大学生电子设计竞赛 G 题的周期信号测量分析装置。系统由模拟前端、AD9226、Zynq-7010 和 ESP32-P4 组成：FPGA 完成采集、滤波与抽取，Zynq PS 通过 CSLP/UDP 发送连续帧，ESP32-P4 完成 FFT、频响补偿、时域/频域投影和触摸显示。
 
-本仓的 main 已整合 ESP32-P4 与 FPGA 主线；原 FPGA 工作树仍作为原始证据的只读来源保留。所有原始仪器、LAN、串口和构建档案均保留在本机，不会因合并被删除、移动或改写。
+> [!WARNING]
+> JTAG 下载、P4 烧录、串口打开、网络重放和信号源操作都可能改变真实设备状态。首次接手应从[安全构建与上板](docs/getting-started/安全构建与上板.md)的离线步骤开始；没有新的硬件操作授权时，只执行离线验证和构建。
 
-## 🌟 特别鸣谢
+## 系统数据流
 
-<p align="center">
-  <a href="https://linux.do">
-    <img src="docs/images/linuxdo.png" alt="LINUX DO" width="420" />
-  </a>
-</p>
-<p align="center"><b>学AI，上L站！祝小破站越来越好～</b></p>
+```text
+BNC 输入
+  → 模拟调理与 AD9226 采样
+  → Zynq PL 三级 FIR / 16 倍抽取
+  → Zynq PS DMA / CSLP UDP
+  → ESP32-P4 FFT / 补偿 / 1P、3P 投影
+  → 1024×600 LVGL 触摸显示
+```
 
-## 当前交付边界
+完整参数与职责见 [G 题采样与处理 Profile](docs/协议与接口/CSLP-G题采样与处理-Profile-v0.1.md)，线上报文合同见 [CSLP UDP 通信协议](docs/协议与接口/CSLP-UDP-通信协议-v0.1.md)。
 
-- 正式模拟链标定的普通输入范围冻结为不超过 250 mVpp。450 mVpp 压缩点保留为历史负证据，不参与当前拟合、保留验证或验收。
-- 频响补偿资产为 Profile C5DCDE41，已形成可复核的标定摘要、独立 holdout 和 M8/M9 20 例审计。
-- 提交 `7e23060` 已纳入 F0 显示到 0.01 Hz 的改动。其新镜像完成构建、烧录哈希校验及真实 FPGA 100 帧启动/链路回归；完整 M8/M9 20 例审计绑定的是较早的应用 BIN。两者不能混作同一发布身份。
-- 现有 v1.1.0 标签指向当前 HEAD 之前的冻结点，不移动该标签，也不把它宣称为包含本工作树未提交的标定与 F0 显示改动。
+## 当前边界
 
-## 从这里开始
+- 正式普通输入范围不超过 250 mVpp；450 mVpp 已确认存在模拟前级压缩，只保留为历史负证据。
+- M12 工程联调、M8/M9 物理审计和 F0 显示镜像分别绑定不同证据范围，不能互相替代。
+- TIME、FFT、1P、3P 按键到真实面板完成刷新的 2 秒时限，以及整机单路 5 V、屏幕和 BNC 实物条件，仍需现场留证。
 
-| 需要了解什么 | 入口 |
-|---|---|
-| 项目交接、文档阅读顺序和用途 | [docs/项目交接资料索引.md](docs/项目交接资料索引.md) |
-| 测量数据、运行数据和证据适用边界 | [docs/测试与证据索引.md](docs/测试与证据索引.md) |
-| 面向合并/答辩的详细证据根索引 | [docs/验收证据索引.md](docs/验收证据索引.md) |
-| 原始赛题、答疑、厂商资料和历史设计稿 | [docs/README.md](docs/README.md) |
-| FPGA 冻结基线与验收证据 | [docs/FPGA验收证据索引.md](docs/FPGA验收证据索引.md) |
-| 最终报告稿件 | [final_doc/README.md](final_doc/README.md) |
-| 本工作树的恢复、夹具和原始归档导航 | [tool-of-rei/README.md](tool-of-rei/README.md) |
+精确构建身份、误差和「能证明／不能证明」范围只在[测试与证据索引](docs/测试与证据索引.md)维护，本页不复制完整哈希和审计表。
 
-## 合并与复现原则
+## 安全开始
 
-可提交内容包括源码、测试夹具、说明文档、轻量 JSON/CSV 摘要和 SHA256 清单。原始波形、pcap、S16 帧、ELF/BIN 以及批量截图仍作为本机/外部证据归档保存，不直接进入普通 Git。
+[安全构建与上板](docs/getting-started/安全构建与上板.md)提供一条线性路径：
 
-如需复核原始档案，请先阅读 [docs/测试与证据索引.md](docs/测试与证据索引.md) 和 [tool-of-rei/evidence/README.md](tool-of-rei/evidence/README.md)；任何带 SHA256SUMS 的证据根都应原路径、原文件名保留，不要为了“整洁”重命名或编辑。
+1. 运行不接触板卡的主机测试和离线检查；
+2. 构建 PL、PS 与 ESP32-P4 产物并核对配置；
+3. 先执行 JTAG dry-run；
+4. 取得明确授权并复核接线后，才执行真实下载和烧录。
+
+## 仓库结构
+
+| 路径 | 职责 |
+| --- | --- |
+| [`Zynq_7010_PL/`](Zynq_7010_PL/README.md) | AD9226 接口、FIR、抽取、AXI-Stream/DMA 集成与 Vivado 构建 |
+| [`Zynq_7010_PS/`](Zynq_7010_PS/cyclescope_cslp/README.md) | CSLP 控制、帧发送、网络诊断与 Vitis 构建 |
+| `ESP32-P4/` | CSLP 接收、FFT、补偿、投影与 LVGL 显示 |
+| `docs/` | 当前协议、架构、操作、标定和证据导航 |
+| `final_doc/` | 设计报告 Markdown 源和独立排版的 HTML 预览 |
+| `source_data_for_test/` | 本机/外部回放归档；普通 Git clone 只包含说明文件 |
+
+## 文档入口
+
+| 目标 | 入口 |
+| --- | --- |
+| 按任务查找文档 | [文档首页](docs/README.md) |
+| 接手项目并恢复上下文 | [项目交接资料索引](docs/项目交接资料索引.md) |
+| 安全验证、构建与上板 | [安全构建与上板](docs/getting-started/安全构建与上板.md) |
+| 查询测试、镜像与证据边界 | [测试与证据索引](docs/测试与证据索引.md) |
+| 复核详细证据根 | [验收证据索引](docs/验收证据索引.md) |
+| 查询 FPGA 冻结基线 | [FPGA 验收证据索引](docs/FPGA验收证据索引.md) |
+| 阅读最终设计报告 | [设计报告交付目录](final_doc/README.md) |
+| 维护文档 | [CycleScope 文档规则](docs/文档规则.md) |
+
+赛题、答疑、厂商资料和历史设计稿保留在 `docs/`，但不作为当前实现或发布事实源。已经清单化的原始证据不得因文档整理而改名、移动或改写。
+
+## 许可证与致谢
+
+本项目采用 [The Unlicense](LICENSE)。感谢 Linux DO 社区提供交流与支持。
